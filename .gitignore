@@ -1,0 +1,9 @@
+*.pc
+build
+cget
+conan.lock
+conanbuildinfo.txt
+conaninfo.txt
+graph_info.json
+info
+spack

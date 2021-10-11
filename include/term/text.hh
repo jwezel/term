@@ -9,12 +9,14 @@
 #pragma once
 
 #include <array>
+#include <string_view>
 #include <vector>
 #include <string>
 
 #include <rx-ranges.hh>
 #include <basic.hh>
 #include <geometry.hh>
+#include <fmt/core.h> // TESTING ONLY
 
 namespace jwezel {
 
@@ -81,7 +83,67 @@ const Rgb
   RgbGray6 =        {0.6, 0.6, 0.6},
   RgbGray7 =        {0.7, 0.7, 0.7},
   RgbGray8 =        {0.8, 0.8, 0.8},
-  RgbGray9 =        {0.9, 0.9, 0.9};
+  RgbGray9 =        {0.9, 0.9, 0.9},
+  RgbRed =          {1.0, 0.0, 0.0},
+  RgbRed1 =         {0.1, 0.0, 0.0},
+  RgbRed2 =         {0.2, 0.0, 0.0},
+  RgbRed3 =         {0.3, 0.0, 0.0},
+  RgbRed4 =         {0.4, 0.0, 0.0},
+  RgbRed5 =         {0.5, 0.0, 0.0},
+  RgbRed6 =         {0.6, 0.0, 0.0},
+  RgbRed7 =         {0.7, 0.0, 0.0},
+  RgbRed8 =         {0.8, 0.0, 0.0},
+  RgbRed9 =         {0.9, 0.0, 0.0},
+  RgbGreen =        {0.0, 1.0, 0.0},
+  RgbGreen1 =       {0.0, 0.1, 0.0},
+  RgbGreen2 =       {0.0, 0.2, 0.0},
+  RgbGreen3 =       {0.0, 0.3, 0.0},
+  RgbGreen4 =       {0.0, 0.4, 0.0},
+  RgbGreen5 =       {0.0, 0.5, 0.0},
+  RgbGreen6 =       {0.0, 0.6, 0.0},
+  RgbGreen7 =       {0.0, 0.7, 0.0},
+  RgbGreen8 =       {0.0, 0.8, 0.0},
+  RgbGreen9 =       {0.0, 0.9, 0.0},
+  RgbBlue =         {0.0, 0.0, 1.0},
+  RgbBlue1 =        {0.0, 0.0, 0.1},
+  RgbBlue2 =        {0.0, 0.0, 0.2},
+  RgbBlue3 =        {0.0, 0.0, 0.3},
+  RgbBlue4 =        {0.0, 0.0, 0.4},
+  RgbBlue5 =        {0.0, 0.0, 0.5},
+  RgbBlue6 =        {0.0, 0.0, 0.6},
+  RgbBlue7 =        {0.0, 0.0, 0.7},
+  RgbBlue8 =        {0.0, 0.0, 0.8},
+  RgbBlue9 =        {0.0, 0.0, 0.9},
+  RgbYellow =       {1.0, 1.0, 0.0},
+  RgbYellow1 =      {0.1, 0.1, 0.0},
+  RgbYellow2 =      {0.2, 0.2, 0.0},
+  RgbYellow3 =      {0.3, 0.3, 0.0},
+  RgbYellow4 =      {0.4, 0.4, 0.0},
+  RgbYellow5 =      {0.5, 0.5, 0.0},
+  RgbYellow6 =      {0.6, 0.6, 0.0},
+  RgbYellow7 =      {0.7, 0.7, 0.0},
+  RgbYellow8 =      {0.8, 0.8, 0.0},
+  RgbYellow9 =      {0.9, 0.9, 0.0},
+  RgbMagenta =      {1.0, 0.0, 1.0},
+  RgbMagenta1 =     {0.1, 0.0, 0.1},
+  RgbMagenta2 =     {0.2, 0.0, 0.2},
+  RgbMagenta3 =     {0.3, 0.0, 0.3},
+  RgbMagenta4 =     {0.4, 0.0, 0.4},
+  RgbMagenta5 =     {0.5, 0.0, 0.5},
+  RgbMagenta6 =     {0.6, 0.0, 0.6},
+  RgbMagenta7 =     {0.7, 0.0, 0.7},
+  RgbMagenta8 =     {0.8, 0.0, 0.8},
+  RgbMagenta9 =     {0.9, 0.0, 0.9},
+  RgbCyan =         {0.0, 1.0, 1.0},
+  RgbCyan1 =        {0.0, 0.1, 0.1},
+  RgbCyan2 =        {0.0, 0.2, 0.2},
+  RgbCyan3 =        {0.0, 0.3, 0.3},
+  RgbCyan4 =        {0.0, 0.4, 0.4},
+  RgbCyan5 =        {0.0, 0.5, 0.5},
+  RgbCyan6 =        {0.0, 0.6, 0.6},
+  RgbCyan7 =        {0.0, 0.7, 0.7},
+  RgbCyan8 =        {0.0, 0.8, 0.8},
+  RgbCyan9 =        {0.0, 0.9, 0.9};
 
 ///
 /// Attributes for the Char type.
@@ -132,12 +194,11 @@ struct CharAttributes {
     const Rgb &fg=RgbNone,
     const Rgb &bg=RgbNone,
     const Attributes &attr={},
-    const AttributeMode &mix=AttributeMode::merge
+    const AttributeMode &mix=AttributeMode::default_
   );
 
   ///
   /// String conversion operator.
-  ///
   operator string() const;
 
   ///
@@ -146,7 +207,6 @@ struct CharAttributes {
   /// @param[in]  other  The other
   ///
   /// @return     The result of the equality
-  ///
   bool operator ==(const CharAttributes &other) const;
 
   ///
@@ -155,7 +215,6 @@ struct CharAttributes {
   /// @param[in]  other  The other
   ///
   /// @return     The result of the inequality
-  ///
   bool operator !=(const CharAttributes &other) const;
 };
 
@@ -168,7 +227,7 @@ enum Orientation {
 
 ///
 /// Line segments
-typedef u1 Segments[8];
+typedef array<u1, 4> Segments;
 
 ///
 /// Quad tuple: north, south, west, east, mode
@@ -246,7 +305,7 @@ struct Char {
   /// @param[in]  attr  The attributes
   ///
   /// @return     Char with new attributes
-  Char withAttr(const CharAttributes &attr);
+  Char withAttr(const CharAttributes &attr) const;
 
   Char combine(
     const Char &other,
@@ -286,11 +345,13 @@ const Char
   Null(0),
   Transparent(32, RgbTransparent, RgbTransparent);
 
+typedef vector<Char> String;
+
+extern const string asString(const String &s);
+
 ///
 /// This struct describes a rectangle of text.
 struct Text {
-  typedef vector<Char> String;
-
   vector<String> data; ///< text
 
   Text() {}
@@ -312,6 +373,15 @@ struct Text {
     const Attributes &attr={},
     const AttributeMode &mix=default_
   );
+
+  ///
+  /// Constructor
+  ///
+  /// @param[in]  str   The string
+  /// @param[in]  attr  CharAttributes
+  inline Text(string_view str, const CharAttributes &attr):
+  Text(str, attr.fg, attr.bg, attr.attr)
+  {}
 
   ///
   /// Constructor
@@ -353,8 +423,19 @@ struct Text {
   /// @return     Text, right-adjusted to @c width characters
   Text rightAligned(Dim width=DimLow);
 
-  Text centered(Dim width=DimLow, Alignment alignment=left);
+  ///
+  /// Get horizontally centered text
+  ///
+  /// @param[in]  width  The width
+  ///
+  /// @return     Centered Text
+  Text centered(Dim width=DimLow);
 
+  ///
+  /// Extend text to specified dimensions
+  ///
+  /// @param[in]  size  The size
+  /// @param[in]  fill  Fill character
   void extend(const Vector &size, const Char &fill=Space);
 
   ///
@@ -368,7 +449,7 @@ struct Text {
   void patch(
     const Text &other,
     const Vector &position={0, 0},
-    const AttributeMode &mixDefaultMode=merge,
+    const AttributeMode &mixDefaultMode=replace,
     const AttributeMode &overrideMixMode=default_,
     const AttributeMode &resetMixMode=default_
   );
@@ -379,7 +460,14 @@ struct Text {
   /// @param[in]  area  The area
   ///
   /// @return     range
-  auto iter(const Rectangle &area=RectangleMax) const;
+  inline auto iter(const Rectangle &area) const {
+    return rx::iterator_range(data.begin() + area.y1, data.begin() + area.y2) | rx::transform(
+      [&area](const String &str) {
+        fmt::print("line: {}\n", asString(String(str.begin() + area.x1, str.begin() + area.x2)));
+        return String(str.begin() + area.x1, str.begin() + area.x2);
+      }
+    );
+  }
 
   ///
   /// Put text into sub-rectangle
@@ -392,7 +480,7 @@ struct Text {
   void patchArea(
     const Text &other,
     const Rectangle &area=RectangleMax,
-    const AttributeMode &mixDefault=merge,
+    const AttributeMode &mixDefault=replace,
     const AttributeMode &overrideMix=default_,
     const AttributeMode &resetMix=default_
   );
@@ -406,7 +494,7 @@ struct Text {
   void setAttr(const CharAttributes &attr, const Rectangle &area=RectangleMax, const AttributeMode &setMix=default_);
 
   ///
-  /// Get sub-ractangle.
+  /// Get sub-rectangle.
   ///
   /// @param[in]  area  The area
   ///
@@ -416,20 +504,34 @@ struct Text {
   ///
   /// Get char at position.
   ///
+  /// Negative elements in position are substituted with `text dimension - position`
+  ///
   /// @param[in]  position  The position
   ///
   /// @return     Char (Null if position is outside of text)
   Char operator [](const Vector &position) const;
 
   ///
+  /// Get reference to char at position.
+  ///
+  /// Negative elements in position are substituted with `text dimension - position`
+  ///
+  /// @param[in]  position  The position
+  ///
+  /// @return     Char (Null if position is outside of text)
+  Char &operator [](const Vector &position);
+
+  ///
   /// Get char at position.
   ///
   /// If position is outside of text dimensions, throws range_error.
   ///
+  /// Negative elements in position are substituted with `text dimension - position`
+  ///
   /// @param[in]  position  The position
   ///
   /// @return     Char
-  Char at(const Vector &position);
+  Char &at(const Vector &position);
 
   ///
   /// Draw horizontal or vertical line.
@@ -440,14 +542,14 @@ struct Text {
   ///
   /// @return     Rectangle spanning the area of modification
   Rectangle line(
-    const Vector &position,
-    Dim endPosition,
-    Orientation orientation,
-    u1 strength,
-    u1 dash,
-    bool roundedCorners,
-    bool extendBegin,
-    bool extendEnd
+    const Vector &position=Vector(0, 0),
+    Dim endPosition=DimHigh,
+    Orientation orientation=Horizontal,
+    u1 strength=1,
+    u1 dash=0,
+    bool roundedCorners=false,
+    bool extendBegin=false,
+    bool extendEnd=false
   );
 
   vector<Rectangle> box(const Box &box);

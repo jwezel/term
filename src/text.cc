@@ -1,5 +1,6 @@
 // Text
 
+#include <array>
 #include <fstream>
 #include <iostream>
 #include <algorithm>
@@ -396,10 +397,26 @@ Vector Text::size() const {
   return Vector(width(), height());
 }
 
+///
+/// Convert String to std::string
+///
+/// @param[in]  s     String to convert
+///
+/// @return     std::string_view
+const string asString(const String &s) {
+  string result;
+  vector<Unicode> runes;
+  for (const Char &char_: s) {
+    runes.push_back(char_.rune);
+  }
+  utf8::utf32to8(runes.begin(), runes.end(), back_inserter(result));
+  return result;
+}
+
 Text::operator string() const {
   // String representation
   string result;
-  for (const vector<Char> &line: data) {
+  for (const String &line: data) {
     vector<Unicode> runes;
     for (const Char &char_: line) {
       runes.push_back(char_.rune);
@@ -413,7 +430,7 @@ Text::operator string() const {
 string Text::repr() const {
   // String representation
   string result{"\"\"\"\n"};
-  for (const vector<Char> &line: data) {
+  for (const String &line: data) {
     vector<Unicode> runes;
     for (const Char &char_: line) {
       runes.push_back(char_.rune < 32? char_.rune + 0x2400: char_.rune);
@@ -448,7 +465,7 @@ Text Text::rightAligned(Dim width) {
   return result;
 }
 
-Text Text::centered(Dim width, Alignment alignment) {
+Text Text::centered(Dim width) {
   width = width == DimLow? width: width;
   if (width < 0)
     throw range_error("width < 0");
@@ -466,25 +483,12 @@ Text Text::centered(Dim width, Alignment alignment) {
     }
     auto size = end - begin;
     if (size > width) {
-      switch (alignment) {
-
-        case left:
-        end += size - width;
-        break;
-
-        case center:
-        begin += size / 2 - width / 2;
-        end = begin + width;
-        break;
-
-        case right:
-        begin += size - width;
-        break;
-      }
+      begin += (size - 1) / 2 - (width - 1) / 2;
+      end = begin + width;
       result.data.push_back(String(begin, end));
     } else {
       String newLine(width, Char(' ').withAttr(begin->attributes));
-      auto pos = width / 2 - (size + 1) / 2;
+      auto pos = (width - 1) / 2 - (size - 1) / 2;
       copy(begin, end, newLine.begin() + pos);
       result.data.push_back(newLine);
     }
@@ -508,7 +512,7 @@ Char::Char(Unicode c, const CharAttributes &attr):
 rune(c), attributes(attr)
 {}
 
-Char Char::withAttr(const CharAttributes &attr) {
+Char Char::withAttr(const CharAttributes &attr) const{
   // Get a char with attributes set
   Char result = *this;
   result.attributes = attr;
@@ -559,39 +563,44 @@ Char Char::combine(
   auto rune_ = (other.rune == NoneRune)? rune: other.rune;
   Char result;
   switch (mix_) {
+
     case merge:
-      result = Char(
-        rune_,
-        attributes.fg | other.attributes.fg,
-        attributes.bg | other.attributes.bg,
-        attributes.attr | other.attributes.attr,
-        merge
-      );
-      break;
+    result = Char(
+      rune_,
+      attributes.fg | other.attributes.fg,
+      attributes.bg | other.attributes.bg,
+      attributes.attr | other.attributes.attr,
+      merge
+    );
+    break;
+
     case mix:
-        result = Char(
-          rune_,
-          attributes.fg + other.attributes.fg,
-          attributes.bg + other.attributes.bg,
-          attributes.attr | other.attributes.attr,
-          mix
-        );
-      break;
+    result = Char(
+      rune_,
+      attributes.fg + other.attributes.fg,
+      attributes.bg + other.attributes.bg,
+      attributes.attr | other.attributes.attr,
+      mix
+    );
+    break;
+
     case replace:
-      result = other;
-      break;
+    result = other;
+    break;
+
     case ignore:
-      result = Char(
-        rune_,
-        attributes.fg,
-        attributes.bg,
-        attributes.attr,
-        attributes.mix
-      );
-      break;
+    result = Char(
+      rune_,
+      attributes.fg,
+      attributes.bg,
+      attributes.attr,
+      attributes.mix
+    );
+    break;
+
     case default_:
-      throw domain_error("source mix must not be Default");
-      break;
+    throw domain_error("source mix must not be Default");
+    break;
   }
   if (resetMix != default_) {
     result.attributes.mix = resetMix;
@@ -600,7 +609,6 @@ Char Char::combine(
 }
 
 void Text::extend(const Vector &size, const Char &fill) {
-  // Extend text to specified dimensions
   if (width() > 0) {
     for (Dim l = 0; l < height(); ++l) {
       fill_n(back_inserter(data[l]), size.x - data[l].size(), fill);
@@ -626,23 +634,14 @@ void Text::patch(
     height_ = min(height() - ydest, other.height() - ybegin);
   for (Dim l = 0; l < height_; ++l) {
     Dim owidth = min(Dim(other.data[ybegin + l].size()), width_);
-    if (xdest + owidth - xbegin > 0) {
+    if (xdest + owidth > 0) {
       auto dest = data[ydest + l].begin() + xdest;
-      auto source = other.data[ybegin + l].begin() + xdest;
-      while (dest != data[ydest + l].begin() + owidth - xbegin) {
+      auto source = other.data[ybegin + l].begin();
+      while (dest != data[ydest + l].begin() + xdest + owidth) {
         *dest++ = dest->combine(*source++, mixDefaultMode, overrideMixMode, resetMixMode);
       }
     }
   }
-}
-
-auto Text::iter(const Rectangle &area) const {
-  auto _ = data | rx::transform(
-    [&area](const String&str) {
-      return rx::iterator_range(str.begin() + area.x1, str.begin() + area.x2);
-    }
-  );
-  return _;
 }
 
 void Text::patchArea(
@@ -655,19 +654,21 @@ void Text::patchArea(
   if (data.data() == other.data.data())
     throw range_error("This and other are the same");
   const Rectangle thisDimensions{0, 0, width(), height()};
-  optional<Rectangle> area_{area.defaultTo(thisDimensions) & thisDimensions};
-  if (area_) {
-    const Rectangle area = area_.value();
-    auto data_ = other.iter(Rectangle{Dim(0), Dim(0), area.width(), area.height()});
-    for (Dim l = 0; l < area.height(); ++l) {
-      auto sourceLine = data_.next();
-      auto
-        dest = data[area.y1 + l].begin() + area.x1,
-        limit = data[area.y1 + l].begin() + size_t(area.x2);
-      while (dest != limit && !sourceLine.at_end()) {
-        *dest++ = dest->combine(sourceLine.next(), mixDefault, overrideMix, resetMix);
-      }
+  auto area_{area.defaultTo(thisDimensions)};
+  if ((area_ & Rectangle{0, 0, this->width(), this->height()}) != area_)
+    throw runtime_error("area must be within text");
+  auto data_ = other.data.begin();
+  for (Dim l = 0; l < area_.height(); ++l) {
+    auto
+      source = data_->begin(),
+      sourceEnd = data_->end();
+    auto
+      dest = data[area_.y1 + l].begin() + area_.x1,
+      limit = data[area_.y1 + l].begin() + size_t(area_.x2);
+    while (dest != limit && source != sourceEnd) {
+      *dest++ = dest->combine(*source++, mixDefault, overrideMix, resetMix);
     }
+    ++data_;
   }
 }
 
@@ -678,7 +679,7 @@ void Text::setAttr(const CharAttributes &attr, const Rectangle &area, const Attr
     Rectangle area = area_.value();
     for (Dim l = area.y1; l < area.y2; ++l) {
       for (Dim c = area.x1; c < area.x2; ++c) {
-        data[l][c] = data[l][c].combine(Char(NoneRune, attr), default_, default_, setMix);
+        data[l][c] = data[l][c].combine(Char(NoneRune, attr), default_, ignore, setMix);
       }
     }
   }
@@ -702,23 +703,25 @@ Text Text::operator [](const Rectangle &area) const {
 }
 
 Char Text::operator [](const Vector &position) const {
-  // Negative elements in position are substituted with `text dimension - position`
   Vector position_ = size().position(position);
-  if (position_.y < height()){
-    if (position_.x < width()) {
-      return data[position_.y][position_.x];
-    }
+  if (position_.y < height() && position_.x < width()) {
+    return data[position_.y][position_.x];
   }
   return Null;
 }
 
-Char Text::at(const Vector &position) {
-  // Negative elements in position are substituted with `text dimension - position`
+Char &Text::operator [](const Vector &position) {
   Vector position_ = size().position(position);
-  if (position_.y < height()){
-    if (position_.x < width()) {
-      return data[position_.y][position_.x];
-    }
+  if (position_.y < height() && position_.x < width()) {
+    return data[position_.y][position_.x];
+  }
+  throw range_error(fmt::format("Position {} is outside text dimensions {}", string(position), string(size())));
+}
+
+Char &Text::at(const Vector &position) {
+  Vector position_ = size().position(position);
+  if (position_.y < height() && position_.x < width()) {
+    return data[position_.y][position_.x];
   }
   throw range_error(fmt::format("Position {} is outside text dimensions {}", string(position), string(size())));
 }
@@ -746,17 +749,20 @@ static unordered_map<QuadValue, Unicode> initializedQuad2Box() {
 }
 
 void Char::drawLineChar(const Segments &segments, u1 dash, bool roundedCorners) {
-  // Patch line segments into Char
-  static const unordered_map<Unicode, QuadTuple> Box2Quad{initializedBox2Quad()};
-  static unordered_map<QuadValue, Unicode> Quad2Box{initializedQuad2Box()}; // const not supported
+  static const unordered_map<Unicode, QuadTuple> box2Quad{initializedBox2Quad()};
+  static unordered_map<QuadValue, Unicode> quad2Box{initializedQuad2Box()}; // const not supported
 
   try {
-    QuadTuple quad = Box2Quad.at(rune);
+    QuadTuple quad{0, 0, 0, 0, 0};
+    auto quadp = box2Quad.find(rune);
+    if (quadp != box2Quad.end()) {
+      quad = quadp->second;
+    }
     for (int i = 0; i < 4; ++i) {
       if (segments[i] != 0)
         quad[i] = segments[i];
     }
-    if ((quad[north] == 1 == quad[south] == 1) and (quad[west] == 1 xor quad[east] == 1) and roundedCorners) {
+    if (((quad[north] == 1) == (quad[south] == 1)) and (quad[west] == 1 xor quad[east] == 1) and roundedCorners) {
       // On corners of strength 1 lines, `roundedCorners` can be set
       quad[mode] = 1;
     } else if (
@@ -768,7 +774,7 @@ void Char::drawLineChar(const Segments &segments, u1 dash, bool roundedCorners) 
       // On straight lines, `dash`ing can be set
       quad[mode] = dash;
     }
-    rune = Quad2Box[_QuadTuple2Value(quad)];
+    rune = quad2Box[_QuadTuple2Value(quad)];
   } catch (const out_of_range &) {
     // ignore
   }
@@ -776,7 +782,7 @@ void Char::drawLineChar(const Segments &segments, u1 dash, bool roundedCorners) 
 
 
 Rectangle drawHorizontalLine(
-  const Text &text,
+  Text &text,
   const Vector &initialPosition,
   Dim endPosition,
   u1 strength,
@@ -785,20 +791,20 @@ Rectangle drawHorizontalLine(
   bool extendBegin,
   bool extendEnd
 ) {
-  Dim e = endPosition == DimHigh? text.width() - 1: endPosition + (endPosition < 0? text.width(): 0) - 1;
+  Dim e = (endPosition == DimHigh? text.width(): endPosition + (endPosition < 0? text.width(): 0));
   Dim b = initialPosition.x;
   for (Dim p = b; p < e; ++p)
     if (p == b and not extendBegin)
-      text[Vector(p, initialPosition.y)].drawLineChar({0, 0, 0, strength}, dash, roundedCorners);
-    else if (p == e and not extendEnd)
-      text[Vector(p, initialPosition.y)].drawLineChar({0, 0, strength, 0}, dash, roundedCorners);
+      text.at(Vector(p, initialPosition.y)).drawLineChar({0, 0, 0, strength}, dash, roundedCorners);
+    else if (p == e - 1 and not extendEnd)
+      text.at(Vector(p, initialPosition.y)).drawLineChar({0, 0, strength, 0}, dash, roundedCorners);
     else
-      text[Vector(p, initialPosition.y)].drawLineChar({0, 0, strength, strength}, dash, roundedCorners);
+      text.at(Vector(p, initialPosition.y)).drawLineChar({0, 0, strength, strength}, dash, roundedCorners);
   return Rectangle(initialPosition.x, initialPosition.y, initialPosition.x + e + 1, initialPosition.y + 1);
 }
 
 Rectangle drawVerticalLine(
-  const Text &text,
+  Text &text,
   const Vector &initialPosition,
   Dim endPosition,
   u1 strength,
@@ -807,28 +813,30 @@ Rectangle drawVerticalLine(
   bool extendBegin,
   bool extendEnd
 ) {
-  Dim e = endPosition == DimHigh? text.height() - 1: endPosition + (endPosition < 0? text.height(): 0) - 1;
+  Dim e = (endPosition == DimHigh? text.height(): endPosition + (endPosition < 0? text.height(): 0));
   Dim b = initialPosition.y;
   for (Dim p = initialPosition.y; p < e; ++p)
     if (p == b and not extendBegin)
-      text[Vector(initialPosition.y, p)].drawLineChar({0, strength, 0, 0}, dash, roundedCorners);
-    else if (p == e and not extendEnd)
-      text[Vector(initialPosition.y, p)].drawLineChar({strength, 0, 0, 0}, dash, roundedCorners);
+      text.at(Vector(initialPosition.x, p)).drawLineChar({0, strength, 0, 0}, dash, roundedCorners);
+    else if (p == e - 1 and not extendEnd)
+      text.at(Vector(initialPosition.x, p)).drawLineChar({strength, 0, 0, 0}, dash, roundedCorners);
     else
-      text[Vector(initialPosition.y, p)].drawLineChar({strength, strength, 0, 0}, dash, roundedCorners);
+      text.at(Vector(initialPosition.x, p)).drawLineChar({strength, strength, 0, 0}, dash, roundedCorners);
   return Rectangle(initialPosition.x, initialPosition.y, initialPosition.x + 1, initialPosition.y + e + 1);
 }
 
 Rectangle Text::line(
-    const Vector &position=Vector(0, 0),
-    Dim endPosition=DimLow,
-    Orientation orientation=Horizontal,
-    u1 strength=1,
-    u1 dash=0,
-    bool roundedCorners=false,
-    bool extendBegin=false,
-    bool extendEnd=false
+    const Vector &position,
+    Dim endPosition,
+    Orientation orientation,
+    u1 strength,
+    u1 dash,
+    bool roundedCorners,
+    bool extendBegin,
+    bool extendEnd
 ) {
+  if (strength < 1 or strength > 2)
+    throw range_error(fmt::format("Invalid strength: {}", strength));
   if (orientation == Horizontal)
     return drawHorizontalLine(
       *this,
@@ -870,6 +878,7 @@ vector<Rectangle> Text::box(const Box &box) {
   vector<Rectangle> result;
   Rectangle area = box.area.defaultTo(Rectangle(0, 0, width(), height()));
   return vector<Rectangle>{
+    // top
     line(
       Vector(area.x1, area.y1),
       limit(area.x2, area.width() + 1),
@@ -878,6 +887,7 @@ vector<Rectangle> Text::box(const Box &box) {
       box.dash,
       box.roundedCorners
     ),
+    // bottom
     line(
       Vector(area.x1, area.y2 - 1),
       limit(area.x2, area.width() + 1),
@@ -886,6 +896,7 @@ vector<Rectangle> Text::box(const Box &box) {
       box.dash,
       box.roundedCorners
     ),
+    // left
     line(
       Vector(area.x1, area.y1),
       limit(area.y2, area.height() + 1),
@@ -894,6 +905,7 @@ vector<Rectangle> Text::box(const Box &box) {
       box.dash,
       box.roundedCorners
     ),
+    // right
     line(
       Vector(area.x2 - 1, area.y1),
       limit(area.y2, area.height() + 1),
