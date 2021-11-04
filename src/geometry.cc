@@ -24,8 +24,8 @@ Vector::operator string() const {
 }
 
 std::ostream& Vector::operator<<(std::ostream& os) const {
-    os << string(*this);
-    return os;
+  os << string(*this);
+  return os;
 }
 
 bool Vector::operator ==(const Vector &other) const {
@@ -46,7 +46,6 @@ Vector Vector::position(const Vector &position) const {
 }
 
 Vector Vector::defaultTo(const Vector &default_) const {
-  // Apply defaults
   if (*this == VectorMin) {
     return default_;
   } else {
@@ -62,7 +61,6 @@ Vector Vector::operator +(const Vector &v2) const {
 }
 
 Vector Vector::operator +(Dim size) const {
-  // Decrease vector
   return Vector(x + size, y + size);
 }
 
@@ -71,7 +69,6 @@ Vector Vector::operator -(const Vector &other) const {
 }
 
 Vector Vector::operator -(Dim size) const {
-  // Decrease vector
   return Vector(x - size, y - size);
 }
 
@@ -98,10 +95,6 @@ Vector Vector::operator |(const Vector &v2) const {
 Rectangle::Rectangle(Dim x1, Dim y1, Dim x2, Dim y2):
 x1(x1), y1(y1), x2(x2), y2(y2)
 {
-  // assert((format("Result must not become RectangleDefault: {}", string(*this)), *this != RectangleDefault));
-  // assert((format("Result must not become RectangleMax: {}", string(*this)), *this != RectangleMax));
-  // assert(*this != RectangleDefault);
-  // assert(*this != RectangleMax);
 }
 
 Rectangle::Rectangle(const Vector &v1, const Vector &v2):
@@ -126,7 +119,7 @@ std::ostream& operator <<(std::ostream& os, const Rectangle &rect) {
 }
 
 optional<Rectangle> Rectangle::operator &(const Rectangle &other) const {
-  Dim
+  const Dim
     rx1 = max(x1, other.x1),
     ry1 = max(y1, other.y1),
     rx2 = min(x2, other.x2),
@@ -141,8 +134,12 @@ bool Rectangle::intersects(const Rectangle &other) const {
   return max(x1, other.x1) < min(x2, other.x2) and max(y1, other.y1) < min(y2, other.y2);
 }
 
-Rectangle Rectangle::operator +(const Vector &v) const {
-  return Rectangle(x1 + v.x, y1 + v.y, x2 + v.x, y2 + v.y);
+Rectangle Rectangle::operator +(const Vector &vector) const {
+  return Rectangle(x1 + vector.x, y1 + vector.y, x2 + vector.x, y2 + vector.y);
+}
+
+Rectangle Rectangle::operator -(const Vector &vector) const {
+  return Rectangle(x1 - vector.x, y1 - vector.y, x2 - vector.x, y2 - vector.y);
 }
 
 Rectangle Rectangle::operator |(const Rectangle &other) const {
@@ -157,10 +154,6 @@ const Rectangle &Rectangle::operator |=(const Rectangle &r2) {
   return *this;
 }
 
-Rectangle Rectangle::operator -(const Vector &vector) const {
-  return Rectangle(x1 - vector.x, y1 - vector.y, x2 - vector.x, y2 - vector.y);
-}
-
 void Rectangle::intersect(vector<Rectangle> &result, const Rectangle &other) const {
   if (y1 < other.y1)
     result.push_back(Rectangle(x1, y1, x2, other.y1));
@@ -173,7 +166,7 @@ void Rectangle::intersect(vector<Rectangle> &result, const Rectangle &other) con
 }
 
 vector<Rectangle> Rectangle::operator -(const Rectangle &other) const {
-  auto intersection = *this & other;
+  const auto intersection = *this & other;
   if (!intersection || intersection.value() == *this)
     // If the two rectangles do not intersect or the intersection is *this, an empty sequence is returned.
     return {};
@@ -184,7 +177,7 @@ vector<Rectangle> Rectangle::operator -(const Rectangle &other) const {
 }
 
 vector<Rectangle> Rectangle::defaultIntersection(const Rectangle &other) const {
-  auto intersection = *this & other;
+  const auto intersection = *this & other;
   if (!intersection)
     return {*this};
   if (intersection.value() == *this)
@@ -239,7 +232,7 @@ Vector Rectangle::position() const {
 }
 
 Rectangle Rectangle::operator -(Dim size) const {
-  auto result = Rectangle(x1 + size, y1 + size, x2 - size, y2 - size);
+  const auto result = Rectangle(x1 + size, y1 + size, x2 - size, y2 - size);
   if (result == RectangleDefault)
     throw RectangleError(string("Result must not become RectangleDefault: )") + string(result));
   assert((format("x axis got negativ: {} + {}", string(*this), size), result.x1 <= result.x2));
@@ -248,7 +241,7 @@ Rectangle Rectangle::operator -(Dim size) const {
 }
 
 Rectangle Rectangle::operator +(Dim size) const {
-  auto result = Rectangle(x1 - size, y1 - size, x2 + size, y2 + size);
+  const auto result = Rectangle(x1 - size, y1 - size, x2 + size, y2 + size);
   if (result == RectangleDefault)
     throw RectangleError(string("Result must not become RectangleDefault: ") + string(result));
   assert((format("x axis got negativ: ", string(*this), size), result.x1 <= result.x2));
@@ -266,7 +259,7 @@ Rectangle Rectangle::defaultTo(const Rectangle &default_) const {
 }
 
 Rectangle centered(const Vector &one, const Vector &other) {
-  Dim
+  const Dim
     ox = other.x / 2,
     oy = other.y / 2,
     tx = one.x / 2,
@@ -280,8 +273,7 @@ const Vector VectorMin = Vector(DimLow, DimLow);
 const Vector VectorMax = Vector(DimHigh, DimHigh);
 
 Dim diff(Dim x1, Dim x2) {
-  // Difference of 2 Dim
   return x1 < x2? x2 - x1: x1 - x2;
 }
 
-}
+} // namespace

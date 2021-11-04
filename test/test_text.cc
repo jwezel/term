@@ -239,7 +239,7 @@ TEST_CASE("Text") {
     t.box(Box(Rectangle(0, 0, 5, 4), 2));
     CHECK_EQ(string(t), "┏━━━┓\n┃...┃\n┃...┃\n┗━━━┛\n");
     SUBCASE("Vertical line in box") {
-      t.line(Vector{0, 1}, DimHigh, jwezel::Horizontal);
+      t.line(Line{Vector{0, 1}, DimHigh, jwezel::Horizontal, false, false});
       CHECK_EQ(string(t), "┏━━━┓\n┠───┨\n┃...┃\n┗━━━┛\n");
     }
   }

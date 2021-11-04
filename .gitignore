@@ -7,3 +7,12 @@ conaninfo.txt
 graph_info.json
 info
 spack
+.spack-env/
+
+.default.sublime-project
+.default.sublime-workspace
+.envrc
+
+loads
+spack.lock
+spack.yaml

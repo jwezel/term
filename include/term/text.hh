@@ -13,7 +13,6 @@
 #include <vector>
 #include <string>
 
-#include <rx-ranges.hh>
 #include <basic.hh>
 #include <geometry.hh>
 #include <fmt/core.h> // TESTING ONLY
@@ -263,6 +262,14 @@ struct Draw {
   Draw(u1 strength, u1 dash, bool roundedCorners);
 };
 
+struct Line {
+  Vector      position;
+  int         endPosition;
+  Orientation orientation;
+  bool        extendBegin;
+  bool        extendEnd;
+};
+
 ///
 /// This struct describes a box.
 struct Box: public Draw {
@@ -439,6 +446,12 @@ struct Text {
   void extend(const Vector &size, const Char &fill=Space);
 
   ///
+  /// Fill text with character
+  ///
+  /// @param[in]  fill  Fill character
+  void fill(const Char &fill=Space);
+
+  ///
   /// Put one text rectangle into another at a specific position
   ///
   /// @param[in]  other            The other
@@ -453,21 +466,6 @@ struct Text {
     const AttributeMode &overrideMixMode=default_,
     const AttributeMode &resetMixMode=default_
   );
-
-  ///
-  /// Get range to sub-rectangle
-  ///
-  /// @param[in]  area  The area
-  ///
-  /// @return     range
-  inline auto iter(const Rectangle &area) const {
-    return rx::iterator_range(data.begin() + area.y1, data.begin() + area.y2) | rx::transform(
-      [&area](const String &str) {
-        fmt::print("line: {}\n", asString(String(str.begin() + area.x1, str.begin() + area.x2)));
-        return String(str.begin() + area.x1, str.begin() + area.x2);
-      }
-    );
-  }
 
   ///
   /// Put text into sub-rectangle
@@ -542,14 +540,10 @@ struct Text {
   ///
   /// @return     Rectangle spanning the area of modification
   Rectangle line(
-    const Vector &position=Vector(0, 0),
-    Dim endPosition=DimHigh,
-    Orientation orientation=Horizontal,
+    const Line &line,
     u1 strength=1,
     u1 dash=0,
-    bool roundedCorners=false,
-    bool extendBegin=false,
-    bool extendEnd=false
+    bool roundedCorners=false
   );
 
   vector<Rectangle> box(const Box &box);

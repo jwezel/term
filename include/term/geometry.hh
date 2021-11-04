@@ -176,7 +176,6 @@ struct Rectangle {
   ///
   /// @param[in]  v1
   /// @param[in]  v2
-  ///
   Rectangle(const Vector &v1, const Vector &v2);
 
   ///

@@ -1,5 +1,7 @@
 // Text
 
+#include "utf8cpp/utf8/cpp11.h"
+#include "range/v3/range/conversion.hpp"
 #include <array>
 #include <fstream>
 #include <iostream>
@@ -23,10 +25,13 @@
 
 #include <fmt/core.h>
 #include <fmt/color.h>
+#include <range/v3/algorithm/max.hpp>
+#include <range/v3/view/transform.hpp>
+#include <range/v3/view/split.hpp>
 #include <utf8cpp/utf8.h>
+#include <utf8cpp/utf8/cpp11.h>
 
 #include <geometry.hh>
-#include <rx-ranges.hh>
 #include <string.hh>
 #include <text.hh>
 
@@ -34,6 +39,7 @@ namespace jwezel {
 
 using namespace std;
 using namespace fmt;
+using namespace ranges;
 using std::string_view;
 
 const vector<pair<u4, QuadTuple>> _quadInitializer = {
@@ -291,7 +297,7 @@ bool Hsv::operator !=(const Hsv &other) const {
 ///
 /// @return     Color 1 and color 2 mixed
 Rgb Rgb::operator +(const Rgb &color2) const {
-  Rgb
+  const Rgb
     color1_ = *this | color2,
     color2_ = color2 | *this;
 
@@ -352,27 +358,51 @@ bool CharAttributes::operator !=(const CharAttributes &other) const {
   return fg != other.fg && bg != other.bg && attr != other.attr && mix != other.mix;
 }
 
+Char::Char():
+rune(0), attributes(RgbNone, RgbNone, {}, default_)
+{}
+
+Char::Char(Unicode c, const Rgb &fg, const Rgb &bg, const Attributes &attr, const AttributeMode &mix):
+rune(c), attributes(fg, bg, attr, mix)
+{}
+
+Char::Char(Unicode c, const CharAttributes &attr):
+rune(c), attributes(attr)
+{}
+
+Char Char::withAttr(const CharAttributes &attr) const {
+  // Get a char with attributes set
+  Char result = *this;
+  result.attributes = attr;
+  return result;
+}
+
+bool Char::operator ==(const Char &other) const {
+  return rune == other.rune and attributes == other.attributes;
+}
+
+bool Char::operator !=(const Char &other) const {
+  return rune != other.rune or !(attributes == other.attributes);
+}
+
 Char::operator string() const {
   string buffer;
   utf8::utf32to8(&rune, &rune + 1, back_inserter(buffer));
   return format("'{}'{}", buffer, string(attributes));
 }
 
-Text::Text(string_view str, const Rgb &fg, const Rgb &bg, const Attributes &attr, const AttributeMode &mix) {
+Text::Text(string_view str_, const Rgb &fg, const Rgb &bg, const Attributes &attr, const AttributeMode &mix) {
+  const auto str{utf8::utf8to32(string(str_))};
+  // print("Text: \"{}\"\n", utf8::utf32to8(str));
   if (str.size() > 0) {
-    SplitString split(string(str), "\n");
-    vector<string_view> lines(split.begin(), split.end());
-    size_t width = (
-      lines
-      | rx::transform([](string_view line) {return line.size();})
-      | rx::max()
-    ).value_or(0);
+    const auto lines{str | views::split('\n') | _to_::to<vector<basic_string<Unicode>>>()};
+    const size_t width = ranges::max(lines | views::transform([](std::basic_string_view<Unicode> line) {return line.size();}));
     data.reserve(lines.size());
-    for (string_view line: lines) {
+    for (const std::basic_string_view<Unicode> line: lines) {
       String iline;
       iline.reserve(line.size());
       // Copy line
-      for (const char &c: line) {
+      for (const Unicode &c: line) {
         iline.emplace_back(c, fg, bg, attr, mix);
       }
       // Pad line
@@ -385,12 +415,30 @@ Text::Text(string_view str, const Rgb &fg, const Rgb &bg, const Attributes &attr
   }
 }
 
+Text::Text(Char c, const Vector &size, const AttributeMode &mixDefault):
+data(
+  vector<String>(
+    size.y,
+    String(
+      size.x,
+      Char(
+        c.rune,
+        c.attributes.fg,
+        c.attributes.bg,
+        c.attributes.attr,
+        mixDefault == default_? c.attributes.mix: mixDefault
+      )
+    )
+  )
+)
+{}
+
 Dim Text::height() const {
   return data.size();
 }
 
 Dim Text::width() const {
-  return data[0].size();
+  return data.size() > 0? data[0].size(): 0;
 }
 
 Vector Text::size() const {
@@ -481,14 +529,14 @@ Text Text::centered(Dim width) {
     while (begin != line.end() && begin->rune == ' ') {
       ++begin;
     }
-    auto size = end - begin;
+    const auto size = end - begin;
     if (size > width) {
       begin += (size - 1) / 2 - (width - 1) / 2;
       end = begin + width;
       result.data.push_back(String(begin, end));
     } else {
       String newLine(width, Char(' ').withAttr(begin->attributes));
-      auto pos = (width - 1) / 2 - (size - 1) / 2;
+      const auto pos = (width - 1) / 2 - (size - 1) / 2;
       copy(begin, end, newLine.begin() + pos);
       result.data.push_back(newLine);
     }
@@ -500,33 +548,6 @@ bool Text::operator ==(const Text &other) const {
   return data == other.data;
 }
 
-Char::Char():
-rune(0), attributes(RgbNone, RgbNone, {}, default_)
-{}
-
-Char::Char(Unicode c, const Rgb &fg, const Rgb &bg, const Attributes &attr, const AttributeMode &mix):
-rune(c), attributes(fg, bg, attr, mix)
-{}
-
-Char::Char(Unicode c, const CharAttributes &attr):
-rune(c), attributes(attr)
-{}
-
-Char Char::withAttr(const CharAttributes &attr) const{
-  // Get a char with attributes set
-  Char result = *this;
-  result.attributes = attr;
-  return result;
-}
-
-bool Char::operator ==(const Char &other) const {
-  return rune == other.rune and attributes == other.attributes;
-}
-
-bool Char::operator !=(const Char &other) const {
-  return rune != other.rune or !(attributes == other.attributes);
-}
-
 Draw::Draw(u1 strength, u1 dash, bool roundedCorners):
 strength(strength), dash(dash), roundedCorners(roundedCorners)
 {}
@@ -536,15 +557,6 @@ Draw(strength, dash, roundedCorners),
 area(area)
 {}
 
-Text::Text(Char c, const Vector &size, const AttributeMode &mixDefault) {
-  if (c.attributes.mix == default_) {
-    c.attributes.mix = mixDefault;
-  }
-  /// Create a matrix of size @arg size filled with @arg c
-  auto _(rx::fill_n(size.y, rx::fill_n(size.x, c) | rx::to_vector()) | rx::to_vector());
-  data.assign(_.begin(), _.end());
-}
-
 Char Char::combine(
   const Char          &other,
   const AttributeMode &mixDefault,
@@ -552,7 +564,7 @@ Char Char::combine(
   const AttributeMode &resetMix
 ) {
   // Combine characters
-  auto mix_ =
+  const auto mix_ =
     (overrideMix == default_)?
       (other.attributes.mix == default_)?
         mixDefault
@@ -560,7 +572,7 @@ Char Char::combine(
         other.attributes.mix
     :
       overrideMix;
-  auto rune_ = (other.rune == NoneRune)? rune: other.rune;
+  const auto rune_ = (other.rune == NoneRune)? rune: other.rune;
   Char result;
   switch (mix_) {
 
@@ -608,128 +620,10 @@ Char Char::combine(
   return result;
 }
 
-void Text::extend(const Vector &size, const Char &fill) {
-  if (width() > 0) {
-    for (Dim l = 0; l < height(); ++l) {
-      fill_n(back_inserter(data[l]), size.x - data[l].size(), fill);
-    }
-  }
-  fill_n(back_inserter(data), size.y - data.size(), rx::fill_n(size.x, fill) | rx::to_vector());
-}
-
-void Text::patch(
-  const Text &other,
-  const Vector &position,
-  const AttributeMode &mixDefaultMode,
-  const AttributeMode &overrideMixMode,
-  const AttributeMode &resetMixMode
-) {
-  assert(data.data() != other.data.data());
-  Dim
-    xdest = max(Dim(0), position.x),
-    xbegin = xdest - position.x,
-    ydest = max(Dim(0), position.y),
-    ybegin = ydest - position.y,
-    width_ = min(width() - xdest, other.width() - xbegin),
-    height_ = min(height() - ydest, other.height() - ybegin);
-  for (Dim l = 0; l < height_; ++l) {
-    Dim owidth = min(Dim(other.data[ybegin + l].size()), width_);
-    if (xdest + owidth > 0) {
-      auto dest = data[ydest + l].begin() + xdest;
-      auto source = other.data[ybegin + l].begin();
-      while (dest != data[ydest + l].begin() + xdest + owidth) {
-        *dest++ = dest->combine(*source++, mixDefaultMode, overrideMixMode, resetMixMode);
-      }
-    }
-  }
-}
-
-void Text::patchArea(
-  const Text          &other,
-  const Rectangle     &area,
-  const AttributeMode &mixDefault,
-  const AttributeMode &overrideMix,
-  const AttributeMode &resetMix
-) {
-  if (data.data() == other.data.data())
-    throw range_error("This and other are the same");
-  const Rectangle thisDimensions{0, 0, width(), height()};
-  auto area_{area.defaultTo(thisDimensions)};
-  if ((area_ & Rectangle{0, 0, this->width(), this->height()}) != area_)
-    throw runtime_error("area must be within text");
-  auto data_ = other.data.begin();
-  for (Dim l = 0; l < area_.height(); ++l) {
-    auto
-      source = data_->begin(),
-      sourceEnd = data_->end();
-    auto
-      dest = data[area_.y1 + l].begin() + area_.x1,
-      limit = data[area_.y1 + l].begin() + size_t(area_.x2);
-    while (dest != limit && source != sourceEnd) {
-      *dest++ = dest->combine(*source++, mixDefault, overrideMix, resetMix);
-    }
-    ++data_;
-  }
-}
-
-void Text::setAttr(const CharAttributes &attr, const Rectangle &area, const AttributeMode &setMix) {
-  Rectangle limits = {0, 0, width(), height()};
-  optional<Rectangle> area_ = area.defaultTo(limits) & limits;
-  if (area_) {
-    Rectangle area = area_.value();
-    for (Dim l = area.y1; l < area.y2; ++l) {
-      for (Dim c = area.x1; c < area.x2; ++c) {
-        data[l][c] = data[l][c].combine(Char(NoneRune, attr), default_, ignore, setMix);
-      }
-    }
-  }
-}
-
-Text Text::operator [](const Rectangle &area) const {
-  optional<Rectangle> area_ = area & Rectangle(0, 0, width(), height());
-  Text result;
-  if (area_) {
-    Rectangle area = area_.value();
-    for (Dim line = area.y1; line < min(height(), area.y2); ++line) {
-      result.data.push_back(
-        String(
-          data[line].begin() + area.x1,
-          data[line].begin() + max(area.x1, min(area.x2, Dim(data[line].size())))
-        )
-      );
-    }
-  }
-  return result;
-}
-
-Char Text::operator [](const Vector &position) const {
-  Vector position_ = size().position(position);
-  if (position_.y < height() && position_.x < width()) {
-    return data[position_.y][position_.x];
-  }
-  return Null;
-}
-
-Char &Text::operator [](const Vector &position) {
-  Vector position_ = size().position(position);
-  if (position_.y < height() && position_.x < width()) {
-    return data[position_.y][position_.x];
-  }
-  throw range_error(fmt::format("Position {} is outside text dimensions {}", string(position), string(size())));
-}
-
-Char &Text::at(const Vector &position) {
-  Vector position_ = size().position(position);
-  if (position_.y < height() && position_.x < width()) {
-    return data[position_.y][position_.x];
-  }
-  throw range_error(fmt::format("Position {} is outside text dimensions {}", string(position), string(size())));
-}
-
 static unordered_map<Unicode, QuadTuple> initializedBox2Quad() {
   unordered_map<Unicode, QuadTuple> result(_quadInitializer.size() * 2);
   // TODO: try copy()
-  for (auto &[rune, quad]: _quadInitializer) {
+  for (const auto &[rune, quad]: _quadInitializer) {
     result[rune] = quad;
   }
   return result;
@@ -780,8 +674,129 @@ void Char::drawLineChar(const Segments &segments, u1 dash, bool roundedCorners) 
   }
 }
 
+void Text::extend(const Vector &size, const Char &fill) {
+  if (width() > 0) {
+    for (Dim l = 0; l < height(); ++l) {
+      fill_n(back_inserter(data[l]), size.x - data[l].size(), fill);
+    }
+  }
+  fill_n(back_inserter(data), size.y - data.size(), String(size.x, fill));
+}
 
-Rectangle drawHorizontalLine(
+void Text::fill(const Char &fill) {
+  const auto line{String(width(), fill)};
+  fill_n(data.begin(), height(), line);
+}
+
+void Text::patch(
+  const Text &other,
+  const Vector &position,
+  const AttributeMode &mixDefaultMode,
+  const AttributeMode &overrideMixMode,
+  const AttributeMode &resetMixMode
+) {
+  assert(data.data() != other.data.data());
+  const Dim
+    xdest = std::max(Dim(0), position.x),
+    xbegin = xdest - position.x,
+    ydest = std::max(Dim(0), position.y),
+    ybegin = ydest - position.y,
+    width_ = std::min(width() - xdest, other.width() - xbegin),
+    height_ = std::min(height() - ydest, other.height() - ybegin);
+  for (Dim l = 0; l < height_; ++l) {
+    const Dim owidth = std::min(Dim(other.data[ybegin + l].size()), width_);
+    if (xdest + owidth > 0) {
+      auto dest = data[ydest + l].begin() + xdest;
+      auto source = other.data[ybegin + l].begin();
+      while (dest != data[ydest + l].begin() + xdest + owidth) {
+        *dest++ = dest->combine(*source++, mixDefaultMode, overrideMixMode, resetMixMode);
+      }
+    }
+  }
+}
+
+void Text::patchArea(
+  const Text          &other,
+  const Rectangle     &area,
+  const AttributeMode &mixDefault,
+  const AttributeMode &overrideMix,
+  const AttributeMode &resetMix
+) {
+  if (data.data() == other.data.data())
+    throw range_error("This and other are the same");
+  const Rectangle thisDimensions{0, 0, width(), height()};
+  const auto area_{area.defaultTo(thisDimensions)};
+  if ((area_ & Rectangle{0, 0, this->width(), this->height()}) != area_)
+    throw runtime_error("area must be within text");
+  auto data_ = other.data.begin();
+  for (Dim l = 0; l < area_.height(); ++l) {
+    auto source = data_->begin();
+    const auto sourceEnd = data_->end();
+    auto
+      dest = data[area_.y1 + l].begin() + area_.x1,
+      limit = data[area_.y1 + l].begin() + size_t(area_.x2);
+    while (dest != limit && source != sourceEnd) {
+      *dest++ = dest->combine(*source++, mixDefault, overrideMix, resetMix);
+    }
+    ++data_;
+  }
+}
+
+void Text::setAttr(const CharAttributes &attr, const Rectangle &area, const AttributeMode &setMix) {
+  const Rectangle limits = {0, 0, width(), height()};
+  const std::optional<Rectangle> area_ = area.defaultTo(limits) & limits;
+  if (area_) {
+    const Rectangle area = area_.value();
+    for (Dim l = area.y1; l < area.y2; ++l) {
+      for (Dim c = area.x1; c < area.x2; ++c) {
+        data[l][c] = data[l][c].combine(Char(NoneRune, attr), default_, ignore, setMix);
+      }
+    }
+  }
+}
+
+Text Text::operator [](const Rectangle &area) const {
+  const std::optional<Rectangle> area_ = area & Rectangle(0, 0, width(), height());
+  Text result;
+  if (area_) {
+    const Rectangle area = area_.value();
+    for (Dim line = area.y1; line < std::min(height(), area.y2); ++line) {
+      result.data.push_back(
+        String(
+          data[line].begin() + area.x1,
+          data[line].begin() + std::max(area.x1, std::min(area.x2, Dim(data[line].size())))
+        )
+      );
+    }
+  }
+  return result;
+}
+
+Char Text::operator [](const Vector &position) const {
+  const Vector position_ = size().position(position);
+  if (position_.y < height() && position_.x < width()) {
+    return data[position_.y][position_.x];
+  }
+  return Null;
+}
+
+Char &Text::operator [](const Vector &position) {
+  const Vector position_ = size().position(position);
+  if (position_.y < height() && position_.x < width()) {
+    return data[position_.y][position_.x];
+  }
+  throw range_error(fmt::format("Position {} is outside text dimensions {}", string(position), string(size())));
+}
+
+Char &Text::at(const Vector &position) {
+  const Vector position_ = size().position(position);
+  if (position_.y < height() && position_.x < width()) {
+    return data[position_.y][position_.x];
+  }
+  throw range_error(fmt::format("Position {} is outside text dimensions {}", string(position), string(size())));
+}
+
+static Rectangle drawHorizontalLine(
   Text &text,
   const Vector &initialPosition,
   Dim endPosition,
@@ -791,8 +806,9 @@ Rectangle drawHorizontalLine(
   bool extendBegin,
   bool extendEnd
 ) {
-  Dim e = (endPosition == DimHigh? text.width(): endPosition + (endPosition < 0? text.width(): 0));
-  Dim b = initialPosition.x;
+  const Dim
+    e = (endPosition == DimHigh? text.width(): endPosition + (endPosition < 0? text.width(): 0)),
+    b = initialPosition.x;
   for (Dim p = b; p < e; ++p)
     if (p == b and not extendBegin)
       text.at(Vector(p, initialPosition.y)).drawLineChar({0, 0, 0, strength}, dash, roundedCorners);
@@ -803,7 +819,7 @@ Rectangle drawHorizontalLine(
   return Rectangle(initialPosition.x, initialPosition.y, initialPosition.x + e + 1, initialPosition.y + 1);
 }
 
-Rectangle drawVerticalLine(
+static Rectangle drawVerticalLine(
   Text &text,
   const Vector &initialPosition,
   Dim endPosition,
@@ -813,8 +829,9 @@ Rectangle drawVerticalLine(
   bool extendBegin,
   bool extendEnd
 ) {
-  Dim e = (endPosition == DimHigh? text.height(): endPosition + (endPosition < 0? text.height(): 0));
-  Dim b = initialPosition.y;
+  const Dim
+    e = (endPosition == DimHigh? text.height(): endPosition + (endPosition < 0? text.height(): 0)),
+    b = initialPosition.y;
   for (Dim p = initialPosition.y; p < e; ++p)
     if (p == b and not extendBegin)
       text.at(Vector(initialPosition.x, p)).drawLineChar({0, strength, 0, 0}, dash, roundedCorners);
@@ -826,39 +843,23 @@ Rectangle drawVerticalLine(
 }
 
 Rectangle Text::line(
-    const Vector &position,
-    Dim endPosition,
-    Orientation orientation,
+    const Line &line,
     u1 strength,
     u1 dash,
-    bool roundedCorners,
-    bool extendBegin,
-    bool extendEnd
+    bool roundedCorners
 ) {
   if (strength < 1 or strength > 2)
     throw range_error(fmt::format("Invalid strength: {}", strength));
-  if (orientation == Horizontal)
-    return drawHorizontalLine(
-      *this,
-      position,
-      endPosition,
-      strength,
-      dash,
-      roundedCorners,
-      extendBegin,
-      extendEnd
-    );
-  else
-    return drawVerticalLine(
-      *this,
-      position,
-      endPosition,
-      strength,
-      dash,
-      roundedCorners,
-      extendBegin,
-      extendEnd
-    );
+  return (line.orientation == Horizontal? drawHorizontalLine: drawVerticalLine)(
+    *this,
+    line.position,
+    line.endPosition,
+    strength,
+    dash,
+    roundedCorners,
+    line.extendBegin,
+    line.extendEnd
+  );
 }
 
 ///
@@ -870,46 +871,62 @@ Rectangle Text::line(
 /// @param[in]  m     Maximum
 ///
 /// @return     Value clipped to maximum
-int limit(int v, int m) {
-  return v < 0? v + m: min(v, m - 1);
+static int limit(int v, int m) {
+  return v < 0? v + m: std::min(v, m - 1);
 }
 
 vector<Rectangle> Text::box(const Box &box) {
   vector<Rectangle> result;
-  Rectangle area = box.area.defaultTo(Rectangle(0, 0, width(), height()));
+  const Rectangle area = box.area.defaultTo(Rectangle(0, 0, width(), height()));
   return vector<Rectangle>{
     // top
     line(
-      Vector(area.x1, area.y1),
-      limit(area.x2, area.width() + 1),
-      Horizontal,
+      Line{
+        Vector(area.x1, area.y1),
+        limit(area.x2, area.width() + 1),
+        Horizontal,
+        false,
+        false
+      },
       box.strength,
       box.dash,
       box.roundedCorners
     ),
     // bottom
     line(
-      Vector(area.x1, area.y2 - 1),
-      limit(area.x2, area.width() + 1),
-      Horizontal,
+      Line{
+        Vector(area.x1, area.y2 - 1),
+        limit(area.x2, area.width() + 1),
+        Horizontal,
+        false,
+        false
+      },
       box.strength,
       box.dash,
       box.roundedCorners
     ),
     // left
     line(
-      Vector(area.x1, area.y1),
-      limit(area.y2, area.height() + 1),
-      Vertical,
+      Line{
+        Vector(area.x1, area.y1),
+        limit(area.y2, area.height() + 1),
+        Vertical,
+        false,
+        false
+      },
       box.strength,
       box.dash,
       box.roundedCorners
     ),
     // right
     line(
-      Vector(area.x2 - 1, area.y1),
-      limit(area.y2, area.height() + 1),
-      Vertical,
+      Line{
+        Vector(area.x2 - 1, area.y1),
+        limit(area.y2, area.height() + 1),
+        Vertical,
+        false,
+        false
+      },
       box.strength,
       box.dash,
       box.roundedCorners
