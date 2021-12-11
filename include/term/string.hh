@@ -22,6 +22,7 @@
 #include <fmt/core.h>
 
 #include "text.hh"
+#include "utf8cpp/utf8/cpp11.h"
 
 namespace jwezel {
 
@@ -30,4 +31,7 @@ std::string str(const T &v) {
   return string(v);
 }
 
-}
+std::string repr(const std::string_view &str);
+
+} // namespace
+

@@ -391,6 +391,24 @@ Dim diff(Dim x1, Dim x2);
 /// @return     Rectangle from centering operation
 Rectangle centered(const Vector &one, const Vector &other);
 
+///
+/// Minimum of two Vectors
+///
+/// @param[in]  v1    Vector 1
+/// @param[in]  v2    Vector 2
+///
+/// @return     Minimum
+Vector min(const Vector &v1, const Vector &v2);
+
+///
+/// Maximum of two Vectors
+///
+/// @param[in]  v1    Vector 1
+/// @param[in]  v2    Vector 2
+///
+/// @return     Maximum
+Vector max(const Vector &v1, const Vector &v2);
+
 extern const Rectangle RectangleDefault;
 extern const Rectangle RectangleMax;
 extern const Vector VectorMin;

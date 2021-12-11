@@ -37,11 +37,11 @@ namespace doctest {
     }
   };
 
-  template<> struct StringMaker<Screen::updates> {
-    static String convert(const Screen::updates& value) {
+  template<> struct StringMaker<Updates> {
+    static String convert(const Updates& value) {
       return fmt::format(
         "[{}]",
-        fmt::join(value | ranges::views::transform(str<Screen::update>) | ranges::_to_::to<vector<string>>(), ", ")
+        fmt::join(value | ranges::views::transform(str<Update>) | ranges::_to_::to<vector<string>>(), ", ")
       ).c_str();
     }
   };
@@ -53,19 +53,19 @@ TEST_CASE("Screen") {
     CHECK_EQ(s.zorder.size(), 1);
     CHECK_EQ(s.screen, s.zorder[0]);
     CHECK_EQ(s.screen, s.focusWindow);
-    CHECK_EQ(string(*s.screen->text), "          \n          \n          \n          \n          \n          \n");
+    CHECK_EQ(string(s.screen->text), "          \n          \n          \n          \n          \n          \n");
   }
   SUBCASE("AddWindow") {
     auto [win1, updates]{s.addWindow(Rectangle{1, 1, 9, 5})};
-    auto [expwin1, expupdates]{make_tuple(s.zorder[1], Screen::updates{{{1, 1}, Text("        \n        \n        \n        ")}})};
+    auto [expwin1, expupdates]{make_tuple(s.zorder[1], Updates{{{1, 1}, Text("        \n        \n        \n        ")}})};
     CHECK_EQ(win1, expwin1);
     CHECK_EQ(updates, expupdates);
     CHECK_EQ(s.zorder.size(), 2);
     CHECK_EQ(s.zorder[1], s.focusWindow);
-    CHECK_EQ(string(*s.zorder[1]->text), "        \n        \n        \n        \n");
+    CHECK_EQ(string(s.zorder[1]->text), "        \n        \n        \n        \n");
     SUBCASE("AddWindow below") {
       auto [win2, updates]{s.addWindow(Rectangle{2, 0, 8, 6}, win1)};
-      auto [expwin, expupdates]{make_tuple(s.zorder[1], Screen::updates{{{2, 0}, Text("      ")}, {{2, 5}, Text("      ")}})};
+      auto [expwin, expupdates]{make_tuple(s.zorder[1], Updates{{{2, 0}, Text("      ")}, {{2, 5}, Text("      ")}})};
       CHECK_EQ(win2, expwin);
       CHECK_EQ(updates, expupdates);
       CHECK_EQ(s.zorder.size(), 3);
@@ -73,7 +73,7 @@ TEST_CASE("Screen") {
       CHECK_EQ(s.zorder[1], win2);
       SUBCASE("DeleteWindow") {
         auto updates{s.deleteWindow(win2)};
-        auto expupdates{Screen::updates{{{2, 0}, Text("      ")}, {{2, 5}, Text("      ")}}};
+        auto expupdates{Updates{{{2, 0}, Text("      ")}, {{2, 5}, Text("      ")}}};
         CHECK_EQ(updates, expupdates);
         CHECK_EQ(s.zorder.size(), 2);
         CHECK_EQ(s.zorder[1], s.focusWindow);
@@ -84,7 +84,7 @@ TEST_CASE("Screen") {
         ranges::actions::sort(updates);
         CHECK_EQ(
           updates,
-          Screen::updates{
+          Updates{
             {
               {{2, 0}, Text("  ")},
               {{2, 5}, Text("  ")},
@@ -99,7 +99,7 @@ TEST_CASE("Screen") {
         auto updates{s.fill(win1, Char('1'))};
         CHECK_EQ(
           updates,
-          Screen::updates{
+          Updates{
             {
               {{1, 1}, Text("11111111\n11111111\n11111111\n11111111")}
             }
@@ -111,7 +111,7 @@ TEST_CASE("Screen") {
         ranges::actions::sort(updates);
         CHECK_EQ(
           updates,
-          Screen::updates{
+          Updates{
             {
               {{2, 0}, Text("222222")},
               {{2, 5}, Text("222222")},
@@ -123,7 +123,7 @@ TEST_CASE("Screen") {
         auto updates{s.text(win1, {0, 0}, Text("aaa\nbbbb"))};
         CHECK_EQ(
           updates,
-          Screen::updates{
+          Updates{
             {
               {{1, 1}, Text("aaa\nbbbb")}
             }
@@ -134,7 +134,7 @@ TEST_CASE("Screen") {
         auto updates{s.text(win2, {0, 0}, Text("qqq\nqqq\nqqq\nqqq\nqqq\nwwww"))};
         CHECK_EQ(
           updates,
-          Screen::updates{
+          Updates{
             {
               {{2, 0}, Text("qqq ")}, // space here because update is a rectangle
               {{2, 5}, Text("wwww")}
@@ -146,14 +146,14 @@ TEST_CASE("Screen") {
         auto updates{s.line(win1, Line{{0, 0}, 8, Horizontal, false, false}, 2)};
         CHECK_EQ(
           updates,
-          Screen::updates{{{{1, 1}, Text("╺━━━━━━╸")}}}
+          Updates{{{{1, 1}, Text("╺━━━━━━╸")}}}
         );
       }
       SUBCASE("Line in covered window") {
         auto updates{s.line(win2, Line{{0, 0}, 6, Vertical, true, true}, 2)};
         CHECK_EQ(
           updates,
-          Screen::updates{{{{2, 0}, Text("┃")}, {{2, 5}, Text("┃")}}}
+          Updates{{{{2, 0}, Text("┃")}, {{2, 5}, Text("┃")}}}
         );
       }
       SUBCASE("Box") {
@@ -161,7 +161,7 @@ TEST_CASE("Screen") {
         ranges::actions::sort(updates);
         CHECK_EQ(
           updates,
-          Screen::updates{
+          Updates{
             {
               {{1, 1}, Text("┌──────┐")},
               {{1, 1}, Text("┌\n│\n│\n└")},
@@ -176,7 +176,7 @@ TEST_CASE("Screen") {
         ranges::actions::sort(updates);
         CHECK_EQ(
           updates,
-          Screen::updates{
+          Updates{
             {
               {{2, 0}, Text("┌────┐")},
               {{2, 0}, Text("┌")},

@@ -69,7 +69,7 @@ struct Window {
   vector<Rectangle> box(const Box &box);
 
   Rectangle area;
-  unique_ptr<Text> text;
+  Text text;
   vector<Rectangle> fragments;
 };
 

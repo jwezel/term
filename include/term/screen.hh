@@ -1,7 +1,11 @@
 #include <exception>
-#include <geometry.hh>
+#include <memory>
 #include <tuple>
-#include <window.hh>
+#include <iostream>
+
+#include "geometry.hh"
+#include "window.hh"
+#include "update.hh"
 
 #pragma once
 
@@ -17,44 +21,6 @@ struct Fragment {
 struct ScreenError: public exception {};
 
 struct Screen {
-  Window *screen;
-  vector<Window *> zorder;
-  Window *focusWindow;
-
-  struct update {
-    Vector position;
-    Text text;
-
-    operator string() const {
-      return string(position) + ": " + text.repr();
-    }
-
-    bool operator ==(const update &other) const {
-      return position == other.position and text == other.text;
-    }
-
-    bool operator !=(const update &other) const {
-      return !(*this == other);
-    }
-
-    bool operator <(const update &other) const {
-      return make_tuple(position.x, position.y) < make_tuple(other.position.x, other.position.y);
-    }
-
-    bool operator >(const update &other) const {
-      return other < *this;
-    }
-
-    bool operator <=(const update &other) const {
-      return !(*this < other);
-    }
-
-    bool operator >=(const update &other) const {
-      return !(other < *this);
-    }
-  };
-
-  using updates = vector<update>;
 
   ///
   /// Constructor
@@ -76,7 +42,7 @@ struct Screen {
   /// @param[in]  fragments  The fragments
   ///
   /// @return     vector with updates
-  updates screenUpdates(const vector<Fragment> &fragments);
+  Updates screenUpdates(const vector<Fragment> &fragments);
 
   ///
   /// Set window focus
@@ -109,7 +75,7 @@ struct Screen {
   /// @param      parent  The parent
   ///
   /// @return     Tuple with window pointer and screen updates
-  tuple<Window *, updates> addWindow(const Rectangle &area={-1, -1, -1, -1}, Window *below=0, Window *parent=0);
+  tuple<Window *, Updates> addWindow(const Rectangle &area={-1, -1, -1, -1}, Window *below=0, Window *parent=0);
 
   ///
   /// Delete window
@@ -117,7 +83,7 @@ struct Screen {
   /// @param      window  The window
   ///
   /// @return     Screen updates
-  updates deleteWindow(Window *window);
+  Updates deleteWindow(Window *window);
 
   ///
   /// Move or reshape window
@@ -126,7 +92,7 @@ struct Screen {
   /// @param[in]  area    The area
   ///
   /// @return     Screen updates
-  updates reshapeWindow(Window *window, const Rectangle &area);
+  Updates reshapeWindow(Window *window, const Rectangle &area);
 
   ///
   /// Fill window with character
@@ -136,7 +102,7 @@ struct Screen {
   ///
   /// @return     Screen updates
   ///
-  updates fill(Window *window, const Char &fillChar=Space);
+  Updates fill(Window *window, const Char &fillChar=Space);
 
   ///
   /// Write text to window
@@ -146,7 +112,7 @@ struct Screen {
   /// @param[in]  text      The text
   ///
   /// @return     Screen updates
-  updates text(Window *window, const Vector &position, const Text &text);
+  Updates text(Window *window, const Vector &position, const Text &text);
 
   ///
   /// Draw line
@@ -159,11 +125,39 @@ struct Screen {
   ///
   /// @return     Screen updates
   ///
-  updates line(Window * window, const Line &line, u1 strength=1, u1 dash=0, bool roundedCorners=false);
+  Updates line(Window * window, const Line &line, u1 strength=1, u1 dash=0, bool roundedCorners=false);
 
-  updates box(Window *window, const Box &box);
+  ///
+  /// Draw box
+  ///
+  /// @param      window  The window
+  /// @param[in]  box     The box
+  ///
+  /// @return     Screen updates
+  Updates box(Window *window, const Box &box);
 
   Vector relative(Window *window, const Vector &position);
+
+  ///
+  /// Get window *
+  ///
+  /// @param[in]  window  The window
+  ///
+  /// @return     Window *
+  Window * operator[](int window) const;
+
+  ///
+  /// Get window ID
+  ///
+  /// @param[in]  window  The window
+  ///
+  /// @return     Window ID
+  int operator[](const Window *window) const;
+
+  Window *screen;
+  vector<Window *> zorder;
+  vector<unique_ptr<Window>> windows;
+  Window *focusWindow;
 };
 
 } // namespace

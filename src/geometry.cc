@@ -1,4 +1,5 @@
 // Geometric shapes
+#include <algorithm>
 #include <cstdint>
 #include <cassert>
 #include <string>
@@ -89,13 +90,20 @@ Vector Vector::down(Dim shift) const {
 }
 
 Vector Vector::operator |(const Vector &v2) const {
-  return Vector(max(x, v2.x), max(y, v2.y));
+  return Vector(std::max(x, v2.x), std::max(y, v2.y));
+}
+
+Vector min(const Vector &v1, const Vector &v2) {
+  return Vector{Dim(std::min(v1.x, v2.x)), Dim(std::min(v1.y, v2.y))};
+}
+
+Vector max(const Vector &v1, const Vector &v2) {
+  return Vector{Dim(std::max(v1.x, v2.x)), Dim(std::max(v1.y, v2.y))};
 }
 
 Rectangle::Rectangle(Dim x1, Dim y1, Dim x2, Dim y2):
 x1(x1), y1(y1), x2(x2), y2(y2)
-{
-}
+{}
 
 Rectangle::Rectangle(const Vector &v1, const Vector &v2):
 x1(v1.x), y1(v1.y), x2(v2.x), y2(v2.y)
@@ -120,10 +128,10 @@ std::ostream& operator <<(std::ostream& os, const Rectangle &rect) {
 
 optional<Rectangle> Rectangle::operator &(const Rectangle &other) const {
   const Dim
-    rx1 = max(x1, other.x1),
-    ry1 = max(y1, other.y1),
-    rx2 = min(x2, other.x2),
-    ry2 = min(y2, other.y2);
+    rx1 = std::max(x1, other.x1),
+    ry1 = std::max(y1, other.y1),
+    rx2 = std::min(x2, other.x2),
+    ry2 = std::min(y2, other.y2);
   if (rx1 < rx2 and ry1 < ry2)
     return Rectangle(rx1, ry1, rx2, ry2);
   else
@@ -131,7 +139,7 @@ optional<Rectangle> Rectangle::operator &(const Rectangle &other) const {
 }
 
 bool Rectangle::intersects(const Rectangle &other) const {
-  return max(x1, other.x1) < min(x2, other.x2) and max(y1, other.y1) < min(y2, other.y2);
+  return std::max(x1, other.x1) < std::min(x2, other.x2) and std::max(y1, other.y1) < std::min(y2, other.y2);
 }
 
 Rectangle Rectangle::operator +(const Vector &vector) const {
@@ -143,14 +151,14 @@ Rectangle Rectangle::operator -(const Vector &vector) const {
 }
 
 Rectangle Rectangle::operator |(const Rectangle &other) const {
-  return Rectangle(min(x1, other.x1), min(y1, other.y1), max(x2, other.x2), max(y2, other.y2));
+  return Rectangle(std::min(x1, other.x1), std::min(y1, other.y1), std::max(x2, other.x2), std::max(y2, other.y2));
 }
 
 const Rectangle &Rectangle::operator |=(const Rectangle &r2) {
-  x1 = min(x1, r2.x1);
-  y1 = min(y1, r2.y1);
-  x2 = max(x2, r2.x2);
-  y2 = max(y2, r2.y2);
+  x1 = std::min(x1, r2.x1);
+  y1 = std::min(y1, r2.y1);
+  x2 = std::max(x2, r2.x2);
+  y2 = std::max(y2, r2.y2);
   return *this;
 }
 
@@ -158,9 +166,9 @@ void Rectangle::intersect(vector<Rectangle> &result, const Rectangle &other) con
   if (y1 < other.y1)
     result.push_back(Rectangle(x1, y1, x2, other.y1));
   if (x1 < other.x1)
-    result.push_back(Rectangle(x1, max(y1, other.y1), other.x1, min(y2, other.y2)));
+    result.push_back(Rectangle(x1, std::max(y1, other.y1), other.x1, std::min(y2, other.y2)));
   if (x2 > other.x2)
-    result.push_back(Rectangle(other.x2, max(y1, other.y1), x2, min(y2, other.y2)));
+    result.push_back(Rectangle(other.x2, std::max(y1, other.y1), x2, std::min(y2, other.y2)));
   if (y2 > other.y2)
     result.push_back(Rectangle(x1, other.y2, x2, y2));
 }

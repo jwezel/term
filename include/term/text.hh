@@ -13,9 +13,10 @@
 #include <vector>
 #include <string>
 
+#include <fmt/core.h> // TESTING ONLY
+
 #include <basic.hh>
 #include <geometry.hh>
-#include <fmt/core.h> // TESTING ONLY
 
 namespace jwezel {
 
@@ -345,6 +346,8 @@ struct Char {
   /// @return     Whether Chars are unequal
   ///
   bool operator !=(const Char &other) const;
+
+  string utf8() const;
 };
 
 const Char

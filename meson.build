@@ -13,20 +13,23 @@ add_project_arguments('-Wno-parentheses', language: ['c', 'cpp'])
 lib_args = ['-DBUILDING_TERM']
 
 sources = [
+  'src/display.cc',
   'src/geometry.cc',
+  'src/keyboard.cc',
   'src/screen.cc',
   'src/text.cc',
   'src/window.cc',
-  'src/keyboard.cc'
+  'src/string.cc',
 ]
 headers = [
   'include/term/basic.hh',
+  'include/term/display.hh',
   'include/term/geometry.hh',
+  'include/term/keyboard.hh',
   'include/term/screen.hh',
   'include/term/string.hh',
   'include/term/text.hh',
   'include/term/window.hh',
-  'include/term/keyboard.hh',
 ]
 
 incdir = include_directories([
@@ -62,6 +65,7 @@ test_exe = executable(
   'test/test_text.cc',
   'test/test_screen.cc',
   'test/test_keyboard.cc',
+  'test/test_display.cc',
   link_with: shlib,
   dependencies: [test_dep, lib_dep],
   include_directories: incdir

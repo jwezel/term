@@ -53,7 +53,6 @@ enum Key: Unicode {
   ShiftBackspace,
   ShiftEnter,
   ShiftTab,
-  ShiftSystem,
   ShiftF1,
   ShiftF2,
   ShiftF3,
@@ -79,7 +78,6 @@ enum Key: Unicode {
   CtrlBackspace,
   CtrlEnter,
   CtrlTab,
-  CtrlSystem,
   CtrlF1,
   CtrlF2,
   CtrlF3,
@@ -105,7 +103,6 @@ enum Key: Unicode {
   CtrlShiftBackspace,
   CtrlShiftEnter,
   CtrlShiftTab,
-  CtrlShiftSystem,
   CtrlShiftF1,
   CtrlShiftF2,
   CtrlShiftF3,
@@ -152,11 +149,11 @@ struct Keyboard
   /// Constructor
   ///
   /// @param[in]  device  Terminal device
-  Keyboard(const std::string &device="/dev/tty");
+  Keyboard(int device=0);
 
   ///
   /// Destructor
-  ~Keyboard();
+  ~Keyboard() = default;
 
   ///
   /// Set terminal to raw mode

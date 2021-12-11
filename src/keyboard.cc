@@ -1,5 +1,7 @@
+#include <assert.h>
 #include <asm-generic/errno-base.h>
 #include <chrono>
+#include <cstdio>
 #include <cstring>
 #include <initializer_list>
 #include <iostream>
@@ -67,7 +69,6 @@ static vector<pair<string, Unicode>> KeyFromName {
   {"ShiftBackspace", Key::ShiftBackspace},
   {"ShiftEnter", Key::ShiftEnter},
   {"ShiftTab", Key::ShiftTab},
-  {"ShiftSystem", Key::ShiftSystem},
   {"ShiftF1", Key::ShiftF1},
   {"ShiftF2", Key::ShiftF2},
   {"ShiftF3", Key::ShiftF3},
@@ -93,7 +94,6 @@ static vector<pair<string, Unicode>> KeyFromName {
   {"CtrlBackspace", Key::CtrlBackspace},
   {"CtrlEnter", Key::CtrlEnter},
   {"CtrlTab", Key::CtrlTab},
-  {"CtrlSystem", Key::CtrlSystem},
   {"CtrlF1", Key::CtrlF1},
   {"CtrlF2", Key::CtrlF2},
   {"CtrlF3", Key::CtrlF3},
@@ -119,7 +119,6 @@ static vector<pair<string, Unicode>> KeyFromName {
   {"CtrlShiftBackspace", Key::CtrlShiftBackspace},
   {"CtrlShiftEnter", Key::CtrlShiftEnter},
   {"CtrlShiftTab", Key::CtrlShiftTab},
-  {"CtrlShiftSystem", Key::CtrlShiftSystem},
   {"CtrlShiftF1", Key::CtrlShiftF1},
   {"CtrlShiftF2", Key::CtrlShiftF2},
   {"CtrlShiftF3", Key::CtrlShiftF3},
@@ -173,6 +172,7 @@ static std::vector<pair<std::string, Unicode>> keyTranslations {
   {"\x7f", Key::Backspace},
   {"\x0d", Key::Enter},
   {"\x07", Key::Tab},
+  // {"", Key::System},
   {"\x1bOP", Key::F1},
   {"\x1bOQ", Key::F2},
   {"\x1bOR", Key::F3},
@@ -198,7 +198,6 @@ static std::vector<pair<std::string, Unicode>> keyTranslations {
   // {"", Key::ShiftBackspace},
   {"\x1bOM", Key::ShiftEnter},
   {"\x1b[Z", Key::ShiftTab},
-  // {"", Key::ShiftSystem},
   {"\x1bO2P", Key::ShiftF1},
   {"\x1bO2Q", Key::ShiftF2},
   {"\x1bO2R", Key::ShiftF3},
@@ -224,7 +223,6 @@ static std::vector<pair<std::string, Unicode>> keyTranslations {
   // {"", Key::CtrlBackspace},
   // {"", Key::CtrlEnter},
   // {"", Key::CtrlTab},
-  // {"", Key::CtrlSystem},
   {"\x1bO5P", Key::CtrlF1},
   {"\x1bO5Q", Key::CtrlF2},
   {"\x1bO5R", Key::CtrlF3},
@@ -250,7 +248,6 @@ static std::vector<pair<std::string, Unicode>> keyTranslations {
   // {"", Key::CtrlShiftBackspace},
   // {"", Key::CtrlShiftEnter},
   // {"", Key::CtrlShiftTab},
-  // {"", Key::CtrlShiftSystem},
   {"\x1bO6P", Key::CtrlShiftF1},
   {"\x1bO6Q", Key::CtrlShiftF2},
   {"\x1bO6R", Key::CtrlShiftF3},
@@ -290,6 +287,8 @@ static std::vector<pair<std::string, Unicode>> keyTranslations {
   {"\x1b\x1b[24~", Key::AltF12}
 };
 
+//~Static functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ///
 /// Load key translations
 ///
@@ -317,25 +316,13 @@ static Keyboard::PrefixNode loadKeyTranslations(const std::vector<pair<std::stri
   return result;
 }
 
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//~Keyboard~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Keyboard::Keyboard(const std::string &device):
+Keyboard::Keyboard(int device):
+keyBuffer(),
 keyPrefixes(loadKeyTranslations(keyTranslations)),
-fd(device.empty()? 0: open(device.c_str(), O_RDONLY)) {
-  if (fd == -1) {
-    throw std::system_error(
-      errno, std::system_category(), format("Could not open terminal \"{}\": {}", device, std::strerror(errno))
-    );
-  }
-}
-
-Keyboard::~Keyboard() {
-  if (fd > 2) {
-    if (close(fd)) {
-      print("Closing terminal (fd {}) failed: {}", fd, std::strerror(errno));
-    }
-  }
-}
+fd(device)
+{}
 
 void Keyboard::raw() {
   termios old;
@@ -371,7 +358,7 @@ void Keyboard::reset() {
 }
 
 Unicode Keyboard::key() {
-  Unicode key;
+  Unicode key{0};
   if (!keyBuffer.empty()) {
     key = keyBuffer.front();
     keyBuffer.pop_front();
@@ -384,7 +371,7 @@ Unicode Keyboard::key() {
   while (true) {
     int readLength;
     steady_clock::duration readTime;
-    auto onSublevel{node != &keyPrefixes}; // If true we should expect more keys in quick succession
+    auto onSublevel{node != &keyPrefixes}; // If true expect more keys in quick succession
     if (onSublevel) {
       auto st{fcntl(fd, F_SETFL, fcntl(0, F_GETFL) | O_NONBLOCK)};
       if (st) print("fcntl(F_SETFL, O_NONBLOCK) returned {}", st);
@@ -398,14 +385,14 @@ Unicode Keyboard::key() {
         if (errno != EAGAIN) {
           throw std::system_error(errno, std::system_category(), format("Could not get key: {}", fd, std::strerror(errno)));
         }
-        // Wait twice 100ms for a key, then give up
+        // Wait twice for a key, then give up
         if (attempt++ > 1) {
           break;
         }
-        sleep_for(100ms);
-      } else if (inputKey == '\xff') {
-        // '\xff' simulates a delay of 100 ms
-        sleep_for(100ms);
+        sleep_for(1ms); // TODO: make this much smaller (based on 19200 cps) and configurable
+      } else if (readLength > 0 and inputKey == '\xff') {
+        // '\xff' simulates a delay
+        sleep_for(1ms);
       } else {
         break;
       }
@@ -421,7 +408,7 @@ Unicode Keyboard::key() {
       inputBuffer.push_back(inputKey);
     }
     auto subnodeIt{node->nodes.find(inputKey)};
-    if (onSublevel and readTime > 200ms or subnodeIt == node->nodes.end()) {
+    if (onSublevel and readTime > 2ms or subnodeIt == node->nodes.end()) {
       copy(inputBuffer.begin(), inputBuffer.end(), back_inserter(keyBuffer));
       break;
     }
@@ -430,6 +417,9 @@ Unicode Keyboard::key() {
       keyBuffer.push_back(node->key);
       break;
     }
+  }
+  if (keyBuffer.empty()) {
+    throw runtime_error("Key buffer is empty");
   }
   key = keyBuffer.front();
   keyBuffer.pop_front();

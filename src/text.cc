@@ -391,9 +391,14 @@ Char::operator string() const {
   return format("'{}'{}", buffer, string(attributes));
 }
 
+string Char::utf8() const {
+  string result;
+  utf8::utf32to8(&rune, &rune + 1, back_inserter(result));
+  return result;
+}
+
 Text::Text(string_view str_, const Rgb &fg, const Rgb &bg, const Attributes &attr, const AttributeMode &mix) {
   const auto str{utf8::utf8to32(string(str_))};
-  // print("Text: \"{}\"\n", utf8::utf32to8(str));
   if (str.size() > 0) {
     const auto lines{str | views::split('\n') | _to_::to<vector<basic_string<Unicode>>>()};
     const size_t width = ranges::max(lines | views::transform([](std::basic_string_view<Unicode> line) {return line.size();}));
@@ -483,7 +488,7 @@ string Text::repr() const {
     for (const Char &char_: line) {
       runes.push_back(char_.rune < 32? char_.rune + 0x2400: char_.rune);
     }
-    runes.push_back(0x240a);
+    runes.push_back(L'¬');
     runes.push_back('\n');
     utf8::utf32to8(runes.begin(), runes.end(), back_inserter(result));
   }
@@ -677,10 +682,14 @@ void Char::drawLineChar(const Segments &segments, u1 dash, bool roundedCorners) 
 void Text::extend(const Vector &size, const Char &fill) {
   if (width() > 0) {
     for (Dim l = 0; l < height(); ++l) {
-      fill_n(back_inserter(data[l]), size.x - data[l].size(), fill);
+      if (size.x > Dim(data[l].size())) {
+        fill_n(back_inserter(data[l]), size.x - data[l].size(), fill);
+      }
     }
   }
-  fill_n(back_inserter(data), size.y - data.size(), String(size.x, fill));
+  if (size.y > Dim(data.size())) {
+    fill_n(back_inserter(data), size.y - data.size(), String(size.x, fill));
+  }
 }
 
 void Text::fill(const Char &fill) {

@@ -20,6 +20,7 @@
 #include <range/v3/view/single.hpp>
 #include <range/v3/view/transform.hpp>
 
+#include "geometry.hh"
 #include "screen.hh"
 #include "window.hh"
 
@@ -36,19 +37,23 @@ using namespace ranges;
 ///
 /// @return     vector<Fragment>
 static auto fragments_of(Window *window, const vector<Rectangle>&rectangles) {
-  return rectangles |
+  return
+    rectangles |
     views::transform(
       [window] (const Rectangle &area) {
         return Fragment{area, window};
       }
-    ) | to<vector>();
+    ) |
+    to<vector>();
 }
 
 Screen::Screen(const Rectangle &area):
 screen{new Window(area)},
 zorder{screen},
 focusWindow{screen}
-{}
+{
+  windows.push_back(unique_ptr<Window>(screen));
+}
 
 Fragment::operator string() const {
   return format("Fragment({})", string(area));
@@ -67,16 +72,16 @@ void Screen::split(const Rectangle &area, vector<Rectangle> &fragments1, const v
   }
 }
 
-Screen::updates Screen::screenUpdates(const vector<Fragment> &fragments) {
-  updates result;
+Updates Screen::screenUpdates(const vector<Fragment> &fragments) {
+  Updates result;
   result.reserve(fragments.size());
   for (const auto &fragment: fragments) {
     const auto area = fragment.area & zorder[0]->area;
     if (area) {
       result.emplace_back(
-        Screen::update{
+        Update{
           Vector(fragment.area.x1, fragment.area.y1),
-          (*fragment.window->text)[area.value() - Vector(fragment.window->area.x1, fragment.window->area.y1)]
+          fragment.window->text[area.value() - Vector(fragment.window->area.x1, fragment.window->area.y1)]
         }
       );
     }
@@ -110,16 +115,25 @@ bool Screen::unfocus(Window *window) {
   }
 }
 
-tuple<Window *, Screen::updates> Screen::addWindow(const Rectangle &area_, Window *below, Window *) {
+tuple<Window *, Updates> Screen::addWindow(const Rectangle &area_, Window *below, Window *) {
   // Setup
   const auto topArea = zorder.back()->area;
   const auto area =
-    area_ == Rectangle(-1, -1, -1, -1)?
+    area_ == RectangleDefault?
       Rectangle(topArea.x1 + 1, topArea.y1 + 1, topArea.x2 + 1, topArea.y2 + 1)
     :
       area_;
   // Create window
-  const auto window = new Window(area);
+  auto window = new Window(area);
+  for (auto &windowPtr: windows) {
+    if (!windowPtr) {
+      windowPtr.reset(window);
+      goto windowRegistered;
+    }
+  }
+  windows.push_back(unique_ptr<Window>(window));
+
+  windowRegistered:
   if (focusWindow)
     focusWindow = window;
   // Add window to screen
@@ -148,12 +162,12 @@ tuple<Window *, Screen::updates> Screen::addWindow(const Rectangle &area_, Windo
   );
 }
 
-Screen::updates Screen::deleteWindow(Window *window) {
-  Screen::updates result;
+Updates Screen::deleteWindow(Window *window) {
+  Updates result;
   if (unfocus(window)) {
     const auto zit{find(zorder.begin(), zorder.end(), window)};
     if (zit == zorder.end()) {
-      throw domain_error(format("Window {} not found\n", fmt::ptr(window)));
+      throw domain_error(format("Window {} not found in zorder\n", fmt::ptr(window)));
     }
     const auto z = std::distance(zorder.begin(), zit);
     vector<Fragment> updates;
@@ -176,13 +190,22 @@ Screen::updates Screen::deleteWindow(Window *window) {
         }
       }
     }
-    //
     result = screenUpdates(updates);
+    // Remove window from registry
+    for (auto &windowPtr: windows) {
+      if (windowPtr.get() == window) {
+        windowPtr.reset(0);
+        goto end;
+      }
+    }
+    throw domain_error(format("Window {} not found in windows\n", fmt::ptr(window)));
   }
+
+  end:
   return result;
 }
 
-Screen::updates Screen::reshapeWindow(Window *window, const Rectangle &area) {
+Updates Screen::reshapeWindow(Window *window, const Rectangle &area) {
   vector<Fragment> updates;
   if (window->area != area) {
     const auto zpos = find(zorder.begin(), zorder.end(), window);
@@ -219,12 +242,12 @@ Screen::updates Screen::reshapeWindow(Window *window, const Rectangle &area) {
   return screenUpdates(updates);
 }
 
-Screen::updates Screen::fill(Window *window, const Char &fillChar) {
+Updates Screen::fill(Window *window, const Char &fillChar) {
   window->fill(fillChar);
   return screenUpdates(fragments_of(window, window->fragments));
 }
 
-Screen::updates Screen::text(Window *window, const Vector &position, const Text &text) {
+Updates Screen::text(Window *window, const Vector &position, const Text &text) {
   window->write(position, text);
   // This implementation generates just one update for the whole text which in the end
   // is a rectangle. Shorter lines will therefore be filled with unchanged content.
@@ -241,7 +264,7 @@ Screen::updates Screen::text(Window *window, const Vector &position, const Text 
   );
 }
 
-Screen::updates Screen::line(Window * window, const Line &line, u1 strength, u1 dash, bool roundedCorners) {
+Updates Screen::line(Window * window, const Line &line, u1 strength, u1 dash, bool roundedCorners) {
   const auto area = window->line(line, strength, dash, roundedCorners) + window->area.position();
   // Screen updates have the same limitations as in @c Screen::text
   return screenUpdates(
@@ -253,7 +276,7 @@ Screen::updates Screen::line(Window * window, const Line &line, u1 strength, u1 
   );
 }
 
-Screen::updates Screen::box(Window *window, const Box &box) {
+Updates Screen::box(Window *window, const Box &box) {
   const auto areas = window->box(box);
   vector<Fragment> updates;
   for (const auto &fragment: window->fragments) {
@@ -273,4 +296,23 @@ Vector Screen::relative(Window *window, const Vector &position) {
     throw range_error(format("Position outside window dimensions {}: {}", string(area.size()), string(position)));
   }
   return position + area.position();
+}
+
+Window * Screen::operator[](int windowId) const {
+  auto &windowPtr{windows[windowId]};
+  if (!windowPtr) {
+    throw domain_error(format("Invalid Window ID {}", windowId));
+  }
+  return windowPtr.get();
+}
+
+int Screen::operator[](const Window *window) const {
+  int i{0};
+  for (const auto &windowPtr: windows) {
+    if (windowPtr.get() == window) {
+      return i;
+    }
+    ++i;
+  }
+  throw domain_error("Invalid Window *");
 }

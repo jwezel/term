@@ -9,7 +9,6 @@ using namespace jwezel;
 
 Window::Window(const Rectangle &area):
 area{area},
-text{new Text()},
 fragments{area}
 {
   fill();
@@ -20,16 +19,16 @@ Window::operator string() const {
 }
 
 void Window::write(const Vector &position, const string_view &str) {
-  text->patch(Text(str), position);
+  text.patch(Text(str), position);
 }
 
 void Window::write(const Vector &position, const Text &text_) {
-  text->patch(text_, position);
+  text.patch(text_, position);
 }
 
 void Window::fill(const Char &fillChar) {
-  text->extend(Vector(area.width(), area.height()), fillChar);
-  text->fill(fillChar);
+  text.extend(Vector(area.width(), area.height()), fillChar);
+  text.fill(fillChar);
 }
 
 Rectangle Window::line(
@@ -38,9 +37,9 @@ Rectangle Window::line(
   u1 dash,
   bool roundedCorners
 ) {
-  return text->line(line, strength, dash, roundedCorners);
+  return text.line(line, strength, dash, roundedCorners);
 }
 
 vector<Rectangle> Window::box(const Box &box) {
-  return text->box(box);
+  return text.box(box);
 }
