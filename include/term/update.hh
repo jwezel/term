@@ -22,7 +22,7 @@ struct Update {
   }
 
   bool operator <(const Update &other) const {
-    return make_tuple(position.x, position.y) < make_tuple(other.position.x, other.position.y);
+    return position < other.position;
   }
 
   bool operator >(const Update &other) const {

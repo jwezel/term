@@ -29,9 +29,9 @@ struct Display {
   Display(
     Keyboard &keyboard,
     int output=1,
-    const Vector &position={VectorMin},
-    const Vector &size={1, 1},
-    const Vector &expandTo={VectorMax}
+    const Vector &position=VectorMin,
+    const Vector &size=VectorMin,
+    const Vector &expandTo=VectorMax
   );
 
   ///
@@ -99,7 +99,20 @@ struct Display {
   void update(const Updates &updates);
 
   ///
-  /// Sets terminal size
+  /// Get terminal size
+  ///
+  /// @return     Terminal size
+  ///
+  Vector size() const;
+
+  ///
+  /// Set terminal size
+  ///
+  /// @param[in]  size  The size
+  void resize(const Vector &size);
+
+  ///
+  /// Get "physical" terminal size
   Vector terminalSize();
 
   Keyboard &keyboard_;                //< Keyboard

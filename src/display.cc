@@ -13,6 +13,7 @@
 #include "display.hh"
 #include "fmt/format.h"
 #include "geometry.hh"
+#include "screen.hh"
 #include "text.hh"
 #include "update.hh"
 #include "string.hh"
@@ -43,7 +44,7 @@ position_{
     position__
 },
 maxSize_{expandTo == VectorMax? terminalSize_: expandTo},
-text_(Null, size__)
+text_(Null, size__ == VectorMin? Vector{1, 1}: size__)
 {}
 
 void Display::write(const string_view &str) const {
@@ -177,4 +178,12 @@ void Display::update(const Updates &updates) {
   for (const auto &update_: updates) {
     update(update_.position, update_.text);
   }
+}
+
+Vector Display::size() const {
+  return text_.size();
+}
+
+void Display::resize(const Vector &size) {
+  text_.resize(min(maxSize_, size), Null);
 }

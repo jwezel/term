@@ -250,9 +250,9 @@ typedef u2 QuadValue;
 ///
 /// Line drawing attributes.
 struct Draw {
-  u1    strength;
-  u1    dash;
-  bool  roundedCorners;
+  u1    strength = 1;
+  u1    dash = 0;
+  bool  roundedCorners = false;
 
   ///
   /// Constructor
@@ -274,7 +274,7 @@ struct Line {
 ///
 /// This struct describes a box.
 struct Box: public Draw {
-  Rectangle area;
+  Rectangle area = RectangleMax;
 
   Box(const Rectangle &area=RectangleMax, u1 strength=1, u1 dash=0, bool roundedCorners=false);
 };
@@ -399,7 +399,7 @@ struct Text {
   /// @param[in]  c           The character
   /// @param[in]  size        The size
   /// @param[in]  mixDefault  The mix default
-  Text(Char c, const Vector &size, const AttributeMode &mixDefault=merge);
+  Text(Char c, const Vector &size, const AttributeMode &mixDefault=default_);
 
   ///
   /// Get height.
@@ -485,6 +485,12 @@ struct Text {
     const AttributeMode &overrideMix=default_,
     const AttributeMode &resetMix=default_
   );
+
+  ///
+  /// Resize text
+  ///
+  /// @param[in]  size  The size
+  void resize(const Vector &size, const Char &fill);
 
   ///
   /// Set Char attributes.

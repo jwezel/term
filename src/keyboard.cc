@@ -322,28 +322,36 @@ Keyboard::Keyboard(int device):
 keyBuffer(),
 keyPrefixes(loadKeyTranslations(keyTranslations)),
 fd(device)
-{}
+{
+  raw();
+}
+
+Keyboard::~Keyboard() {
+  reset();
+}
 
 void Keyboard::raw() {
-  termios old;
-  if (!originalState) {
-    if (tcgetattr(fd, &old)) {
+  if (isatty(fd)) {
+    termios old;
+    if (!originalState) {
+      if (tcgetattr(fd, &old)) {
+        throw std::system_error(
+          errno, std::system_category(), format("Could not get terminal state for fd {}: {}", fd, std::strerror(errno))
+        );
+      }
+      originalState.emplace(old);
+    }
+    termios new_{old};
+    new_.c_iflag = new_.c_iflag & !(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+    new_.c_oflag = new_.c_oflag & !OPOST;
+    new_.c_lflag = new_.c_lflag & !(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+    new_.c_cflag = new_.c_cflag & !(CSIZE | PARENB);
+    new_.c_cflag = new_.c_cflag | CS8;
+    if (tcsetattr(fd, TCSANOW, &new_)) {
       throw std::system_error(
-        errno, std::system_category(), format("Could not get terminal state for fd {}: {}", fd, std::strerror(errno))
+        errno, std::system_category(), format("Could not set terminal state for fd {}: {}", fd, std::strerror(errno))
       );
     }
-    originalState.emplace(old);
-  }
-  termios new_{old};
-  new_.c_iflag = new_.c_iflag & !(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
-  new_.c_oflag = new_.c_oflag & !OPOST;
-  new_.c_lflag = new_.c_lflag & !(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
-  new_.c_cflag = new_.c_cflag & !(CSIZE | PARENB);
-  new_.c_cflag = new_.c_cflag | CS8;
-  if (tcsetattr(fd, TCSANOW, &new_)) {
-    throw std::system_error(
-      errno, std::system_category(), format("Could not set terminal state for fd {}: {}", fd, std::strerror(errno))
-    );
   }
 }
 

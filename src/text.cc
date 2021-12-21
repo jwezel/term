@@ -731,12 +731,14 @@ void Text::patchArea(
   const AttributeMode &overrideMix,
   const AttributeMode &resetMix
 ) {
-  if (data.data() == other.data.data())
+  if (data.data() == other.data.data()) {
     throw range_error("This and other are the same");
+  }
   const Rectangle thisDimensions{0, 0, width(), height()};
   const auto area_{area.defaultTo(thisDimensions)};
-  if ((area_ & Rectangle{0, 0, this->width(), this->height()}) != area_)
+  if ((area_ & Rectangle{0, 0, this->width(), this->height()}) != area_) {
     throw runtime_error("area must be within text");
+  }
   auto data_ = other.data.begin();
   for (Dim l = 0; l < area_.height(); ++l) {
     auto source = data_->begin();
@@ -749,6 +751,18 @@ void Text::patchArea(
     }
     ++data_;
   }
+}
+
+void Text::resize(const Vector &size, const Char &fill) {
+  if (size.y < height()) {
+    data.erase(data.begin() + size.y, data.end());
+  }
+  if (size.x < width()) {
+    for (auto &line: data) {
+      line.erase(line.begin() + size.x, line.end());
+    }
+  }
+  extend(size, fill);
 }
 
 void Text::setAttr(const CharAttributes &attr, const Rectangle &area, const AttributeMode &setMix) {
@@ -819,12 +833,13 @@ static Rectangle drawHorizontalLine(
     e = (endPosition == DimHigh? text.width(): endPosition + (endPosition < 0? text.width(): 0)),
     b = initialPosition.x;
   for (Dim p = b; p < e; ++p)
-    if (p == b and not extendBegin)
+    if (p == b and not extendBegin) {
       text.at(Vector(p, initialPosition.y)).drawLineChar({0, 0, 0, strength}, dash, roundedCorners);
-    else if (p == e - 1 and not extendEnd)
+    } else if (p == e - 1 and not extendEnd) {
       text.at(Vector(p, initialPosition.y)).drawLineChar({0, 0, strength, 0}, dash, roundedCorners);
-    else
+    } else {
       text.at(Vector(p, initialPosition.y)).drawLineChar({0, 0, strength, strength}, dash, roundedCorners);
+    }
   return Rectangle(initialPosition.x, initialPosition.y, initialPosition.x + e + 1, initialPosition.y + 1);
 }
 
@@ -842,12 +857,13 @@ static Rectangle drawVerticalLine(
     e = (endPosition == DimHigh? text.height(): endPosition + (endPosition < 0? text.height(): 0)),
     b = initialPosition.y;
   for (Dim p = initialPosition.y; p < e; ++p)
-    if (p == b and not extendBegin)
+    if (p == b and not extendBegin) {
       text.at(Vector(initialPosition.x, p)).drawLineChar({0, strength, 0, 0}, dash, roundedCorners);
-    else if (p == e - 1 and not extendEnd)
+    } else if (p == e - 1 and not extendEnd) {
       text.at(Vector(initialPosition.x, p)).drawLineChar({strength, 0, 0, 0}, dash, roundedCorners);
-    else
+    } else {
       text.at(Vector(initialPosition.x, p)).drawLineChar({strength, strength, 0, 0}, dash, roundedCorners);
+    }
   return Rectangle(initialPosition.x, initialPosition.y, initialPosition.x + 1, initialPosition.y + e + 1);
 }
 
@@ -857,8 +873,9 @@ Rectangle Text::line(
     u1 dash,
     bool roundedCorners
 ) {
-  if (strength < 1 or strength > 2)
+  if (strength < 1 or strength > 2) {
     throw range_error(fmt::format("Invalid strength: {}", strength));
+  }
   return (line.orientation == Horizontal? drawHorizontalLine: drawVerticalLine)(
     *this,
     line.position,

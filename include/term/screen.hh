@@ -1,3 +1,5 @@
+#pragma once
+
 #include <exception>
 #include <memory>
 #include <tuple>
@@ -6,8 +8,6 @@
 #include "geometry.hh"
 #include "window.hh"
 #include "update.hh"
-
-#pragma once
 
 namespace jwezel {
 
@@ -26,7 +26,7 @@ struct Screen {
   /// Constructor
   ///
   /// @param[in]  area  Screen area
-  Screen(const Rectangle &area);
+  Screen(const Vector &size, const Char &background=Space);
 
   ///
   /// Split window into fragments
@@ -75,7 +75,12 @@ struct Screen {
   /// @param      parent  The parent
   ///
   /// @return     Tuple with window pointer and screen updates
-  tuple<Window *, Updates> addWindow(const Rectangle &area={-1, -1, -1, -1}, Window *below=0, Window *parent=0);
+  tuple<Window *, Updates> addWindow(
+    const Rectangle &area={-1, -1, -1, -1},
+    const Char &background=Space,
+    Window *below=0,
+    Window *parent=0
+  );
 
   ///
   /// Delete window
@@ -136,7 +141,7 @@ struct Screen {
   /// @return     Screen updates
   Updates box(Window *window, const Box &box);
 
-  Vector relative(Window *window, const Vector &position);
+  Vector relative(Window *window, const Vector &position) const;
 
   ///
   /// Get window *
@@ -153,6 +158,21 @@ struct Screen {
   ///
   /// @return     Window ID
   int operator[](const Window *window) const;
+
+  ///
+  /// Resize screen
+  ///
+  /// @param[in]  size  The size
+  ///
+  /// @return     Screen updates
+  Updates resize(const Vector &size);
+
+  ///
+  /// Get minimum size to accomodate all windows
+  ///
+  /// @return     Minimum size
+  ///
+  Vector minSize() const;
 
   Window *screen;
   vector<Window *> zorder;

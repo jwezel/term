@@ -117,7 +117,7 @@ TEST_CASE("Text") {
   }
   SUBCASE("Box of Chars") {
     Text t(Char('.', CharAttributes(RgbBlue, RgbCyan1, bold)), Vector(5, 4));
-    CHECK_EQ(t, Text(".....\n.....\n.....\n.....", RgbBlue, RgbCyan1, bold, jwezel::merge));
+    CHECK_EQ(t, Text(".....\n.....\n.....\n.....", RgbBlue, RgbCyan1, bold));
   }
   SUBCASE("Two lines, fg red, bg blue, bold") {
     Text t("line1\nline 2", attr);

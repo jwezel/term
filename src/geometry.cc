@@ -37,6 +37,22 @@ bool Vector::operator !=(const Vector &other) const {
   return !(*this == other);
 }
 
+bool Vector::operator <(const Vector &other) const {
+  return x < other.x or x == other.x and y < other.y;
+}
+
+bool Vector::operator >(const Vector &other) const {
+  return other.x < x or x == other.x and other.y < y;
+}
+
+bool Vector::operator <=(const Vector &other) const {
+  return !(x > other.x or y > other.y);
+}
+
+bool Vector::operator >=(const Vector &other) const {
+  return !(x < other.x or y < other.y);
+}
+
 Vector Vector::position(const Vector &position) const {
   auto result{position};
   if (result.x < 0)
@@ -100,6 +116,8 @@ Vector min(const Vector &v1, const Vector &v2) {
 Vector max(const Vector &v1, const Vector &v2) {
   return Vector{Dim(std::max(v1.x, v2.x)), Dim(std::max(v1.y, v2.y))};
 }
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Rectangle::Rectangle(Dim x1, Dim y1, Dim x2, Dim y2):
 x1(x1), y1(y1), x2(x2), y2(y2)

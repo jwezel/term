@@ -14,6 +14,7 @@ TEST_CASE("Display") {
   SUBCASE("Simulated") {
     auto output{tmpfile()};
     auto input{tmpfile()};
+    // Simulate terminal replies for cursor position
     fputs("\x1b[1;1R", input);
     fputs("\x1b[1;1R", input);
     fputs("\x1b[20;10R", input);
@@ -77,6 +78,10 @@ TEST_CASE("Display") {
       CHECK_EQ(string(d.text_), "::::::::::\n:++++++++:\n:++++++++:\n::::::::::\n");
       fclose(input);
       fclose(output);
+    }
+    SUBCASE("Resize") {
+      d.resize(Vector{10, 6});
+      CHECK_EQ(d.size(), Vector{10, 6});
     }
     k.reset();
   }

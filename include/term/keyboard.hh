@@ -153,7 +153,7 @@ struct Keyboard
 
   ///
   /// Destructor
-  ~Keyboard() = default;
+  ~Keyboard();
 
   ///
   /// Set terminal to raw mode

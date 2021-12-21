@@ -48,12 +48,12 @@ namespace doctest {
 }
 
 TEST_CASE("Screen") {
-  Screen s(Rectangle{0, 0, 10, 6});
+  Screen s(Vector{10, 6});
   SUBCASE("Constructor") {
     CHECK_EQ(s.zorder.size(), 1);
     CHECK_EQ(s.screen, s.zorder[0]);
     CHECK_EQ(s.screen, s.focusWindow);
-    CHECK_EQ(string(s.screen->text), "          \n          \n          \n          \n          \n          \n");
+    CHECK_EQ(string(s.screen->text()), "          \n          \n          \n          \n          \n          \n");
   }
   SUBCASE("AddWindow") {
     auto [win1, updates]{s.addWindow(Rectangle{1, 1, 9, 5})};
@@ -62,9 +62,9 @@ TEST_CASE("Screen") {
     CHECK_EQ(updates, expupdates);
     CHECK_EQ(s.zorder.size(), 2);
     CHECK_EQ(s.zorder[1], s.focusWindow);
-    CHECK_EQ(string(s.zorder[1]->text), "        \n        \n        \n        \n");
+    CHECK_EQ(string(s.zorder[1]->text()), "        \n        \n        \n        \n");
     SUBCASE("AddWindow below") {
-      auto [win2, updates]{s.addWindow(Rectangle{2, 0, 8, 6}, win1)};
+      auto [win2, updates]{s.addWindow(Rectangle{2, 0, 8, 6}, Space, win1)};
       auto [expwin, expupdates]{make_tuple(s.zorder[1], Updates{{{2, 0}, Text("      ")}, {{2, 5}, Text("      ")}})};
       CHECK_EQ(win2, expwin);
       CHECK_EQ(updates, expupdates);

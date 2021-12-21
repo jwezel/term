@@ -17,9 +17,10 @@ sources = [
   'src/geometry.cc',
   'src/keyboard.cc',
   'src/screen.cc',
+  'src/string.cc',
+  'src/term.cc',
   'src/text.cc',
   'src/window.cc',
-  'src/string.cc',
 ]
 headers = [
   'include/term/basic.hh',
@@ -28,6 +29,7 @@ headers = [
   'include/term/keyboard.hh',
   'include/term/screen.hh',
   'include/term/string.hh',
+  'include/term/term.hh',
   'include/term/text.hh',
   'include/term/window.hh',
 ]
@@ -61,11 +63,12 @@ test_dep = [
 
 test_exe = executable(
   'test_term',
+  'test/test_display.cc',
+  'test/test_geometry.cc',
+  'test/test_keyboard.cc',
+  'test/test_screen.cc',
   'test/test_term.cc',
   'test/test_text.cc',
-  'test/test_screen.cc',
-  'test/test_keyboard.cc',
-  'test/test_display.cc',
   link_with: shlib,
   dependencies: [test_dep, lib_dep],
   include_directories: incdir

@@ -65,6 +65,20 @@ struct Vector {
   bool operator !=(const Vector &other) const;
 
   ///
+  /// Compare vector less than other
+  ///
+  /// @param[in]  other  The other
+  ///
+  /// @return     True if less
+  bool operator <(const Vector &other) const;
+
+  bool operator >(const Vector &other) const;
+
+  bool operator <=(const Vector &other) const;
+
+  bool operator >=(const Vector &other) const;
+
+  ///
   /// Replace negative elements in @c *this with sum of element in @c *this and
   /// @arg position such that -1 becomes last.
   ///

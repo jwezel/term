@@ -1,12 +1,13 @@
+#pragma once
 
 #include "display.hh"
 #include "geometry.hh"
 #include "keyboard.hh"
 #include "screen.hh"
+#include "text.hh"
 #include "window.hh"
 
 namespace jwezel {
-
 
 ///
 /// Terminal
@@ -14,7 +15,7 @@ namespace jwezel {
 /// Responsibilites:
 ///   - control display size
 struct Terminal {
-  using WinId = u2;
+  using WinId = i2;
 
   ///
   /// Constructor
@@ -25,6 +26,7 @@ struct Terminal {
   /// @param[in]  terminalFd       The terminal fd
   /// @param[in]  keyboardFd       The keyboard fd
   Terminal(
+    const Char background=Space,
     const Vector &initialPosition=VectorMin,
     const Vector &initialSize=VectorMin,
     const Vector &maxSize=VectorMax,
@@ -38,7 +40,7 @@ struct Terminal {
   /// @param[in]  area  The area
   ///
   /// @return     The window identifier.
-  WinId newWindow(const Rectangle &area=RectangleDefault, WinId below=-1);
+  WinId newWindow(const Rectangle &area=RectangleDefault, const Char &background=Space, WinId below=-1);
 
   ///
   /// Delete window
@@ -62,6 +64,14 @@ struct Terminal {
   void write(WinId windowId, const Vector &position, const Text &text);
 
   ///
+  /// Draw box
+  ///
+  /// @param[in]  windowId  The window identifier
+  /// @param[in]  position  The position
+  /// @param[in]  box       The box
+  void box(WinId windowId, const Box &box=Box{});
+
+  ///
   /// Get window area
   ///
   /// @param[in]  windowId  The window identifier
@@ -72,14 +82,14 @@ struct Terminal {
   ///
   /// Possibly expand display and screen
   ///
-  /// @param[in]  area  The area
-  void expand(const Rectangle &area);
+  /// @param[in]  size  The size
+  bool expand(const Vector &size);
 
   ///
   /// Possibly contract display and screen
   ///
-  /// @param[in]  area  The area
-  void contract(const Rectangle &area);
+  /// @param[in]  size  The size
+  bool contract();
 
   Keyboard keyboard;
   Display display;
