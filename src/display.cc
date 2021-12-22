@@ -100,7 +100,7 @@ void Display::foreground(const Rgb &color) {
     if (color == RgbNone) {
       write("\x1b[39m");
     } else {
-      write(format("\x1b[38;2;{};{};{}m", 255 * color.r, 255 * color.g, 255 * color.b));
+      write(format("\x1b[38;2;{};{};{}m", int(255 * color.r), int(255 * color.g), int(255 * color.b)));
     }
   }
 }
@@ -111,7 +111,7 @@ void Display::background(const Rgb &color) {
     if (color == RgbNone) {
       write("\x1b[49m");
     } else {
-      write(format("\x1b[48;2;{};{};{}m", 255 * color.r, 255 * color.g, 255 * color.b));
+      write(format("\x1b[48;2;{};{};{}m", int(255 * color.r), int(255 * color.g), int(255 * color.b)));
     }
   }
 }
