@@ -20,28 +20,32 @@ struct BaseWindow {
   ///
   BaseWindow(const Rectangle &area, const Char &background=Space);
 
+  ///
+  /// Destroy BaseWindow
+  virtual ~BaseWindow() {}
+
   /// String representation of WindowObj
-  operator string() const;
+  virtual operator string() const;
 
   ///
   /// Write text to window
   ///
   /// @param[in]  position  The position
   /// @param[in]  str       The text
-  void write(const Vector &position, const string_view &str);
+  virtual void write(const Vector &position, const string_view &str);
 
   ///
   /// Write text to window
   ///
   /// @param[in]  position  The position
   /// @param[in]  text      The text
-  void write(const Vector &position, const Text &text_);
+  virtual void write(const Vector &position, const Text &text_);
 
   ///
   /// Fill window with Char
   ///
   /// @param[in]  fillChar  The fill character
-  void fill(const Char &fillChar=Space);
+  virtual void fill(const Char &fillChar=Space);
 
   ///
   /// Draw line
@@ -52,7 +56,7 @@ struct BaseWindow {
   /// @param[in]  roundedCorners  Whether to round corners
   ///
   /// @return     Rectangle
-  Rectangle line(
+  virtual Rectangle line(
     const Line &line,
     u1 strength=1,
     u1 dash=0,
@@ -65,66 +69,83 @@ struct BaseWindow {
   /// @param[in]  box   The box
   ///
   /// @return     vector of rectangles
-  vector<Rectangle> box(const Box &box);
+  virtual vector<Rectangle> box(const Box &box);
 
   ///
   /// Get window size
   ///
   /// @return     Window size
-  Vector size() const;
+  virtual Vector size() const;
 
   ///
   /// Move window
   ///
   /// @param[in]  area  The area
-  void move(const Rectangle &area);
+  virtual void move(const Rectangle &area);
 
   ///
   /// Get window area
   ///
   /// @return     Window area
-  Rectangle area() const;
+  virtual Rectangle area() const;
 
   ///
   /// Get window text
   ///
   /// @return     Text
-  const Text &text() const;
+  virtual const Text &text() const;
+
+  ///
+  /// Get area of window text
+  ///
+  /// @param[in]  area  The area
+  ///
+  /// @return     text
+  virtual Text text(const Rectangle &area) const;
 
   Vector position;
   Char background;
   vector<Rectangle> fragments;
 };
 
-struct DisplayBackground: BaseWindow {
+struct Backdrop: public BaseWindow {
 
   ///
   /// Constructor
   ///
   /// @param[in]  id    The identifier
   /// @param[in]  area  The area
-  ///
-  DisplayBackground(const Rectangle &area, const Char &background=Space);
+  Backdrop(const Char &background=Space);
 
   ///
-  /// Get window size
-  ///
-  /// @return     Window size
-  Vector size() const;
+  /// Destroy Backdrop
+  ~Backdrop() override {}
 
   ///
-  /// Get window area
+  /// Get backdrop area
   ///
-  /// @return     Window area
-  Rectangle area() const;
+  /// @return     RectangleMax
+  Rectangle area() const override;
+
+  ///
+  /// Get backdrop size
+  ///
+  /// @return     VectorMax
+  Vector size() const override;
 
   ///
   /// Get window text
   ///
   /// @return     Text
-  const Text &text() const;
+  const Text &text() const override;
 
-  Vector size_;
+  ///
+  /// Get area of window text
+  ///
+  /// @param[in]  area  The area
+  ///
+  /// @return     text
+  Text text(const Rectangle &area) const override;
 };
 
 ///
@@ -139,28 +160,32 @@ struct Window: public BaseWindow {
   ///
   Window(const Rectangle &area, const Char &background=Space);
 
+  ///
+  /// Destroy Window
+   ~Window() override {}
+
   /// String representation of Window
-  operator string() const;
+  operator string() const override;
 
   ///
   /// Write string to window
   ///
   /// @param[in]  position  The position
   /// @param[in]  str       The text
-  void write(const Vector &position, const string_view &str);
+  void write(const Vector &position, const string_view &str) override;
 
   ///
   /// Write text to window
   ///
   /// @param[in]  position  The position
   /// @param[in]  text      The text
-  void write(const Vector &position, const Text &text_);
+  void write(const Vector &position, const Text &text_) override;
 
   ///
   /// Fill window with Char
   ///
   /// @param[in]  fillChar  The fill character
-  void fill(const Char &fillChar=Space);
+  void fill(const Char &fillChar=Space) override;
 
   ///
   /// Draw line
@@ -176,7 +201,7 @@ struct Window: public BaseWindow {
     u1 strength=1,
     u1 dash=0,
     bool roundedCorners=false
-  );
+  ) override;
 
   ///
   /// Draw box
@@ -184,32 +209,42 @@ struct Window: public BaseWindow {
   /// @param[in]  box   The box
   ///
   /// @return     vector of rectangles
-  vector<Rectangle> box(const Box &box);
+  vector<Rectangle> box(const Box &box) override;
 
   ///
   /// Get window size
   ///
   /// @return     Window size
-  Vector size() const;
+  Vector size() const override;
 
   ///
   /// Move window
   ///
   /// @param[in]  area  The area
-  void move(const Rectangle &area);
+  void move(const Rectangle &area) override;
 
   ///
   /// Get window area
   ///
   /// @return     Window area
-  Rectangle area() const;
+  Rectangle area() const override;
 
   ///
   /// Get window text
   ///
   /// @return     Text
-  const Text &text() const {
+  const Text &text() const override {
     return text_;
+  }
+
+  ///
+  /// Get area of window text
+  ///
+  /// @param[in]  area  The area
+  ///
+  /// @return     text
+  Text text(const Rectangle &area) const override {
+    return text_[area];
   }
 
   Text text_;

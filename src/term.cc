@@ -63,7 +63,7 @@ bool Terminal::expand(const Vector &size) {
 bool Terminal::contract() {
   const auto minSize{screen.minSize()};
   if (minSize != display.size()) {
-    screen.resize(minSize);
+    display.update(screen.resize(minSize));
     display.resize(minSize);
     return true;
   }

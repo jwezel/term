@@ -49,18 +49,41 @@ Rectangle BaseWindow::area() const {
   NOT_IMPLEMENTED
 }
 
-DisplayBackground::DisplayBackground(const Rectangle &area, const Char &background):
-BaseWindow{area, background},
-size_{area.size()}
+Vector BaseWindow::size() const {
+  NOT_IMPLEMENTED
+}
+
+const Text &BaseWindow::text() const {
+  NOT_IMPLEMENTED
+}
+
+Text BaseWindow::text(const Rectangle &) const {
+  NOT_IMPLEMENTED
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Backdrop::Backdrop(const Char &background):
+BaseWindow{RectangleMax, background}
 {}
 
-Vector DisplayBackground::size() const {
-  return size_;
+Rectangle Backdrop::area() const {
+  return RectangleMax;
 }
 
-Rectangle DisplayBackground::area() const {
-  return Rectangle{position, position + size_};
+Vector Backdrop::size() const {
+  return VectorMax;
 }
+
+const Text &Backdrop::text() const {
+  NOT_IMPLEMENTED
+}
+
+Text Backdrop::text(const Rectangle &area) const {
+  return Text(Space, area.size());
+}
+
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Window::Window(const Rectangle &area, const Char &background):
 BaseWindow{area, background}

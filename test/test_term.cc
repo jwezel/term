@@ -25,12 +25,12 @@ TEST_CASE("Terminal") {
   SUBCASE("Window") {
     t.newWindow(Rectangle{0, 0, 10, 4}, '1');
     CHECK_EQ(string(t.display.size()), string(Vector{10, 4}));
-    CHECK_EQ(string(t.screen.screen->text().size()), string(Vector{10, 4}));
+    CHECK_EQ(string(t.screen.screen.text().size()), string(Vector{10, 4}));
     CHECK_EQ(t.display.text_.repr(), Text("1111111111\n1111111111\n1111111111\n1111111111").repr());
     SUBCASE("Another window") {
       auto w2{t.newWindow(Rectangle{2, 2, 8, 6}, '2')};
       CHECK_EQ(string(t.display.size()), string(Vector{10, 6}));
-      CHECK_EQ(string(t.screen.screen->text().size()), string(Vector{10, 6}));
+      CHECK_EQ(string(t.screen.screen.text().size()), string(Vector{10, 6}));
       CHECK_EQ(t.display.text_.repr(), Text("1111111111\n1111111111\n1122222211\n1122222211\n..222222..\n..222222..").repr());
       SUBCASE("Delete window 2") {
         t.deleteWindow(w2);

@@ -36,7 +36,7 @@ using namespace ranges;
 /// @param[in]  rectangles  The rectangles
 ///
 /// @return     vector<Fragment>
-static auto fragments_of(Window *window, const vector<Rectangle>&rectangles) {
+static auto fragmentsOf(Window *window, const vector<Rectangle>&rectangles) {
   return
     rectangles |
     views::transform(
@@ -47,13 +47,11 @@ static auto fragments_of(Window *window, const vector<Rectangle>&rectangles) {
     to<vector>();
 }
 
-Screen::Screen(const Vector &size, const Char &backbround):
-screen{new Window(Rectangle{0, 0, size.x, size.y}, backbround)},
-zorder{screen},
-focusWindow{screen}
-{
-  windows.push_back(unique_ptr<Window>(screen));
-}
+Screen::Screen(const Vector &size, const Char &background):
+screen{Rectangle{0, 0, size.x, size.y}, background},
+zorder{&backdrop, &screen},
+focusWindow{&screen}
+{}
 
 Fragment::operator string() const {
   return format("Fragment({})", string(area));
@@ -81,7 +79,7 @@ Updates Screen::screenUpdates(const vector<Fragment> &fragments) {
       result.emplace_back(
         Update{
           Vector(fragment.area.x1, fragment.area.y1),
-          fragment.window->text()[area.value() - Vector(fragment.window->area().x1, fragment.window->area().y1)]
+          fragment.window->text(area.value() - Vector(fragment.window->area().x1, fragment.window->area().y1))
         }
       );
     }
@@ -93,7 +91,7 @@ void Screen::focus(Window *window) {
     focusWindow = window;
 }
 
-Window *Screen::focus() const {
+BaseWindow *Screen::focus() const {
   return focusWindow;
 }
 
@@ -176,7 +174,7 @@ Updates Screen::deleteWindow(Window *window) {
     // Recreate fragments covered by removed window
     for (auto z1 = z - 1; z1 >= 0; --z1) {
       if (zorder[z1]->area().intersects(window->area())) {
-        const auto zwindow = zorder[z1];
+        BaseWindow *zwindow = zorder[z1];
         zwindow->fragments = {zwindow->area()};
         for (auto z2 = z1 + 1; z2 < int(zorder.size()); ++z2) {
           split(zwindow->area(), zwindow->fragments, zorder[z2]->fragments);
@@ -244,7 +242,7 @@ Updates Screen::reshapeWindow(Window *window, const Rectangle &area) {
 
 Updates Screen::fill(Window *window, const Char &fillChar) {
   window->fill(fillChar);
-  return screenUpdates(fragments_of(window, window->fragments));
+  return screenUpdates(fragmentsOf(window, window->fragments));
 }
 
 Updates Screen::text(Window *window, const Vector &position, const Text &text) {
@@ -322,15 +320,13 @@ int Screen::operator[](const Window *window) const {
 }
 
 Updates Screen::resize(const Vector &size) {
-  return reshapeWindow(screen, Rectangle{Vector{0, 0}, size});
+  return reshapeWindow(&screen, Rectangle{Vector{0, 0}, size});
 }
 
 Vector Screen::minSize() const {
   Vector result{0, 0};
   for (auto &window: windows) {
-    if (window and window.get() != screen) {
-      result = max(result, window->position + window->size());
-    }
+    result = max(result, window->position + window->size());
   }
   return result;
 }

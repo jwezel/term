@@ -13,7 +13,7 @@ namespace jwezel {
 
 struct Fragment {
   Rectangle area;
-  Window *window;
+  BaseWindow *window;
 
   operator string() const;
 };
@@ -54,7 +54,7 @@ struct Screen {
   /// Get focus window
   ///
   /// @return     Focus window
-  Window *focus() const;
+  BaseWindow *focus() const;
 
   ///
   /// Move focus away from window
@@ -174,10 +174,11 @@ struct Screen {
   ///
   Vector minSize() const;
 
-  Window *screen;
-  vector<Window *> zorder;
+  Backdrop backdrop;
+  Window screen;
+  vector<BaseWindow *> zorder;
   vector<unique_ptr<Window>> windows;
-  Window *focusWindow;
+  BaseWindow *focusWindow;
 };
 
 } // namespace
