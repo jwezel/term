@@ -47,17 +47,7 @@ static auto fragmentsOf(Window *window, const vector<Rectangle>&rectangles) {
     to<vector>();
 }
 
-Screen::Screen(const Vector &size, const Char &background):
-screen{Rectangle{0, 0, size.x, size.y}, background},
-zorder{&backdrop, &screen},
-focusWindow{&screen}
-{}
-
-Fragment::operator string() const {
-  return format("Fragment({})", string(area));
-}
-
-void Screen::split(const Rectangle &area, vector<Rectangle> &fragments1, const vector<Rectangle> fragments2) {
+static void split(const Rectangle &area, vector<Rectangle> &fragments1, const vector<Rectangle> fragments2) {
   for (const auto &fragment2: fragments2) {
     if (area.intersects(fragment2)) {
       vector<Rectangle> shards;
@@ -70,21 +60,27 @@ void Screen::split(const Rectangle &area, vector<Rectangle> &fragments1, const v
   }
 }
 
-Updates Screen::screenUpdates(const vector<Fragment> &fragments) {
+static Updates screenUpdates(const vector<Fragment> &fragments) {
   Updates result;
   result.reserve(fragments.size());
   for (const auto &fragment: fragments) {
-    const auto area = fragment.area & zorder[0]->area();
-    if (area) {
-      result.emplace_back(
-        Update{
-          Vector(fragment.area.x1, fragment.area.y1),
-          fragment.window->text(area.value() - Vector(fragment.window->area().x1, fragment.window->area().y1))
-        }
-      );
-    }
+    const auto area = fragment.area;
+    result.emplace_back(
+      Update{
+        Vector(fragment.area.x1, fragment.area.y1),
+        fragment.window->text(area - Vector(fragment.window->area().x1, fragment.window->area().y1))
+      }
+    );
   }
   return result;
+}
+
+Screen::Screen():
+zorder{&backdrop}
+{}
+
+Fragment::operator string() const {
+  return format("Fragment({})", string(area));
 }
 
 void Screen::focus(Window *window) {
@@ -132,8 +128,11 @@ tuple<Window *, Updates> Screen::addWindow(const Rectangle &area_, const Char &b
   windows.push_back(unique_ptr<Window>(window));
 
   windowRegistered:
-  if (focusWindow)
-    focusWindow = window;
+  return std::make_tuple(window, createWindow(window, below));
+}
+
+Updates Screen::createWindow(Window *window, Window *below) {
+  focusWindow = window;
   // Add window to screen
   const auto insertPos =
     below?
@@ -152,11 +151,8 @@ tuple<Window *, Updates> Screen::addWindow(const Rectangle &area_, const Char &b
       split(windowBelow->area(), windowBelow->fragments, window->fragments);
     }
   }
-  return std::make_tuple(
-    window,
-    screenUpdates(
-      window->fragments | views::transform([window](const Rectangle &area){return Fragment{area, window};}) | to<vector>()
-    )
+  return screenUpdates(
+    window->fragments | views::transform([window](const Rectangle &area){return Fragment{area, window};}) | to<vector>()
   );
 }
 
@@ -211,7 +207,7 @@ Updates Screen::reshapeWindow(Window *window, const Rectangle &area) {
       throw range_error(format("Window {} not found", fmt::ptr(window)));
     }
     const auto z = std::distance(zorder.begin(), zpos);
-    auto damageAreas{window->area() - area};
+    auto damageAreas{window->area().defaultIntersection(area)};
     damageAreas.push_back(area);
     const auto searchArea = window->area() | area;
     window->move(area);
@@ -319,14 +315,12 @@ int Screen::operator[](const Window *window) const {
   throw domain_error("Invalid Window *");
 }
 
-Updates Screen::resize(const Vector &size) {
-  return reshapeWindow(&screen, Rectangle{Vector{0, 0}, size});
-}
-
-Vector Screen::minSize() const {
+Vector Screen::minSize(Window *exclude) const {
   Vector result{0, 0};
-  for (auto &window: windows) {
-    result = max(result, window->position + window->size());
+  for (const auto &window: windows) {
+    if (window and window.get() != exclude) {
+      result = max(result, window->position + window->size());
+    }
   }
   return result;
 }

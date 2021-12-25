@@ -43,9 +43,20 @@ position_{
   :
     position__
 },
-maxSize_{expandTo == VectorMax? terminalSize_: expandTo},
-text_(Null, size__ == VectorMin? Vector{1, 1}: size__)
-{}
+maxSize_{min(expandTo == VectorMax? terminalSize_: expandTo, terminalSize_ - position_)},
+text_(Null, size__ == VectorMin? Vector{1, 1}: min(size__, maxSize_))
+{
+  cursor(false);
+}
+
+Display::~Display() {
+  cursor(true);
+  foreground(RgbNone);
+  background(RgbNone);
+  attributes({});
+  cursor(0, size().y + position_.y - 1);
+  write("\n");
+}
 
 void Display::write(const string_view &str) const {
   if (!str.empty()) {
@@ -91,7 +102,7 @@ void Display::cursor(int x, int y) {
 
 void Display::cursor(bool mode) {
   static const array<string, 2> sequence{"\x1b[?25l", "\x1b[?25h"};
-  write(sequence[mode]);
+  write(sequence[int(mode)]);
 }
 
 void Display::foreground(const Rgb &color) {
@@ -150,25 +161,33 @@ Vector Display::terminalSize() {
 }
 
 
-#include <assert.h>
 void Display::update(const Vector &position, const Text &text) {
-  text_.extend(min(position + text.size(), maxSize_));
-  for (Dim line = 0; line < std::min(text.height(), Dim(maxSize_.y - position.y)); ++line) {
+  auto area{Rectangle{position, position + text.size()} & Rectangle{0, size()}};
+  if (!area) {
+    return;
+  }
+  auto textArea{area.value() - position};
+  // text_.extend(min(position + text.size(), maxSize_));
+  for (Dim line = textArea.y1, dline = area.value().y1; line < textArea.y2; ++line, ++dline) {
     assert(line < (int)text.data.size());
     while (line + position.y >= (int)text_.data.size()) {
       text_.data.push_back(String(text.data[line].size(), Null));
     }
-    for (Dim column = 0; column < min(text.width(), Dim(maxSize_.x - position.x)); ++column) {
+    for (Dim column = textArea.x1, dcolumn = area.value().x1; column < textArea.x2; ++column, ++dcolumn) {
       const auto &ch{text.data[line][column]};
-      if (text_.data[line + position.y][column + position.x] != ch) {
-        cursor(column + position.x + position_.x, line + position.y + position_.y);
+      if (text_.data[dline][dcolumn] != ch) {
+        cursor(dcolumn + position_.x, dline + position_.y);
         foreground(ch.attributes.fg);
         background(ch.attributes.bg);
         attributes(ch.attributes.attr);
         write(ch.utf8());
         cursor_.x += 1;
-        assert(column < (int)text_.data[line + position.y].size());
-        text_.data[line + position.y][column + position.x] = ch;
+        if (cursor_.x > maxSize_.x) {
+          cursor_.x = 0;
+          cursor_.y += 1;
+        }
+        assert(dcolumn < (int)text_.data[dline].size());
+        text_.data[dline][dcolumn] = ch;
       }
     }
   }

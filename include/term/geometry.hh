@@ -105,12 +105,20 @@ struct Vector {
   Vector operator +(const Vector &other) const;
 
   ///
-  /// Enlarge Vector.
+  /// Enlarge Vector
   ///
   /// @param[in]  size  The size
   ///
   /// @return     Enlarged Vector
   Vector operator +(Dim size) const;
+
+  ///
+  /// Enlarge Vector destructively
+  ///
+  /// @param[in]  size  The size
+  ///
+  /// @return     Enlarged Vector
+  Vector &operator +=(Dim size);
 
   ///
   /// Subtract vectors.
@@ -121,12 +129,20 @@ struct Vector {
   Vector operator -(const Vector &other) const;
 
   ///
-  /// Decrease Vector.
+  /// Decrease Vector
   ///
   /// @param[in]  size  The size
   ///
   /// @return     Decreased Vector
   Vector operator -(Dim size) const;
+
+  ///
+  /// Decrease Vector destructively
+  ///
+  /// @param[in]  size  The size
+  ///
+  /// @return     Decreased Vector
+  Vector &operator -=(Dim size);
 
   ///
   /// Shift Vector left

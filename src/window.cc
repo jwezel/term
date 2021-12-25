@@ -64,11 +64,11 @@ Text BaseWindow::text(const Rectangle &) const {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Backdrop::Backdrop(const Char &background):
-BaseWindow{RectangleMax, background}
+BaseWindow{Rectangle{{0, 0}, VectorMax}, background}
 {}
 
 Rectangle Backdrop::area() const {
-  return RectangleMax;
+  return Rectangle{{0, 0}, VectorMax};
 }
 
 Vector Backdrop::size() const {

@@ -36,7 +36,7 @@ struct Display {
 
   ///
   /// Destroy Display
-  ~Display() = default;
+  ~Display();
 
   ///
   /// Write string

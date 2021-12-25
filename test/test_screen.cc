@@ -48,12 +48,9 @@ namespace doctest {
 }
 
 TEST_CASE("Screen") {
-  Screen s(Vector{10, 6});
+  Screen s;
   SUBCASE("Constructor") {
     CHECK_EQ(s.zorder.size(), 1);
-    CHECK_EQ(&s.screen, s.zorder[0]);
-    CHECK_EQ(&s.screen, s.focusWindow);
-    CHECK_EQ(string(s.screen.text()), "          \n          \n          \n          \n          \n          \n");
   }
   SUBCASE("AddWindow") {
     auto [win1, updates]{s.addWindow(Rectangle{1, 1, 9, 5})};

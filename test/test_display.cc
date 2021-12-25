@@ -30,8 +30,6 @@ TEST_CASE("Display") {
       fseek(output, 0, SEEK_SET);
       fgets(buffer, sizeof buffer, output);
       CHECK_EQ(repr(buffer), repr("something"));
-      fclose(input);
-      fclose(output);
     }
     SUBCASE("Turn cursor off") {
       char buffer[2048];
@@ -40,8 +38,6 @@ TEST_CASE("Display") {
       fseek(output, 0, SEEK_SET);
       fgets(buffer, sizeof buffer, output);
       CHECK_EQ(string(buffer), string("\x1b[?25l\x1b[?25h"));
-      fclose(input);
-      fclose(output);
     }
     SUBCASE("Foreground") {
       char buffer[2048];
@@ -49,8 +45,6 @@ TEST_CASE("Display") {
       fseek(output, 0, SEEK_SET);
       fgets(buffer, sizeof buffer, output);
       CHECK_EQ(string(buffer), string("\x1b[38;2;0;0;255m"));
-      fclose(input);
-      fclose(output);
     }
     SUBCASE("Background") {
       char buffer[2048];
@@ -58,8 +52,6 @@ TEST_CASE("Display") {
       fseek(output, 0, SEEK_SET);
       fgets(buffer, sizeof buffer, output);
       CHECK_EQ(string(buffer), string("\x1b[48;2;0;0;255m"));
-      fclose(input);
-      fclose(output);
     }
     SUBCASE("Attributes") {
       char buffer[2048];
@@ -69,20 +61,19 @@ TEST_CASE("Display") {
       fseek(output, 0, SEEK_SET);
       fgets(buffer, sizeof buffer, output);
       CHECK_EQ(string(buffer), string("\x1b[1;4;7;5m\x1b[21;24;27;25m"));
-      fclose(input);
-      fclose(output);
     }
     SUBCASE("Updates") {
+      d.resize({10, 4});
       d.update({0, 0}, Text("::::::::::\n::::::::::\n::::::::::\n::::::::::"));
       d.update({1, 1}, Text("++++++++\n++++++++"));
-      CHECK_EQ(string(d.text_), "::::::::::\n:++++++++:\n:++++++++:\n::::::::::\n");
-      fclose(input);
-      fclose(output);
+      CHECK_EQ(d.text_.repr(), Text("::::::::::\n:++++++++:\n:++++++++:\n::::::::::").repr());
     }
     SUBCASE("Resize") {
       d.resize(Vector{10, 6});
       CHECK_EQ(d.size(), Vector{10, 6});
     }
+    // fclose(input);
+    // fclose(output);
     k.reset();
   }
 }

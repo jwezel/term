@@ -26,7 +26,7 @@ struct Screen {
   /// Constructor
   ///
   /// @param[in]  area  Screen area
-  Screen(const Vector &size, const Char &background=Space);
+  Screen();
 
   ///
   /// Split window into fragments
@@ -34,7 +34,7 @@ struct Screen {
   /// @param[in]  area        The area
   /// @param      fragments1  Result fragments
   /// @param[in]  fragments2  Source fragments
-  void split(const Rectangle &area, vector<Rectangle> &fragments1, const vector<Rectangle> fragments2);
+  // void split(const Rectangle &area, vector<Rectangle> &fragments1, const vector<Rectangle> fragments2);
 
   ///
   /// Generate regions to update screen
@@ -42,7 +42,7 @@ struct Screen {
   /// @param[in]  fragments  The fragments
   ///
   /// @return     vector with updates
-  Updates screenUpdates(const vector<Fragment> &fragments);
+  // Updates screenUpdates(const vector<Fragment> &fragments);
 
   ///
   /// Set window focus
@@ -66,6 +66,14 @@ struct Screen {
   /// @return     false if the window had the focus or true otherwise
   ///
   bool unfocus(Window *window);
+
+  ///
+  /// Register window in screen
+  ///
+  /// @param[in]  window  The window
+  ///
+  /// @return     Updates
+  Updates createWindow(Window *window, Window *below=0);
 
   ///
   /// Add a window
@@ -160,22 +168,14 @@ struct Screen {
   int operator[](const Window *window) const;
 
   ///
-  /// Resize screen
-  ///
-  /// @param[in]  size  The size
-  ///
-  /// @return     Screen updates
-  Updates resize(const Vector &size);
-
-  ///
   /// Get minimum size to accomodate all windows
   ///
-  /// @return     Minimum size
+  /// @param      exclude  Window to exclude
   ///
-  Vector minSize() const;
+  /// @return     Minimum size
+  Vector minSize(Window *exclude=0) const;
 
   Backdrop backdrop;
-  Window screen;
   vector<BaseWindow *> zorder;
   vector<unique_ptr<Window>> windows;
   BaseWindow *focusWindow;

@@ -31,7 +31,9 @@ struct Terminal {
     const Vector &initialSize=VectorMin,
     const Vector &maxSize=VectorMax,
     int terminalFd=1,
-    int keyboardFd=0
+    int keyboardFd=0,
+    bool expand=true,
+    bool contract=true
   );
 
   ///
@@ -94,6 +96,10 @@ struct Terminal {
   Keyboard keyboard;
   Display display;
   Screen screen;
+  Window *desktop;
+  Vector minimumSize;
+  bool expand_;
+  bool contract_;
 };
 
 } // namespace

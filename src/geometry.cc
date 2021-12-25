@@ -81,12 +81,24 @@ Vector Vector::operator +(Dim size) const {
   return Vector(x + size, y + size);
 }
 
+Vector &Vector::operator +=(Dim size) {
+  x += size;
+  y += size;
+  return *this;
+}
+
 Vector Vector::operator -(const Vector &other) const {
   return Vector(x - other.x, y - other.y);
 }
 
 Vector Vector::operator -(Dim size) const {
   return Vector(x - size, y - size);
+}
+
+Vector &Vector::operator -=(Dim size) {
+  x -= size;
+  y -= size;
+  return *this;
 }
 
 Vector Vector::left(Dim shift) const {
@@ -193,9 +205,10 @@ void Rectangle::intersect(vector<Rectangle> &result, const Rectangle &other) con
 
 vector<Rectangle> Rectangle::operator -(const Rectangle &other) const {
   const auto intersection = *this & other;
-  if (!intersection || intersection.value() == *this)
+  if (!intersection || intersection.value() == *this) {
     // If the two rectangles do not intersect or the intersection is *this, an empty sequence is returned.
     return {};
+  }
   // Otherwise, a sequence of up to four rectangles is returned
   vector<Rectangle> result;
   intersect(result, other);
@@ -204,11 +217,13 @@ vector<Rectangle> Rectangle::operator -(const Rectangle &other) const {
 
 vector<Rectangle> Rectangle::defaultIntersection(const Rectangle &other) const {
   const auto intersection = *this & other;
-  if (!intersection)
+  if (!intersection) {
     return {*this};
-  if (intersection.value() == *this)
+  }
+  if (intersection.value() == *this) {
     // If the two rectangles do not intersect or the intersection is *this, an empty sequence is returned.
     return {};
+  }
   // Otherwise, a sequence of up to four rectangles is returned
   vector<Rectangle> result;
   intersect(result, other);

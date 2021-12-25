@@ -13,12 +13,20 @@ Terminal::Terminal(
   const Vector &initialSize,
   const Vector &maxSize,
   int terminalFd,
-  int keyboardFd
+  int keyboardFd,
+  bool expand,
+  bool contract
 ):
 keyboard{keyboardFd == -1? terminalFd: keyboardFd},
 display{keyboard, terminalFd, initialPosition, initialSize == VectorMin? Vector{1, 1}: initialSize, maxSize},
-screen{display.size(), background}
-{}
+minimumSize(display.size()),
+expand_(expand),
+contract_(contract)
+{
+  auto [w, updates] = screen.addWindow(Rectangle{{0, 0}, display.size()}, background);
+  desktop = w;
+  display.update(updates);
+}
 
 Terminal::WinId Terminal::newWindow(const Rectangle &area, const Char &background, WinId below) {
   expand(Vector{area.x2, area.y2});
@@ -51,20 +59,26 @@ void Terminal::box(WinId windowId, const Box &box) {
 }
 
 bool Terminal::expand(const Vector &size) {
+  if (!expand_) {
+    return false;
+  }
   const auto size_ = max(min(display.maxSize_, size), display.size());
   if (size_ != display.size()) {
     display.resize(size_);
-    display.update(screen.resize(size_));
+    display.update(screen.reshapeWindow(desktop, Rectangle{Vector{0, 0}, size_}));
     return true;
   }
   return false;
 }
 
 bool Terminal::contract() {
-  const auto minSize{screen.minSize()};
-  if (minSize != display.size()) {
-    display.update(screen.resize(minSize));
-    display.resize(minSize);
+  if (!contract_) {
+    return false;
+  }
+  const auto size_{max(max(screen.minSize(desktop), {1, 1}), minimumSize)};
+  if (size_ != display.size()) {
+    display.update(screen.reshapeWindow(desktop, Rectangle{Vector{0, 0}, size_}));
+    display.resize(size_);
     return true;
   }
   return false;
