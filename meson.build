@@ -20,7 +20,7 @@ sources = [
   'src/string.cc',
   'src/term.cc',
   'src/text.cc',
-  'src/window.cc',
+  'src/screen_window.cc',
 ]
 headers = [
   'include/term/basic.hh',
@@ -31,11 +31,12 @@ headers = [
   'include/term/string.hh',
   'include/term/term.hh',
   'include/term/text.hh',
-  'include/term/window.hh',
+  'include/term/_screen_window.hh',
 ]
 
 incdir = include_directories([
   'include/term',
+  'include/util',
   'include',
 ])
 

@@ -692,9 +692,12 @@ void Text::extend(const Vector &size, const Char &fill) {
   }
 }
 
-void Text::fill(const Char &fill) {
-  const auto line{String(width(), fill)};
-  fill_n(data.begin(), height(), line);
+void Text::fill(const Char &fill, const Rectangle &area) {
+  auto area_{area == RectangleMax? Rectangle{{0, 0}, size()}: (extend(Vector{area.x2, area.y2}, fill), area)};
+  const auto line{String(area_.width(), fill)};
+  for (auto &textline: data) {
+    std::copy(line.begin(), line.end(), textline.begin() + area_.x1);
+  }
 }
 
 void Text::patch(
@@ -897,8 +900,8 @@ Rectangle Text::line(
 /// @param[in]  m     Maximum
 ///
 /// @return     Value clipped to maximum
-static int limit(int v, int m) {
-  return v < 0? v + m: std::min(v, m - 1);
+static Dim limit(Dim v, Dim m) {
+  return v < 0? v + m: std::min(v, Dim(m - 1));
 }
 
 vector<Rectangle> Text::box(const Box &box) {

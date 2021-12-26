@@ -264,11 +264,11 @@ struct Draw {
 };
 
 struct Line {
-  Vector      position;
-  int         endPosition;
-  Orientation orientation;
-  bool        extendBegin;
-  bool        extendEnd;
+  Vector      position{0, 0};
+  Dim         endPosition = DimHigh;
+  Orientation orientation = Horizontal;
+  bool        extendBegin = false;
+  bool        extendEnd = false;
 };
 
 ///
@@ -362,8 +362,6 @@ extern const string asString(const String &s);
 ///
 /// This struct describes a rectangle of text.
 struct Text {
-  vector<String> data; ///< text
-
   Text() {}
 
   ///
@@ -452,7 +450,7 @@ struct Text {
   /// Fill text with character
   ///
   /// @param[in]  fill  Fill character
-  void fill(const Char &fill=Space);
+  void fill(const Char &fill=Space, const Rectangle &area=RectangleMax);
 
   ///
   /// Put one text rectangle into another at a specific position
@@ -558,6 +556,8 @@ struct Text {
   vector<Rectangle> box(const Box &box);
 
   bool operator ==(const Text &other) const;
+
+  vector<String> data; ///< text
 };
 
 }

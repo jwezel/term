@@ -1,13 +1,74 @@
 #pragma once
 
+#include "_screen_window.hh"
 #include "display.hh"
 #include "geometry.hh"
 #include "keyboard.hh"
 #include "screen.hh"
 #include "text.hh"
-#include "window.hh"
+#include <optional>
+#include <string_view>
 
 namespace jwezel {
+
+struct Window
+{
+  ///
+  /// Destroy window
+  void destroy();
+
+  ///
+  /// Move window
+  ///
+  /// @param[in]  area  The area
+  void move(const Rectangle &area=RectangleMax);
+
+  ///
+  /// Get window area
+  ///
+  /// @return     Area
+  Rectangle area() const;
+
+  ///
+  /// Focus/unfocus window
+  ///
+  /// @param[in]  status  The status
+  void focus(bool status=true);
+
+  ///
+  /// Write string to window
+  ///
+  /// @param[in]  str   The string
+  void write(const Vector &position, const string_view &str);
+
+  ///
+  /// Write text to window
+  ///
+  /// @param[in]  text  The text
+  void write(const Vector &position, const Text &text);
+
+  ///
+  /// Draw box in window
+  ///
+  /// @param[in]  box   The box
+  void box(const Box &box={});
+
+  ///
+  /// Draw line in window
+  ///
+  /// @param[in]  line  The line
+  void line(const Line &line={});
+
+  ///
+  /// Fill area in window
+  ///
+  /// @param[in]  fill  The fill character
+  /// @param[in]  area  The area
+  void fill(const Char &fill=Space, const Rectangle &area=RectangleMax);
+
+  struct Terminal &terminal;  ///< Terminal
+  screen::Window *window;     ///< Pointer to window
+};
 
 ///
 /// Terminal
@@ -42,20 +103,31 @@ struct Terminal {
   /// @param[in]  area  The area
   ///
   /// @return     The window identifier.
-  WinId newWindow(const Rectangle &area=RectangleDefault, const Char &background=Space, WinId below=-1);
+  jwezel::Window newWindow(
+    const Rectangle &area=RectangleDefault,
+    const Char &background=Space,
+    const optional<jwezel::Window> &below=nullopt
+  );
 
   ///
   /// Delete window
   ///
   /// @param[in]  windowId  The window
-  void deleteWindow(WinId windowId);
+  void deleteWindow(const jwezel::Window &window);
 
   ///
   /// Move window
   ///
   /// @param[in]  windowId  The window identifier
   /// @param[in]  area      The area
-  void moveWindow(WinId windowId, const Rectangle &area);
+  void moveWindow(const jwezel::Window &window, const Rectangle &area);
+
+  ///
+  /// Set window focus
+  ///
+  /// @param[in]  window  The window
+  /// @param[in]  status  The status
+  void focus(const jwezel::Window &window, bool status=true);
 
   ///
   /// Write text to window
@@ -63,7 +135,7 @@ struct Terminal {
   /// @param[in]  windowId  The window identifier
   /// @param[in]  position  The position
   /// @param[in]  text      The text
-  void write(WinId windowId, const Vector &position, const Text &text);
+  void write(const jwezel::Window &window, const Vector &position, const Text &text);
 
   ///
   /// Draw box
@@ -71,7 +143,22 @@ struct Terminal {
   /// @param[in]  windowId  The window identifier
   /// @param[in]  position  The position
   /// @param[in]  box       The box
-  void box(WinId windowId, const Box &box=Box{});
+  void box(const jwezel::Window &window, const Box &box=Box{});
+
+  ///
+  /// Draw line
+  ///
+  /// @param[in]  window  The window
+  /// @param[in]  line    The line
+  void line(const jwezel::Window &window, const Line &line=Line{});
+
+  ///
+  /// Fill area
+  ///
+  /// @param[in]  window  The window
+  /// @param[in]  fill    The fill
+  /// @param[in]  area    The area
+  void fill(const jwezel::Window &window, const Char &fill=Space, const Rectangle &area=RectangleMax);
 
   ///
   /// Get window area
@@ -79,7 +166,7 @@ struct Terminal {
   /// @param[in]  windowId  The window identifier
   ///
   /// @return     Window area
-  Rectangle windowArea(WinId windowId) const;
+  Rectangle windowArea(const jwezel::Window &window) const;
 
   ///
   /// Possibly expand display and screen
@@ -96,7 +183,7 @@ struct Terminal {
   Keyboard keyboard;
   Display display;
   Screen screen;
-  Window *desktop;
+  screen::Window *desktop;
   Vector minimumSize;
   bool expand_;
   bool contract_;

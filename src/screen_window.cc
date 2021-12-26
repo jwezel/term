@@ -3,10 +3,11 @@
 #include <cmath>
 #include <stdexcept>
 #include <vector>
-#include "window.hh"
+#include "_screen_window.hh"
 #include "geometry.hh"
 
 using namespace jwezel;
+using namespace jwezel::screen;
 using fmt::format;
 
 #define NOT_IMPLEMENTED throw runtime_error(format("Not implemented in {}", typeid(this).name()));
@@ -29,7 +30,7 @@ void BaseWindow::write(const Vector &, const Text &) {
   NOT_IMPLEMENTED
 }
 
-void BaseWindow::fill(const Char &) {
+void BaseWindow::fill(const Char &, const Rectangle &) {
   NOT_IMPLEMENTED
 }
 
@@ -103,8 +104,8 @@ void Window::write(const Vector &position, const Text &text__) {
   text_.patch(text__, position);
 }
 
-void Window::fill(const Char &fillChar) {
-  text_.fill(fillChar);
+void Window::fill(const Char &fillChar, const Rectangle &area) {
+  text_.fill(fillChar, area);
 }
 
 Rectangle Window::line(

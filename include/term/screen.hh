@@ -1,15 +1,21 @@
 #pragma once
 
+#include <algorithm>
 #include <exception>
 #include <memory>
 #include <tuple>
 #include <iostream>
+#include <unordered_map>
+#include <unordered_set>
+#include <functional>
 
 #include "geometry.hh"
-#include "window.hh"
+#include "_screen_window.hh"
 #include "update.hh"
 
 namespace jwezel {
+
+using namespace screen;
 
 struct Fragment {
   Rectangle area;
@@ -68,14 +74,6 @@ struct Screen {
   bool unfocus(Window *window);
 
   ///
-  /// Register window in screen
-  ///
-  /// @param[in]  window  The window
-  ///
-  /// @return     Updates
-  Updates createWindow(Window *window, Window *below=0);
-
-  ///
   /// Add a window
   ///
   /// @param[in]  area    The area
@@ -115,7 +113,7 @@ struct Screen {
   ///
   /// @return     Screen updates
   ///
-  Updates fill(Window *window, const Char &fillChar=Space);
+  Updates fill(Window *window, const Char &fillChar=Space, const Rectangle &area=RectangleMax);
 
   ///
   /// Write text to window
@@ -152,22 +150,6 @@ struct Screen {
   Vector relative(Window *window, const Vector &position) const;
 
   ///
-  /// Get window *
-  ///
-  /// @param[in]  window  The window
-  ///
-  /// @return     Window *
-  Window * operator[](int window) const;
-
-  ///
-  /// Get window ID
-  ///
-  /// @param[in]  window  The window
-  ///
-  /// @return     Window ID
-  int operator[](const Window *window) const;
-
-  ///
   /// Get minimum size to accomodate all windows
   ///
   /// @param      exclude  Window to exclude
@@ -177,7 +159,7 @@ struct Screen {
 
   Backdrop backdrop;
   vector<BaseWindow *> zorder;
-  vector<unique_ptr<Window>> windows;
+  unordered_map<Window *, unique_ptr<Window>> windows;
   BaseWindow *focusWindow;
 };
 

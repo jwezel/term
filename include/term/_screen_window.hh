@@ -7,6 +7,7 @@
 #include <text.hh>
 
 namespace jwezel {
+namespace screen {
 
 ///
 /// Base Window
@@ -45,7 +46,8 @@ struct BaseWindow {
   /// Fill window with Char
   ///
   /// @param[in]  fillChar  The fill character
-  virtual void fill(const Char &fillChar=Space);
+  /// @param[in]  area      The area
+  virtual void fill(const Char &fillChar=Space, const Rectangle &area=RectangleMax);
 
   ///
   /// Draw line
@@ -108,6 +110,9 @@ struct BaseWindow {
   vector<Rectangle> fragments;
 };
 
+///
+/// A virtually infinite window, all blank with no buffer, used to represent
+/// the display in a clear state.
 struct Backdrop: public BaseWindow {
 
   ///
@@ -185,7 +190,8 @@ struct Window: public BaseWindow {
   /// Fill window with Char
   ///
   /// @param[in]  fillChar  The fill character
-  void fill(const Char &fillChar=Space) override;
+  /// @param[in]  area      The area
+  void fill(const Char &fillChar=Space, const Rectangle &area=RectangleMax) override;
 
   ///
   /// Draw line
@@ -250,4 +256,5 @@ struct Window: public BaseWindow {
   Text text_;
 };
 
-} // namespace
+} // namespace screen
+} // namespace jwezel

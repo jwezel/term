@@ -33,11 +33,11 @@ TEST_CASE("Terminal") {
       CHECK_EQ(string(t.desktop->text().size()), string(Vector{10, 6}));
       CHECK_EQ(t.display.text_.repr(), Text("1111111111\n1111111111\n1122222211\n1122222211\n..222222..\n..222222..").repr());
       SUBCASE("Delete window 2") {
-        t.deleteWindow(w2);
+        w2.destroy();
         CHECK_EQ(t.display.text_.repr(), Text("1111111111\n1111111111\n1111111111\n1111111111").repr()); // display contracted
       }
       SUBCASE("Move window 2") {
-        t.moveWindow(w2, Rectangle{2, 2, 12, 7});
+        w2.move(Rectangle{2, 2, 12, 7});
         CHECK_EQ(
           t.display.text_.repr(),
           Text("1111111111..\n1111111111..\n112222222222\n112222222222\n..2222222222\n..2222222222\n..2222222222").repr()

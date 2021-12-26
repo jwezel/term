@@ -22,7 +22,6 @@
 
 #include "geometry.hh"
 #include "screen.hh"
-#include "window.hh"
 
 using fmt::print, fmt::format;
 
@@ -119,19 +118,7 @@ tuple<Window *, Updates> Screen::addWindow(const Rectangle &area_, const Char &b
       area_;
   // Create window
   auto window = new Window(area, background);
-  for (auto &windowPtr: windows) {
-    if (!windowPtr) {
-      windowPtr.reset(window);
-      goto windowRegistered;
-    }
-  }
-  windows.push_back(unique_ptr<Window>(window));
-
-  windowRegistered:
-  return std::make_tuple(window, createWindow(window, below));
-}
-
-Updates Screen::createWindow(Window *window, Window *below) {
+  windows.insert(make_pair(window, unique_ptr<Window>(window)));
   focusWindow = window;
   // Add window to screen
   const auto insertPos =
@@ -151,8 +138,11 @@ Updates Screen::createWindow(Window *window, Window *below) {
       split(windowBelow->area(), windowBelow->fragments, window->fragments);
     }
   }
-  return screenUpdates(
+  return std::make_tuple(
+    window,
+    screenUpdates(
     window->fragments | views::transform([window](const Rectangle &area){return Fragment{area, window};}) | to<vector>()
+    )
   );
 }
 
@@ -186,16 +176,10 @@ Updates Screen::deleteWindow(Window *window) {
     }
     result = screenUpdates(updates);
     // Remove window from registry
-    for (auto &windowPtr: windows) {
-      if (windowPtr.get() == window) {
-        windowPtr.reset(0);
-        goto end;
-      }
+    if (!windows.erase(window)) {
+      throw domain_error(format("Window {} not found in windows\n", fmt::ptr(window)));
     }
-    throw domain_error(format("Window {} not found in windows\n", fmt::ptr(window)));
   }
-
-  end:
   return result;
 }
 
@@ -236,8 +220,8 @@ Updates Screen::reshapeWindow(Window *window, const Rectangle &area) {
   return screenUpdates(updates);
 }
 
-Updates Screen::fill(Window *window, const Char &fillChar) {
-  window->fill(fillChar);
+Updates Screen::fill(Window *window, const Char &fillChar, const Rectangle &area) {
+  window->fill(fillChar, area);
   return screenUpdates(fragmentsOf(window, window->fragments));
 }
 
@@ -296,30 +280,11 @@ Vector Screen::relative(Window *window, const Vector &position) const {
   return position + area.position();
 }
 
-Window * Screen::operator[](int windowId) const {
-  auto &windowPtr{windows[windowId]};
-  if (!windowPtr) {
-    throw domain_error(format("Invalid Window ID {}", windowId));
-  }
-  return windowPtr.get();
-}
-
-int Screen::operator[](const Window *window) const {
-  int i{0};
-  for (const auto &windowPtr: windows) {
-    if (windowPtr.get() == window) {
-      return i;
-    }
-    ++i;
-  }
-  throw domain_error("Invalid Window *");
-}
-
 Vector Screen::minSize(Window *exclude) const {
   Vector result{0, 0};
   for (const auto &window: windows) {
-    if (window and window.get() != exclude) {
-      result = max(result, window->position + window->size());
+    if (exclude and window.first != exclude) {
+      result = max(result, window.first->position + window.first->size());
     }
   }
   return result;
