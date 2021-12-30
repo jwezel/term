@@ -117,6 +117,18 @@ Rectangle jwezel::Window::area() const {
   return terminal.windowArea(*this);
 }
 
+Vector jwezel::Window::size() const {
+  return terminal.windowArea(*this).size();
+}
+
+Dim jwezel::Window::width() const {
+  return terminal.windowArea(*this).width();
+}
+
+Dim jwezel::Window::height() const {
+  return terminal.windowArea(*this).height();
+}
+
 void jwezel::Window::focus(bool status) {
   terminal.focus(*this, status);
 }

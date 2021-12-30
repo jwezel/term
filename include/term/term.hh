@@ -29,6 +29,12 @@ struct Window
   /// @return     Area
   Rectangle area() const;
 
+  Vector size() const;
+
+  Dim width() const;
+
+  Dim height() const;
+
   ///
   /// Focus/unfocus window
   ///

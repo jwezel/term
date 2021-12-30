@@ -397,7 +397,7 @@ string Char::utf8() const {
   return result;
 }
 
-Text::Text(string_view str_, const Rgb &fg, const Rgb &bg, const Attributes &attr, const AttributeMode &mix) {
+Text::Text(const string_view &str_, const Rgb &fg, const Rgb &bg, const Attributes &attr, const AttributeMode &mix) {
   const auto str{utf8::utf8to32(string(str_))};
   if (str.size() > 0) {
     const auto lines{str | views::split('\n') | _to_::to<vector<basic_string<Unicode>>>()};

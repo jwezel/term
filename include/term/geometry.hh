@@ -145,6 +145,22 @@ struct Vector {
   Vector &operator -=(Dim size);
 
   ///
+  /// Multiply Vector with factor
+  ///
+  /// @param[in]  factor  The factor
+  ///
+  /// @return     The result of the multiplication
+  Vector operator *(double factor) const;
+
+  ///
+  /// Divide Vector by divisor
+  ///
+  /// @param[in]  divisor  The divisor
+  ///
+  /// @return     The result of the division
+  Vector operator /(double divisor) const;
+
+  ///
   /// Shift Vector left
   ///
   /// @param[in]  shift  The shift

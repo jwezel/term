@@ -101,6 +101,14 @@ Vector &Vector::operator -=(Dim size) {
   return *this;
 }
 
+Vector Vector::operator *(double factor) const {
+  return Vector{static_cast<Dim>(x * factor)};
+}
+
+Vector Vector::operator /(double divisor) const {
+  return Vector{static_cast<Dim>(x / divisor)};
+}
+
 Vector Vector::left(Dim shift) const {
   return Vector(x - shift, y);
 }

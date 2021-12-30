@@ -375,7 +375,7 @@ struct Text {
   /// @param[in]  attr  The attribute
   /// @param[in]  mix   The mix
   Text(
-    string_view str,
+    const string_view &str,
     const Rgb &fg=RgbNone,
     const Rgb &bg=RgbNone,
     const Attributes &attr={},
