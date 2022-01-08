@@ -553,7 +553,7 @@ struct Text {
     bool roundedCorners=false
   );
 
-  vector<Rectangle> box(const Box &box);
+  vector<Rectangle> box(const Box &box={});
 
   bool operator ==(const Text &other) const;
 

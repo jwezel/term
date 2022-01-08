@@ -1,10 +1,12 @@
 #include "term.hh"
 #include "display.hh"
+#include "event.hh"
 #include "fmt/core.h"
 #include "geometry.hh"
 #include "keyboard.hh"
 #include "screen.hh"
 #include "text.hh"
+#include <unistd.h>
 
 using namespace jwezel;
 
@@ -22,7 +24,8 @@ keyboard{keyboardFd == -1? terminalFd: keyboardFd},
 display{keyboard, terminalFd, initialPosition, initialSize == VectorMin? Vector{1, 1}: initialSize, maxSize},
 minimumSize(display.size()),
 expand_(expand),
-contract_(contract)
+contract_(contract),
+running_{false}
 {
   auto [w, updates] = screen.addWindow(Rectangle{{0, 0}, display.size()}, background);
   desktop = w;
@@ -75,6 +78,17 @@ void Terminal::fill(const jwezel::Window &window, const Char &fill, const Rectan
 
 void Terminal::box(const jwezel::Window &window, const Box &box) {
   display.update(screen.box(window.window, box));
+}
+
+Event *Terminal::event() {
+  return keyboard.event();
+}
+
+void Terminal::run() {
+  while (running_) {
+    auto event{keyboard.event()};
+
+  }
 }
 
 bool Terminal::expand(const Vector &size) {
@@ -134,7 +148,7 @@ void jwezel::Window::focus(bool status) {
 }
 
 void jwezel::Window::write(const Vector &position, const string_view &str) {
-  terminal.write(*this, position, str);
+  terminal.write(*this, position, Text(str, RgbNone, RgbNone, {}, mix));
 }
 
 void jwezel::Window::write(const Vector &position, const Text &text) {

@@ -175,6 +175,22 @@ struct Terminal {
   Rectangle windowArea(const jwezel::Window &window) const;
 
   ///
+  /// Get event
+  ///
+  /// @return     Event
+  Event *event();
+
+  ///
+  /// Run loop
+  void run();
+
+  Keyboard keyboard;
+  Display display;
+  Screen screen;
+  screen::Window *desktop;
+
+  protected:
+  ///
   /// Possibly expand display and screen
   ///
   /// @param[in]  size  The size
@@ -186,13 +202,10 @@ struct Terminal {
   /// @param[in]  size  The size
   bool contract();
 
-  Keyboard keyboard;
-  Display display;
-  Screen screen;
-  screen::Window *desktop;
   Vector minimumSize;
   bool expand_;
   bool contract_;
+  bool running_;
 };
 
 } // namespace

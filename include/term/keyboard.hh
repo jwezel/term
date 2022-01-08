@@ -8,7 +8,10 @@
 #include <deque>
 
 #include "basic.hh"
+#include "string.hh"
 #include "text.hh"
+#include "event.hh"
+#include <typeinfo>
 
 namespace jwezel {
 
@@ -140,11 +143,73 @@ enum Key: Unicode {
   AltF9,
   AltF10,
   AltF11,
-  AltF12
+  AltF12,
+  Mouse
 };
 
-struct Keyboard
-{
+enum class EventType: u1 {
+  Key,
+  Mouse
+};
+
+enum class MouseAction: u1 {
+  Up,
+  Down
+};
+
+enum class MouseButton: u1 {
+  Button1,
+  Button2,
+  Button3,
+  Button4,
+  Button5,
+  Button6,
+  Button7,
+  Button8
+};
+
+struct MouseModifiers {
+  u1 shift: 1;
+  u1 control: 1;
+  u1 alt: 1;
+};
+
+struct InputEvent: public Event {
+  CLASS_ID(InputEvent);
+};
+
+struct KeyEvent: public InputEvent {
+  KeyEvent(const Unicode &key): key{key} {}
+
+  Unicode key;
+  CLASS_ID(KeyEvent);
+};
+
+struct MouseEvent: public InputEvent {
+  CLASS_ID(MouseEvent);
+};
+
+struct MouseButtonEvent: public MouseEvent {
+  MouseButtonEvent(MouseButton button, MouseModifiers modifiers, u2 x, u2 y, MouseAction action):
+  button(button), modifiers(modifiers), x(x), y(y), action(action)
+  {}
+
+  MouseButton button;
+  MouseModifiers modifiers;
+  u2 x;
+  u2 y;
+  MouseAction action;
+  CLASS_ID(MouseButtonEvent);
+};
+
+struct MouseMoveEvent: public MouseEvent {
+  MouseMoveEvent(u2 x, u2 y): x{x}, y{y} {}
+  u2 x;
+  u2 y;
+  CLASS_ID(MouseMoveEvent);
+};
+
+struct Keyboard {
   ///
   /// Constructor
   ///
@@ -168,6 +233,18 @@ struct Keyboard
   ///
   /// @return     key
   Unicode key();
+
+  ///
+  /// Mouse report
+  ///
+  /// @return     Terminal mouse event data
+  tuple<MouseButton, MouseModifiers, u2, u2, MouseAction> mouseReport();
+
+  ///
+  /// Get input event
+  ///
+  /// @return     The input event.
+  InputEvent *event();
 
   ///
   /// Key prefix tree node

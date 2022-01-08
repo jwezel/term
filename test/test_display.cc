@@ -60,7 +60,7 @@ TEST_CASE("Display") {
       d.attributes(0);
       fseek(output, 0, SEEK_SET);
       fgets(buffer, sizeof buffer, output);
-      CHECK_EQ(string(buffer), string("\x1b[1;4;7;5m\x1b[21;24;27;25m"));
+      CHECK_EQ(string(buffer), string("\x1b[1;4;7;5m\x1b[22;24;27;25m"));
     }
     SUBCASE("Updates") {
       d.resize({10, 4});

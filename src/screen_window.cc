@@ -5,6 +5,7 @@
 #include <vector>
 #include "_screen_window.hh"
 #include "geometry.hh"
+#include "text.hh"
 
 using namespace jwezel;
 using namespace jwezel::screen;
@@ -97,7 +98,7 @@ Window::operator string() const {
 }
 
 void Window::write(const Vector &position, const string_view &str) {
-  text_.patch(Text(str), position);
+  text_.patch(Text(str, RgbNone, RgbNone, {}, mix), position);
 }
 
 void Window::write(const Vector &position, const Text &text__) {

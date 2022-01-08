@@ -5,8 +5,7 @@
 #include <memory>
 #include <tuple>
 #include <iostream>
-#include <unordered_map>
-#include <unordered_set>
+#include <set>
 #include <functional>
 
 #include "geometry.hh"
@@ -22,6 +21,12 @@ struct Fragment {
   BaseWindow *window;
 
   operator string() const;
+};
+
+struct FragmentRef {
+  FragmentRef(const Rectangle *area, const BaseWindow *window): area(area), window(window) {}
+  const Rectangle *area;
+  const BaseWindow *window;
 };
 
 struct ScreenError: public exception {};
@@ -161,6 +166,22 @@ struct Screen {
   vector<BaseWindow *> zorder;
   unordered_map<Window *, unique_ptr<Window>> windows;
   BaseWindow *focusWindow;
+
+  protected:
+  ///
+  /// Insert window fragments into register
+  ///
+  /// @param[in]  window  The window
+  void registerFragments(BaseWindow *window);
+
+  ///
+  /// Remove window fragments from register
+  ///
+  /// @param[in]  window  The window
+  void deregisterFragments(const BaseWindow *window);
+
+  std::set<FragmentRef, bool(*)(const FragmentRef &, const FragmentRef &)> fragmentsByX_;
+  std::set<FragmentRef, bool(*)(const FragmentRef &, const FragmentRef &)> fragmentsByY_;
 };
 
 } // namespace

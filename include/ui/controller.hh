@@ -2,21 +2,21 @@
 
 #include <memory>
 
-#include "element.hh"
+#include "container.hh"
 #include "geometry.hh"
-#include "layout_element.hh"
+#include "element.hh"
 
 namespace jwezel::ui {
 
-struct Controller: public LayoutElement, Container
+struct Controller: public virtual Element
 {
-  Controller(Container *parent=0, const Rectangle &area=RectangleDefault);
+  Controller(Element *parent=0, const Rectangle &area=RectangleDefault);
 
-  virtual int add(Element *controlled) override;
+  // virtual int add(Element *controlled) override;
 
-  virtual int add(Element *controlled, Element *before) override;
+  // virtual int add(Element *controlled, Element *before) override;
 
-  virtual void doLayout() override;
+  virtual void render() override;
 
   std::unique_ptr<Element> controlled;
 };

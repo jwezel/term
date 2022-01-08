@@ -1,20 +1,24 @@
 #pragma once
 
-#include "layout_element.hh"
+#include "element.hh"
 #include "text.hh"
 
 namespace jwezel::ui {
 
-struct Widget: public LayoutElement
+struct Widget: public Element
 {
-  Widget(struct Container *parent=0, const Char &background=Space, const std::string_view &text="");
+  Widget(struct Element *parent=0, const Char &background=Space);
 
   virtual ~Widget() = default;
 
-  virtual void draw();
+  virtual void drawEvent() const;
 
-  Char background;
-  Text text;
+  virtual Updates draw();
+
+  virtual void render();
+
+  Char background_;
+  Text text_;
 };
 
 } // namespace

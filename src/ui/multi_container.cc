@@ -3,7 +3,7 @@
 #include <stdexcept>
 
 #include "Yoga.h"
-#include "layout_element.hh"
+#include "element.hh"
 #include "multi_container.hh"
 #include "element.hh"
 

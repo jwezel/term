@@ -5,6 +5,7 @@ utfcpp/3.1.2
 frozen/20181020@bincrafters/stable
 range-v3/0.11.0
 rxcpp/4.1.0
+xxhash/0.8.0
 
 [generators]
 pkg_config

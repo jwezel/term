@@ -129,7 +129,7 @@ void Display::background(const Rgb &color) {
 
 void Display::attributes(const Attributes &attributes) {
   static const vector<array<string, 2>> sequence{
-    {"21", "1"},
+    {"22", "1"},
     {"24", "4"},
     {"27", "7"},
     {"25", "5"}

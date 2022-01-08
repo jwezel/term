@@ -4,26 +4,19 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <string_view>
 #include <tuple>
 
-#include <fmt/core.h>
 #include <fmt/format.h>
-#include <range/v3/action/insert.hpp>
 #include <range/v3/action/push_back.hpp>
 #include <range/v3/range/conversion.hpp>
-#include <range/v3/range_fwd.hpp>
-#include <range/v3/utility/optional.hpp>
-#include <range/v3/view/concat.hpp>
-#include <range/v3/view/ref.hpp>
 #include <range/v3/view/remove_if.hpp>
-#include <range/v3/view/single.hpp>
+#include <range/v3/action/remove_if.hpp>
 #include <range/v3/view/transform.hpp>
 
 #include "geometry.hh"
 #include "screen.hh"
 
-using fmt::print, fmt::format;
+using fmt::format;
 
 using namespace jwezel;
 using namespace ranges;
@@ -75,7 +68,9 @@ static Updates screenUpdates(const vector<Fragment> &fragments) {
 }
 
 Screen::Screen():
-zorder{&backdrop}
+zorder{&backdrop},
+fragmentsByX_([](const FragmentRef &f1, const FragmentRef &f2) {return f1.area->x1 < f2.area->x1;}),
+fragmentsByY_([](const FragmentRef &f1, const FragmentRef &f2) {return f1.area->y1 < f2.area->y1;})
 {}
 
 Fragment::operator string() const {
@@ -131,11 +126,15 @@ tuple<Window *, Updates> Screen::addWindow(const Rectangle &area_, const Char &b
   for (auto j = i + 1; j < int(zorder.size()); ++j) {
     split(window->area(), window->fragments, zorder[j]->fragments);
   }
+  // Insert fragments into registries
+  registerFragments(window);
   // Create fragments of all windows overlayed by this
   for (auto z = i - 1; z >= 0; --z) {
     const auto windowBelow = zorder[z];
     if (windowBelow->area().intersects(window->area())) {
       split(windowBelow->area(), windowBelow->fragments, window->fragments);
+      // Insert fragments into registries
+      registerFragments(windowBelow);
     }
   }
   return std::make_tuple(
@@ -161,10 +160,13 @@ Updates Screen::deleteWindow(Window *window) {
     for (auto z1 = z - 1; z1 >= 0; --z1) {
       if (zorder[z1]->area().intersects(window->area())) {
         BaseWindow *zwindow = zorder[z1];
+        deregisterFragments(zwindow);
         zwindow->fragments = {zwindow->area()};
         for (auto z2 = z1 + 1; z2 < int(zorder.size()); ++z2) {
           split(zwindow->area(), zwindow->fragments, zorder[z2]->fragments);
         }
+        // Insert fragments into registries
+        registerFragments(zwindow);
         // Add screen updates for these fragments
         updates |= push_back(
           zwindow->fragments |
@@ -200,13 +202,15 @@ Updates Screen::reshapeWindow(Window *window, const Rectangle &area) {
       if (zorder[j]->area().intersects(searchArea)) {
         // Window fragments
         const auto window = zorder[j];
-        vector<Rectangle> fragments{window->area()};
+        deregisterFragments(window);
+        window->fragments = {window->area()};
         for (auto i = j + 1; i < int(zorder.size()); ++i) {
-          split(window->area(), fragments, zorder[i]->fragments);
+          split(window->area(), window->fragments, zorder[i]->fragments);
         }
-        window->fragments = fragments;
+        // Insert fragments into registries
+        registerFragments(window);
         // Screen update fragments
-        for (const auto &fragment: fragments) {
+        for (const auto &fragment: window->fragments) {
           for (const auto &damageArea: damageAreas) {
             const auto intersection = fragment & damageArea;
             if (intersection) {
@@ -288,4 +292,28 @@ Vector Screen::minSize(Window *exclude) const {
     }
   }
   return result;
+}
+
+void Screen::registerFragments(BaseWindow *window) {
+  for (const auto &fragment: window->fragments) {
+    fragmentsByX_.emplace(&fragment, window);
+    fragmentsByY_.emplace(&fragment, window);
+  }
+}
+
+void Screen::deregisterFragments(const BaseWindow *window) {
+  for (auto it{fragmentsByX_.begin()}; it != fragmentsByX_.end();) {
+    if (it->window == window) {
+      it = fragmentsByX_.erase(it);
+    } else {
+      ++it;
+    }
+  };
+  for (auto it{fragmentsByY_.begin()}; it != fragmentsByY_.end();) {
+    if (it->window == window) {
+      it = fragmentsByY_.erase(it);
+    } else {
+      ++it;
+    }
+  };
 }

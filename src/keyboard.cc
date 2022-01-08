@@ -7,6 +7,7 @@
 #include <iostream>
 #include <iterator>
 #include <map>
+#include <regex>
 #include <stdexcept>
 #include <string>
 #include <system_error>
@@ -284,7 +285,8 @@ static std::vector<pair<std::string, Unicode>> keyTranslations {
   {"\x1b\x1b[20~", Key::AltF9},
   {"\x1b\x1b[21~", Key::AltF10},
   {"\x1b\x1b[23~", Key::AltF11},
-  {"\x1b\x1b[24~", Key::AltF12}
+  {"\x1b\x1b[24~", Key::AltF12},
+  {"\x1b[<", Key::Mouse}
 };
 
 //~Static functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -432,4 +434,44 @@ Unicode Keyboard::key() {
   key = keyBuffer.front();
   keyBuffer.pop_front();
   return key;
+}
+
+tuple<MouseButton, MouseModifiers, u2, u2, MouseAction> Keyboard::mouseReport() {
+  static const basic_regex reportPattern("(\\d+);(\\d+);(\\d+)([Mm])");
+  Unicode key_;
+  string report;
+  report.reserve(16);
+  do {
+    key_ = key();
+    report += key_;
+  } while (key_ != 'M' and key_ != 'm');
+  smatch subMatch;
+  if (regex_match(report, subMatch, reportPattern)) {
+    return {
+      static_cast<MouseButton>((stoi(subMatch[1].str()) & 3) + 1),
+      MouseModifiers{
+        static_cast<u1>(stoi(subMatch[1].str()) & 4),
+        static_cast<u1>(stoi(subMatch[1].str()) & 16),
+        static_cast<u1>(stoi(subMatch[1].str()) & 8)
+      },
+      stoi(subMatch[2].str()) - 1,
+      u1(stoi(subMatch[3].str()) - 1),
+      subMatch[3].str() == "M"? MouseAction::Down: MouseAction::Up
+    };
+  }
+  throw runtime_error("Could not parse terminal mouse report");
+}
+
+InputEvent *Keyboard::event() {
+  auto key_ = key();
+  if (key_ == Mouse) {
+    auto [button, modifiers, x, y, action]{mouseReport()};
+    if (button == MouseButton(35)) {
+      return new MouseMoveEvent{x, y};
+    } else {
+      return new MouseButtonEvent{button, modifiers, x, y, action};
+    }
+  } else {
+    return new KeyEvent{key_};
+  }
 }
