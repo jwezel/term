@@ -3,13 +3,14 @@
 #include <cstdint>
 #include <cassert>
 #include <string>
-#include <fmt/core.h>
+#define FMT_HEADER_ONLY
+#include <fmt/format.h>
 
 #include "geometry.hh"
 
 namespace jwezel {
 
-using namespace fmt;
+using fmt::format;
 
 typedef int16_t Dim;
 
@@ -284,8 +285,8 @@ Rectangle Rectangle::operator -(Dim size) const {
   const auto result = Rectangle(x1 + size, y1 + size, x2 - size, y2 - size);
   if (result == RectangleDefault)
     throw RectangleError(string("Result must not become RectangleDefault: )") + string(result));
-  assert((format("x axis got negativ: {} + {}", string(*this), size), result.x1 <= result.x2));
-  assert((format("y axis got negativ: {} + {}", string(*this), size), result.y1 <= result.y2));
+  assert(result.x1 <= result.x2);
+  assert(result.y1 <= result.y2);
   return result;
 }
 
@@ -293,8 +294,8 @@ Rectangle Rectangle::operator +(Dim size) const {
   const auto result = Rectangle(x1 - size, y1 - size, x2 + size, y2 + size);
   if (result == RectangleDefault)
     throw RectangleError(string("Result must not become RectangleDefault: ") + string(result));
-  assert((format("x axis got negativ: ", string(*this), size), result.x1 <= result.x2));
-  assert((format("y axis got negativ: ", string(*this), size), result.y1 <= result.y2));
+  assert(result.x1 <= result.x2);
+  assert(result.y1 <= result.y2);
   return result;
 }
 

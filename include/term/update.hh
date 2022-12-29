@@ -9,6 +9,8 @@ struct Update {
   Vector position;
   Text text;
 
+  Update(const Vector &position, const Text &text): position{position}, text{text} {}
+
   operator string() const {
     return string(position) + ": " + text.repr();
   }

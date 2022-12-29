@@ -1,7 +1,6 @@
 #pragma once
 
 #include <string_view>
-#include "fmt/core.h"
 
 #include "geometry.hh"
 #include "text.hh"

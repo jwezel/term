@@ -39,7 +39,9 @@ struct Rgb {
 
   operator struct Hsv() const;
 
-  Rgb(const Rgb & color) = default; //: r(color.r), g(color.g), b(color.b) {};
+  Rgb(const Rgb & color) = default;
+
+  Rgb &operator = (const Rgb & color) = default;
 
   Rgb operator |(const Rgb &other) const;
 

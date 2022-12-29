@@ -1,6 +1,7 @@
 #include <string>
 
 #include "string.hh"
+#include "utf8/checked.h"
 
 namespace jwezel {
 

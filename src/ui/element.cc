@@ -1,45 +1,51 @@
-#include <Yoga.h>
+#include <yoga/Yoga.h>
+#include <algorithm>
+#include <memory>
 
-#include "YGStyle.h"
-
-#include "container.hh"
+#include "fmt/core.h"
+#include "fmt/format.h"
 #include "geometry.hh"
 #include "element.hh"
 #include "text.hh"
 #include "update.hh"
-#include "window.hh"
 
 using namespace jwezel;
 using namespace jwezel::ui;
 
-using tl::optional;
-
-Element::Element(Element *parent, Orientation orientation, const Rectangle &area, struct Window *window):
+Element::Element(Element *parent, Orientation orientation, const Rectangle &area, struct Element *window_):
 layout_{YGConfigGetDefault()},
 layoutNode_{YGNodeNewWithConfig(layout_)},
 needsDrawing_{true},
 needsRendering_{true},
 orientation_(orientation),
-parent_(parent),
-window_(window? window: (parent? parent->window_: 0))
+parent_(parent)/*,
+window_(window_? window_: window())*/
 {
   constexpr std::array<YGFlexDirection, 2> j2ydt{YGFlexDirectionRow, YGFlexDirectionColumn}; // TODO: move to a better place
 
   YGNodeStyleSetFlexDirection(layoutNode_, j2ydt[orientation_]);
-  YGNodeSetContext(layoutNode_, this);
+  YGNodeStyleSetFlex(layoutNode_, 1.0);
+  if (area != RectangleDefault) {
+    YGNodeStyleSetWidth(layoutNode_, area.width());
+    YGNodeStyleSetHeight(layoutNode_, area.height());
+  } else {
+    YGNodeStyleSetWidthAuto(layoutNode_);
+    YGNodeStyleSetHeightAuto(layoutNode_);
+  }
   if (parent_) {
-    if (area != RectangleDefault) {
-      // Set geometry
-    }
-    auto insertPos{parent_->add(this)};
-    YGNodeInsertChild(dynamic_cast<Element *>(parent_)->layoutNode_, layoutNode_, insertPos);
+    parent_->add(this);
   }
 }
 
+Element *Element::window() const {
+  return parent_? parent_->window(): 0;
+}
+
 Updates Element::updated() {
+  fmt::print(stderr, "Updated element {}\n", fmt::ptr(this));
   Updates result;
-  // Draw if needed
   if (needsDrawing_) {
+    fmt::print(stderr, "Calling draw on {}\n", fmt::ptr(this));
     result = draw();
     needsDrawing_ = false;
     needsRendering_ = true;
@@ -48,12 +54,14 @@ Updates Element::updated() {
 }
 
 void Element::render() {
-  // Send contents to window
-  Updates updates{updated()};
-  if (!updates.empty()) {
-    window_->update(updates);
+  fmt::print(stderr, "Render element {}\n", fmt::ptr(this));
+  // Gather updates from element and its children
+  const Updates updates{updated()};
+  for (const auto &e: children_) {
+    e->render();
   }
   needsRendering_ = false;
+  window()->update(updates);
 }
 
 void Element::doLayout() {
@@ -61,12 +69,14 @@ void Element::doLayout() {
 }
 
 Rectangle Element::area() const {
-  return Rectangle(
-    YGNodeLayoutGetLeft(layoutNode_),
-    YGNodeLayoutGetTop(layoutNode_),
-    YGNodeLayoutGetRight(layoutNode_),
-    YGNodeLayoutGetBottom(layoutNode_)
-  );
+  // Sadly Yoga doesn't give the absolut position of sub-elements, just their position in the parent
+  auto left{YGNodeLayoutGetLeft(layoutNode_)};
+  auto top{YGNodeLayoutGetTop(layoutNode_)};
+  for (auto e{parent_}; e; e = e->parent_) {
+    left += YGNodeLayoutGetLeft(e->layoutNode_);
+    top += YGNodeLayoutGetTop(e->layoutNode_);
+  }
+  return Rectangle(left, top, left + YGNodeLayoutGetWidth(layoutNode_), top + YGNodeLayoutGetHeight(layoutNode_));
 }
 
 void Element::area(const Rectangle &area) {
@@ -88,16 +98,15 @@ Dim Element::height() const {
 }
 
 int Element::add(Element *element, Element *before) {
-  auto ygInsertPos{add(element, before)};
-  if (parent_) {
-    Element &parentElement = *dynamic_cast<Element *>(parent_);
-    YGNodeInsertChild(parentElement.layoutNode_, layoutNode_, ygInsertPos);
-#ifndef NDEBUG
-    if (parent_) {
-      assert(YGNodeGetChildCount(parentElement.layoutNode_) == children_.size());
-    }
-#endif
-  }
+  children_.reserve((children_.size() / 8 + 1) * 8);
+  auto insertPos{
+    before?
+      find_if(children_.begin(), children_.end(), [before](const unique_ptr<Element> &e1) {return e1.get() == before;}):
+      children_.end()
+  };
+  children_.insert(insertPos, unique_ptr<Element>(element));
+  auto ygInsertPos{insertPos - children_.begin()};
+  YGNodeInsertChild(layoutNode_, element->layoutNode_, ygInsertPos);
   return ygInsertPos;
 }
 

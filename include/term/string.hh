@@ -21,9 +21,6 @@
 
 #include <fmt/core.h>
 
-#include "text.hh"
-#include "utf8cpp/utf8/cpp11.h"
-
 namespace jwezel {
 
 template<typename T>

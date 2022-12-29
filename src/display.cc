@@ -7,20 +7,19 @@
 #include <regex>
 #include <unistd.h>
 
-#include <fmt/core.h>
 #include <utility>
-
+#define FMT_HEADER_ONLY
 #include "display.hh"
+#include "fmt/core.h"
 #include "fmt/format.h"
 #include "geometry.hh"
-#include "screen.hh"
 #include "text.hh"
 #include "update.hh"
 #include "string.hh"
 
 using namespace jwezel;
 
-using fmt::format, fmt::print;
+using fmt::format;
 using std::array;
 
 Display::Display(

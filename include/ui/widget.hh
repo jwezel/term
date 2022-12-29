@@ -2,6 +2,7 @@
 
 #include "element.hh"
 #include "text.hh"
+#include <string_view>
 
 namespace jwezel::ui {
 
@@ -11,11 +12,11 @@ struct Widget: public Element
 
   virtual ~Widget() = default;
 
-  virtual void drawEvent() const;
+  virtual void drawEvent() const {}
 
-  virtual Updates draw();
+  virtual Updates draw() override;
 
-  virtual void render();
+  // virtual void render() override {};
 
   Char background_;
   Text text_;

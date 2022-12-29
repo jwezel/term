@@ -8,7 +8,6 @@
 #include <deque>
 
 #include "basic.hh"
-#include "string.hh"
 #include "text.hh"
 #include "event.hh"
 #include <typeinfo>

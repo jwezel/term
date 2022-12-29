@@ -1,7 +1,6 @@
 #include "term.hh"
 #include "display.hh"
 #include "event.hh"
-#include "fmt/core.h"
 #include "geometry.hh"
 #include "keyboard.hh"
 #include "screen.hh"
@@ -86,8 +85,7 @@ Event *Terminal::event() {
 
 void Terminal::run() {
   while (running_) {
-    auto event{keyboard.event()};
-
+    keyboard.event();
   }
 }
 

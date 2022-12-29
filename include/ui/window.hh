@@ -1,29 +1,28 @@
 #pragma once
 
-#include "frame.hh"
+#include "element.hh"
 #include "geometry.hh"
-#include "keyboard.hh"
 #include "term.hh"
-#include "update.hh"
-#include "widget.hh"
 
 namespace jwezel::ui {
 
-struct Window: public Frame
+struct Window: public Element
 {
   Window(struct Ui *ui, const Char &background=Space, const Rectangle &area=RectangleDefault);
 
-  virtual Rectangle area() const;
+  virtual Rectangle area() const override;
 
-  virtual Vector size() const;
+  virtual Element *window() const override {return const_cast<Window *>(this);}
 
-  virtual Dim width() const;
+  virtual Vector size() const override;
 
-  virtual Dim height() const;
+  virtual Dim width() const override;
 
-  void update(const Updates &updates);
+  virtual Dim height() const override;
 
-  jwezel::Window window;
+  virtual void update(const Updates &updates) override;
+
+  jwezel::Window window_;
 };
 
 } // namespace

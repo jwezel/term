@@ -1,6 +1,5 @@
 #pragma once
 
-#include "geometry.hh"
 #include "term.hh"
 #include "window.hh"
 #include <memory>
