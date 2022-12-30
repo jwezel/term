@@ -1,5 +1,7 @@
 #pragma once
 
+#include "surface.hh"
+
 #include <string>
 #include <basic.hh>
 #include <geometry.hh>
@@ -11,7 +13,7 @@ namespace screen {
 
 ///
 /// Base Window
-struct BaseWindow {
+struct BaseWindow: Surface::Element {
 
   ///
   /// Constructor
@@ -107,7 +109,6 @@ struct BaseWindow {
 
   Vector position;
   Char background;
-  vector<Rectangle> fragments;
 };
 
 ///

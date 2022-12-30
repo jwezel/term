@@ -26,14 +26,14 @@ expand_(expand),
 contract_(contract),
 running_{false}
 {
-  auto [w, updates] = screen.addWindow(Rectangle{{0, 0}, display.size()}, background);
-  desktop = w;
+  auto [window, updates] = screen.addWindow(Rectangle{{0, 0}, display.size()}, background);
+  desktop = window;
   display.update(updates);
 }
 
 jwezel::Window Terminal::newWindow(const Rectangle &area, const Char &background, const optional<jwezel::Window> &below) {
   expand(Vector{area.x2, area.y2});
-  const auto [window, updates] = screen.addWindow(area, background, below.has_value()? below.value().window: 0);
+  const auto [window, updates]{screen.addWindow(area, background, below.has_value()? below.value().window: 0)};
   display.update(updates);
   return {*this, window};
 }

@@ -1,5 +1,10 @@
 #pragma once
 
+#include "geometry.hh"
+#include "_screen_window.hh"
+#include "surface.hh"
+#include "update.hh"
+
 #include <algorithm>
 #include <exception>
 #include <memory>
@@ -8,52 +13,25 @@
 #include <set>
 #include <functional>
 
-#include "geometry.hh"
-#include "_screen_window.hh"
-#include "update.hh"
-
 namespace jwezel {
 
 using namespace screen;
 
-struct Fragment {
-  Rectangle area;
-  BaseWindow *window;
-
-  operator string() const;
-};
-
-struct FragmentRef {
-  FragmentRef(const Rectangle *area, const BaseWindow *window): area(area), window(window) {}
-  const Rectangle *area;
-  const BaseWindow *window;
-};
+// struct FragmentRef {
+//   FragmentRef(const Rectangle *area, const BaseWindow *window): area(area), window(window) {}
+//   const Rectangle *area;
+//   const BaseWindow *window;
+// };
 
 struct ScreenError: public exception {};
 
-struct Screen {
+struct Screen: Surface {
 
   ///
   /// Constructor
   ///
   /// @param[in]  area  Screen area
   Screen();
-
-  ///
-  /// Split window into fragments
-  ///
-  /// @param[in]  area        The area
-  /// @param      fragments1  Result fragments
-  /// @param[in]  fragments2  Source fragments
-  // void split(const Rectangle &area, vector<Rectangle> &fragments1, const vector<Rectangle> fragments2);
-
-  ///
-  /// Generate regions to update screen
-  ///
-  /// @param[in]  fragments  The fragments
-  ///
-  /// @return     vector with updates
-  // Updates screenUpdates(const vector<Fragment> &fragments);
 
   ///
   /// Set window focus
@@ -163,25 +141,7 @@ struct Screen {
   Vector minSize(Window *exclude=0) const;
 
   Backdrop backdrop;
-  vector<BaseWindow *> zorder;
-  unordered_map<Window *, unique_ptr<Window>> windows;
   BaseWindow *focusWindow;
-
-  protected:
-  ///
-  /// Insert window fragments into register
-  ///
-  /// @param[in]  window  The window
-  void registerFragments(BaseWindow *window);
-
-  ///
-  /// Remove window fragments from register
-  ///
-  /// @param[in]  window  The window
-  void deregisterFragments(const BaseWindow *window);
-
-  std::set<FragmentRef, bool(*)(const FragmentRef &, const FragmentRef &)> fragmentsByX_;
-  std::set<FragmentRef, bool(*)(const FragmentRef &, const FragmentRef &)> fragmentsByY_;
 };
 
 } // namespace

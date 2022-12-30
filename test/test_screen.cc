@@ -59,7 +59,7 @@ TEST_CASE("Screen") {
     CHECK_EQ(updates, expupdates);
     CHECK_EQ(s.zorder.size(), 2);
     CHECK_EQ(s.zorder[1], s.focusWindow);
-    CHECK_EQ(string(s.zorder[1]->text()), "        \n        \n        \n        \n");
+    CHECK_EQ(string(dynamic_cast<Window *>(s.zorder[1])->text()), "        \n        \n        \n        \n");
     SUBCASE("AddWindow below") {
       auto [win2, updates]{s.addWindow(Rectangle{2, 0, 8, 6}, Space, win1)};
       auto [expwin, expupdates]{make_tuple(s.zorder[1], Updates{{{2, 0}, Text("      ")}, {{2, 5}, Text("      ")}})};

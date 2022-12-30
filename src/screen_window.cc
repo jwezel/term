@@ -14,9 +14,9 @@ using fmt::format;
 #define NOT_IMPLEMENTED throw runtime_error(format("Not implemented in {}", typeid(this).name()));
 
 BaseWindow::BaseWindow(const Rectangle &area, const Char &background):
+Surface::Element{area},
 position{area.position()},
-background{background},
-fragments{area}
+background{background}
 {}
 
 BaseWindow::operator string() const {
