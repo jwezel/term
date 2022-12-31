@@ -7,7 +7,7 @@
 #include "update.hh"
 #include <memory>
 
-namespace jwezel { struct Text; }
+// namespace jwezel {struct Text;}
 
 namespace jwezel::ui {
 
@@ -21,19 +21,18 @@ struct Element
   Element(
     struct Element *parent=0,
     Orientation orientation=Vertical,
-    const Rectangle &area=RectangleDefault,
-    Element *window=0
+    const Rectangle &area=RectangleDefault
   );
 
   ///
   /// Destroy Element
   virtual ~Element() = default;
 
-  virtual Element *window() const;
+  virtual const Element *window() const;
 
   virtual jwezel::Updates updated();
 
-  virtual void render();
+  virtual Updates render();
 
   ///
   /// Adjust layout

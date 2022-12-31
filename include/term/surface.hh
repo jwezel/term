@@ -27,6 +27,8 @@ struct Surface {
     operator string() const;
   };
 
+  Surface() {}
+
   Surface(initializer_list<Element *>);
 
   Updates addElement(Surface::Element * element, Surface::Element *below);

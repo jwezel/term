@@ -1,18 +1,17 @@
 #pragma once
 
-#include "element.hh"
-#include "geometry.hh"
-#include "term.hh"
+#include "surface.hh"
+#include "widget.hh"
 
 namespace jwezel::ui {
 
-struct Window: public Element
+struct Window: public Widget, public Surface
 {
   Window(struct Ui *ui, const Char &background=Space, const Rectangle &area=RectangleDefault);
 
   virtual Rectangle area() const override;
 
-  virtual Element *window() const override {return const_cast<Window *>(this);}
+  virtual const jwezel::ui::Element *window() const override {return this;}
 
   virtual Vector size() const override;
 

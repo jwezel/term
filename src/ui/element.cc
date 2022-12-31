@@ -1,18 +1,22 @@
-#include <yoga/Yoga.h>
-#include <algorithm>
-#include <memory>
+#include <yoga/Yoga.h> // NOTE: only works when placed on top 😱
 
-#include "fmt/core.h"
-#include "fmt/format.h"
 #include "geometry.hh"
 #include "element.hh"
 #include "text.hh"
 #include "update.hh"
 
+#include <cstdio>
+#include <iterator>
+#include <algorithm>
+#include <memory>
+
+#include <fmt/core.h>
+#include <fmt/format.h>
+
 using namespace jwezel;
 using namespace jwezel::ui;
 
-Element::Element(Element *parent, Orientation orientation, const Rectangle &area, struct Element *window_):
+Element::Element(Element *parent, Orientation orientation, const Rectangle &area):
 layout_{YGConfigGetDefault()},
 layoutNode_{YGNodeNewWithConfig(layout_)},
 needsDrawing_{true},
@@ -37,7 +41,7 @@ window_(window_? window_: window())*/
   }
 }
 
-Element *Element::window() const {
+const Element *Element::window() const {
   return parent_? parent_->window(): 0;
 }
 
@@ -53,15 +57,18 @@ Updates Element::updated() {
   return result;
 }
 
-void Element::render() {
+Updates Element::render() {
   fmt::print(stderr, "Render element {}\n", fmt::ptr(this));
   // Gather updates from element and its children
-  const Updates updates{updated()};
+  Updates updates{updated()};
   for (const auto &e: children_) {
-    e->render();
+    auto subUpdates{e->render()};
+    copy(subUpdates.begin(), subUpdates.end(), back_inserter(updates));
   }
   needsRendering_ = false;
-  window()->update(updates);
+  fmt::print(stderr, "{} updates\n", updates.size());
+  return updates;
+  // const_cast<Element *>(window())->update(updates);
 }
 
 void Element::doLayout() {

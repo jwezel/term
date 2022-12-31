@@ -18,9 +18,10 @@ background_{background}
 }
 
 jwezel::Updates Widget::draw() {
-  fmt::print(stderr, "Draw element {}\n", fmt::ptr(this));
   Updates result{Element::draw()};
+  text_.extend(size());
   text_.fill(background_);
-  result.emplace_back(area_.position(), text_);
+  fmt::print(stderr, "Draw element {}: \n", fmt::ptr(this));
+  result.emplace_back(area().position(), text_);
   return result;
 }
