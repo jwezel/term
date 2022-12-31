@@ -3,6 +3,7 @@
 #include "geometry.hh"
 #include "text.hh"
 #include "update.hh"
+
 #include <initializer_list>
 #include <memory>
 #include <unordered_map>

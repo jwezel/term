@@ -48,6 +48,7 @@ Surface{&backdrop}
 {}
 
 void Screen::focus(Window *window) {
+    assert(find(zorder.begin(), zorder.end(), window) != zorder.end());
     focusWindow = window;
 }
 
@@ -62,17 +63,17 @@ bool Screen::unfocus(Window *window) {
       cerr << "Window to unfocus not found" << endl;
       return false;
     }
-    focusWindow = dynamic_cast<BaseWindow *>(
-      *(
-        zpos == zorder.rbegin().base()?
-          zpos > zorder.begin()?
-            zpos - 1
-          :
-            zpos
+    auto pos{
+      zpos + 1 == zorder.end()?
+        zpos > zorder.begin()?
+          zpos - 1
         :
-          zpos + 1
-      )
-    );
+          zpos
+      :
+        zpos + 1
+    };
+    assert(pos != zorder.end());
+    focusWindow = dynamic_cast<BaseWindow *>(*pos);
   }
   return true;
 }
@@ -105,7 +106,6 @@ Updates Screen::reshapeWindow(Window *window, const Rectangle &area) {
   Updates updates;
   if (window->area() != area) {
     updates = Surface::reshapeElement(window, area);
-    // window->move(area);
   }
   return updates;
 }
