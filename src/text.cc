@@ -1,16 +1,18 @@
 // Text
 
-#include "utf8cpp/utf8/cpp11.h"
-#include "range/v3/range/conversion.hpp"
-#include <array>
-#include <fstream>
-#include <iostream>
+#include <geometry.hh>
+#include <string.hh>
+#include <text.hh>
+
 #include <algorithm>
+#include <array>
 #include <cfloat>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <fstream>
 #include <initializer_list>
+#include <iostream>
 #include <iterator>
 #include <optional>
 #include <sstream>
@@ -23,17 +25,15 @@
 #include <utility>
 #include <vector>
 
-#include <fmt/core.h>
 #include <fmt/color.h>
+#include <fmt/core.h>
 #include <range/v3/algorithm/max.hpp>
-#include <range/v3/view/transform.hpp>
+#include <range/v3/range/conversion.hpp>
 #include <range/v3/view/split.hpp>
+#include <range/v3/view/transform.hpp>
 #include <utf8cpp/utf8.h>
 #include <utf8cpp/utf8/cpp11.h>
-
-#include <geometry.hh>
-#include <string.hh>
-#include <text.hh>
+#include <utf8cpp/utf8/cpp11.h>
 
 namespace jwezel {
 

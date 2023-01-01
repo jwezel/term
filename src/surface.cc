@@ -1,13 +1,13 @@
 #include "surface.hh"
-#include "fmt/format.h"
 #include "update.hh"
 
 #include <algorithm>
 
+#include <fmt/format.h>
 #include <range/v3/action/push_back.hpp>
+#include <range/v3/action/remove_if.hpp>
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/view/remove_if.hpp>
-#include <range/v3/action/remove_if.hpp>
 #include <range/v3/view/transform.hpp>
 
 namespace jwezel {

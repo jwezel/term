@@ -1,13 +1,10 @@
 #pragma once
 
 #include "geometry.hh"  // for Dim, Rectangle, RectangleDefault, Vector
-// #include "optional.hh"  // for optional
-#include "term.hh"
 #include "text.hh"
 #include "update.hh"
-#include <memory>
 
-// namespace jwezel {struct Text;}
+#include <memory>
 
 namespace jwezel::ui {
 
@@ -21,7 +18,7 @@ struct Element
   Element(
     struct Element *parent=0,
     Orientation orientation=Vertical,
-    const Rectangle &area=RectangleDefault
+    const Vector &size=VectorMin
   );
 
   ///
@@ -58,6 +55,16 @@ struct Element
 
   virtual void update(const Updates &) {}
 
+  virtual void setMinimumWidth(Dim width);
+
+  virtual void setMinimumHeight(Dim height);
+
+  virtual void setMaximumWidth(Dim width);
+
+  virtual void setMaximumHeight(Dim height);
+
+  virtual void setPadding(const Rectangle &padding);
+
   struct YGConfig *layout_;
   struct YGNode *layoutNode_;
   bool needsDrawing_;
@@ -65,7 +72,6 @@ struct Element
   Orientation orientation_;
   Rectangle area_;
   struct Element *parent_;
-  // struct Element *window_;
   vector<unique_ptr<Element>> children_;
 };
 

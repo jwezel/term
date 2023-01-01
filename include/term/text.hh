@@ -8,15 +8,15 @@
 
 #pragma once
 
+#include "basic.hh"
+#include "geometry.hh"
+
 #include <array>
 #include <string_view>
 #include <vector>
 #include <string>
 
 #include <fmt/core.h> // TESTING ONLY
-
-#include <basic.hh>
-#include <geometry.hh>
 
 namespace jwezel {
 

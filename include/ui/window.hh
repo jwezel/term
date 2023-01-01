@@ -1,6 +1,7 @@
 #pragma once
 
 #include "surface.hh"
+#include "term.hh"
 #include "widget.hh"
 
 namespace jwezel::ui {

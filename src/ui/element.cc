@@ -16,24 +16,26 @@
 using namespace jwezel;
 using namespace jwezel::ui;
 
-Element::Element(Element *parent, Orientation orientation, const Rectangle &area):
+Element::Element(Element *parent, Orientation orientation, const Vector &size):
 layout_{YGConfigGetDefault()},
 layoutNode_{YGNodeNewWithConfig(layout_)},
 needsDrawing_{true},
 needsRendering_{true},
 orientation_(orientation),
-parent_(parent)/*,
-window_(window_? window_: window())*/
+parent_(parent)
 {
   constexpr std::array<YGFlexDirection, 2> j2ydt{YGFlexDirectionRow, YGFlexDirectionColumn}; // TODO: move to a better place
 
   YGNodeStyleSetFlexDirection(layoutNode_, j2ydt[orientation_]);
   YGNodeStyleSetFlex(layoutNode_, 1.0);
-  if (area != RectangleDefault) {
-    YGNodeStyleSetWidth(layoutNode_, area.width());
-    YGNodeStyleSetHeight(layoutNode_, area.height());
+  if (size.x != DimLow) {
+    YGNodeStyleSetWidth(layoutNode_, size.x);
   } else {
     YGNodeStyleSetWidthAuto(layoutNode_);
+  }
+  if (size.y != DimLow) {
+    YGNodeStyleSetHeight(layoutNode_, size.y);
+  } else {
     YGNodeStyleSetHeightAuto(layoutNode_);
   }
   if (parent_) {
@@ -46,10 +48,10 @@ const Element *Element::window() const {
 }
 
 Updates Element::updated() {
-  fmt::print(stderr, "Updated element {}\n", fmt::ptr(this));
+  // fmt::print(stderr, "Updated element {}\n", fmt::ptr(this));
   Updates result;
   if (needsDrawing_) {
-    fmt::print(stderr, "Calling draw on {}\n", fmt::ptr(this));
+    // fmt::print(stderr, "Calling draw on {}\n", fmt::ptr(this));
     result = draw();
     needsDrawing_ = false;
     needsRendering_ = true;
@@ -58,7 +60,7 @@ Updates Element::updated() {
 }
 
 Updates Element::render() {
-  fmt::print(stderr, "Render element {}\n", fmt::ptr(this));
+  // fmt::print(stderr, "Render element {}\n", fmt::ptr(this));
   // Gather updates from element and its children
   Updates updates{updated()};
   for (const auto &e: children_) {
@@ -66,7 +68,7 @@ Updates Element::render() {
     copy(subUpdates.begin(), subUpdates.end(), back_inserter(updates));
   }
   needsRendering_ = false;
-  fmt::print(stderr, "{} updates\n", updates.size());
+  // fmt::print(stderr, "{} updates\n", updates.size());
   return updates;
   // const_cast<Element *>(window())->update(updates);
 }
@@ -105,10 +107,10 @@ Dim Element::height() const {
 }
 
 int Element::add(Element *element, Element *before) {
-  children_.reserve((children_.size() / 8 + 1) * 8);
   auto insertPos{
     before?
-      find_if(children_.begin(), children_.end(), [before](const unique_ptr<Element> &e1) {return e1.get() == before;}):
+      find_if(children_.begin(), children_.end(), [before](const unique_ptr<Element> &e1) {return e1.get() == before;})
+    :
       children_.end()
   };
   children_.insert(insertPos, unique_ptr<Element>(element));
@@ -119,4 +121,35 @@ int Element::add(Element *element, Element *before) {
 
 int Element::add(Element *element) {
   return add(element, 0);
+}
+
+void Element::setMinimumWidth(Dim width) {
+    YGNodeStyleSetMinWidth(layoutNode_, width);
+}
+
+void Element::setMaximumWidth(Dim width) {
+    YGNodeStyleSetMaxWidth(layoutNode_, width);
+}
+
+void Element::setMinimumHeight(Dim height) {
+    YGNodeStyleSetMinHeight(layoutNode_, height);
+}
+
+void Element::setMaximumHeight(Dim height) {
+    YGNodeStyleSetMaxHeight(layoutNode_, height);
+}
+
+void Element::setPadding(const Rectangle &padding) {
+  if (padding.x1 != DimLow) {
+    YGNodeStyleSetPadding(layoutNode_, YGEdgeLeft, padding.x1);
+  }
+  if (padding.x2 != DimLow) {
+    YGNodeStyleSetPadding(layoutNode_, YGEdgeRight, padding.x2);
+  }
+  if (padding.y1 != DimLow) {
+    YGNodeStyleSetPadding(layoutNode_, YGEdgeTop, padding.y1);
+  }
+  if (padding.y1 != DimLow) {
+    YGNodeStyleSetPadding(layoutNode_, YGEdgeBottom, padding.y1);
+  }
 }
