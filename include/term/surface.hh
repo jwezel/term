@@ -13,8 +13,11 @@ namespace jwezel {
 struct Surface {
   struct Element {
     Element(const Rectangle &area): fragments{area} {}
+
     virtual Text text(const Rectangle &area) const = 0;
+
     virtual Rectangle area() const = 0;
+
     virtual void move(const Rectangle &area) = 0;
 
     vector<Rectangle> fragments;

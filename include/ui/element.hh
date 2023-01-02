@@ -27,7 +27,7 @@ struct Element
 
   virtual const Element *window() const;
 
-  virtual jwezel::Updates updated();
+  virtual Updates updated();
 
   virtual Updates render();
 
@@ -64,6 +64,10 @@ struct Element
   virtual void setMaximumHeight(Dim height);
 
   virtual void setPadding(const Rectangle &padding);
+
+  virtual void setBorder(const Rectangle &padding);
+
+  virtual void setMargin(const Rectangle &padding);
 
   struct YGConfig *layout_;
   struct YGNode *layoutNode_;

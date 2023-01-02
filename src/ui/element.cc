@@ -115,6 +115,7 @@ int Element::add(Element *element, Element *before) {
   };
   children_.insert(insertPos, unique_ptr<Element>(element));
   auto ygInsertPos{insertPos - children_.begin()};
+  children_.insert(insertPos, element);
   YGNodeInsertChild(layoutNode_, element->layoutNode_, ygInsertPos);
   return ygInsertPos;
 }
@@ -151,5 +152,35 @@ void Element::setPadding(const Rectangle &padding) {
   }
   if (padding.y1 != DimLow) {
     YGNodeStyleSetPadding(layoutNode_, YGEdgeBottom, padding.y1);
+  }
+}
+
+void Element::setBorder(const Rectangle &padding) {
+  if (padding.x1 != DimLow) {
+    YGNodeStyleSetBorder(layoutNode_, YGEdgeLeft, padding.x1);
+  }
+  if (padding.x2 != DimLow) {
+    YGNodeStyleSetBorder(layoutNode_, YGEdgeRight, padding.x2);
+  }
+  if (padding.y1 != DimLow) {
+    YGNodeStyleSetBorder(layoutNode_, YGEdgeTop, padding.y1);
+  }
+  if (padding.y1 != DimLow) {
+    YGNodeStyleSetBorder(layoutNode_, YGEdgeBottom, padding.y1);
+  }
+}
+
+void Element::setMargin(const Rectangle &padding) {
+  if (padding.x1 != DimLow) {
+    YGNodeStyleSetMargin(layoutNode_, YGEdgeLeft, padding.x1);
+  }
+  if (padding.x2 != DimLow) {
+    YGNodeStyleSetMargin(layoutNode_, YGEdgeRight, padding.x2);
+  }
+  if (padding.y1 != DimLow) {
+    YGNodeStyleSetMargin(layoutNode_, YGEdgeTop, padding.y1);
+  }
+  if (padding.y1 != DimLow) {
+    YGNodeStyleSetMargin(layoutNode_, YGEdgeBottom, padding.y1);
   }
 }
