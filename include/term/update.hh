@@ -1,45 +1,50 @@
 #pragma once
 
+#include <utility>
+
 #include "geometry.hh"
 #include "text.hh"
 
 namespace jwezel {
 
 struct Update {
-  Vector position;
-  Text text;
 
-  Update(const Vector &position, const Text &text): position{position}, text{text} {}
+  Update(const Vector &position, Text text): position{position}, text{std::move(text)} {}
 
-  operator string() const {
+  explicit operator string() const {
     return string(position) + ": " + text.repr();
   }
 
-  bool operator ==(const Update &other) const {
+  auto operator ==(const Update &other) const -> bool {
     return position == other.position and text == other.text;
   }
 
-  bool operator !=(const Update &other) const {
+  auto operator !=(const Update &other) const -> bool {
     return !(*this == other);
   }
 
-  bool operator <(const Update &other) const {
+  auto operator <(const Update &other) const -> bool {
     return position < other.position;
   }
 
-  bool operator >(const Update &other) const {
+  auto operator >(const Update &other) const -> bool {
     return other < *this;
   }
 
-  bool operator <=(const Update &other) const {
+  auto operator <=(const Update &other) const -> bool {
     return !(*this < other);
   }
 
-  bool operator >=(const Update &other) const {
+  auto operator >=(const Update &other) const -> bool {
     return !(other < *this);
   }
+
+  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
+  Vector position;
+  Text text;
+  // NOLINTEND(misc-non-private-member-variables-in-classes)
 };
 
 using Updates = vector<Update>;
 
-} // namespace
+} // namespace jwezel

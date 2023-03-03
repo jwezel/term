@@ -12,150 +12,162 @@
 #include "geometry.hh"
 
 #include <array>
+#include <string>
 #include <string_view>
 #include <vector>
-#include <string>
 
 #include <fmt/core.h> // TESTING ONLY
 
 namespace jwezel {
 
-using namespace std;
+using std::string, std::array, std::string_view;
 
-typedef char32_t Unicode;
+using Unicode = char32_t;
 
 const Unicode NoneRune = 0xffffffff;
 
 ///
 /// RGB color attributes.
 struct Rgb {
-  f4 r; ///< red (0 .. 1)
-  f4 g; ///< green (0 .. 1)
-  f4 b; ///< blue (0 .. 1)
+  explicit Rgb(f4 r=-1., f4 g=0., f4 b=0.) noexcept;
 
-  Rgb(f4 r=-1., f4 g=0., f4 b=0.);
+  ~Rgb() = default;
 
-  operator string() const;
+  Rgb(Rgb &&) = default;
 
-  operator struct Hsv() const;
+  auto operator=(Rgb &&) -> Rgb & = delete;
+
+  explicit operator string() const;
+
+  explicit operator struct Hsv() const noexcept;
 
   Rgb(const Rgb & color) = default;
 
-  Rgb &operator = (const Rgb & color) = default;
+  auto operator = (const Rgb & color) -> Rgb & = default;
 
-  Rgb operator |(const Rgb &other) const;
+  auto operator |(const Rgb &other) const -> Rgb;
 
-  bool operator ==(const Rgb &other) const;
+  auto operator ==(const Rgb &other) const -> bool;
 
-  bool operator !=(const Rgb &other) const;
+  auto operator !=(const Rgb &other) const -> bool;
 
-  Rgb operator +(const Rgb &color2) const;
+  auto operator +(const Rgb &color2) const -> Rgb;
+
+  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
+  f4 r; ///< red (0 .. 1)
+  f4 g; ///< green (0 .. 1)
+  f4 b; ///< blue (0 .. 1)
+  // NOLINTEND(misc-non-private-member-variables-in-classes)
 };
 
 ///
 /// HSV color attributes.
 struct Hsv {
-  f4 h; ///< hue (angle in decimal degrees (0 .. 360))
-  f4 s; ///< saturation (0 .. 1)
-  f4 v; ///< value (0 .. 1)
-
   Hsv(): h(-1), s(-1), v(-1) {}
 
   Hsv(f4 h, f4 s, f4 v): h(h), s(s), v(v) {}
 
-  operator string() const;
+  explicit operator string() const;
 
-  operator Rgb() const;
+  explicit operator Rgb() const;
 
-  bool operator ==(const Hsv &other) const;
+  auto operator ==(const Hsv &other) const -> bool;
 
-  bool operator !=(const Hsv &other) const;
+  auto operator !=(const Hsv &other) const -> bool;
+
+  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
+  f4 h; ///< hue (angle in decimal degrees (0 .. 360))
+  f4 s; ///< saturation (0 .. 1)
+  f4 v; ///< value (0 .. 1)
+  // NOLINTEND(misc-non-private-member-variables-in-classes)
 };
 
 const Rgb
-  RgbTransparent =  {-2.0, -2.0, -2.0},
-  RgbNone =         {-1.0, -1.0, -1.0},
-  RgbWhite =        {1.0, 1.0, 1.0},
-  RgbBlack =        {0.0, 0.0, 0.0},
-  RgbGray1 =        {0.1, 0.1, 0.1},
-  RgbGray2 =        {0.2, 0.2, 0.2},
-  RgbGray3 =        {0.3, 0.3, 0.3},
-  RgbGray4 =        {0.4, 0.4, 0.4},
-  RgbGray5 =        {0.5, 0.5, 0.5},
-  RgbGray6 =        {0.6, 0.6, 0.6},
-  RgbGray7 =        {0.7, 0.7, 0.7},
-  RgbGray8 =        {0.8, 0.8, 0.8},
-  RgbGray9 =        {0.9, 0.9, 0.9},
-  RgbRed =          {1.0, 0.0, 0.0},
-  RgbRed1 =         {0.1, 0.0, 0.0},
-  RgbRed2 =         {0.2, 0.0, 0.0},
-  RgbRed3 =         {0.3, 0.0, 0.0},
-  RgbRed4 =         {0.4, 0.0, 0.0},
-  RgbRed5 =         {0.5, 0.0, 0.0},
-  RgbRed6 =         {0.6, 0.0, 0.0},
-  RgbRed7 =         {0.7, 0.0, 0.0},
-  RgbRed8 =         {0.8, 0.0, 0.0},
-  RgbRed9 =         {0.9, 0.0, 0.0},
-  RgbGreen =        {0.0, 1.0, 0.0},
-  RgbGreen1 =       {0.0, 0.1, 0.0},
-  RgbGreen2 =       {0.0, 0.2, 0.0},
-  RgbGreen3 =       {0.0, 0.3, 0.0},
-  RgbGreen4 =       {0.0, 0.4, 0.0},
-  RgbGreen5 =       {0.0, 0.5, 0.0},
-  RgbGreen6 =       {0.0, 0.6, 0.0},
-  RgbGreen7 =       {0.0, 0.7, 0.0},
-  RgbGreen8 =       {0.0, 0.8, 0.0},
-  RgbGreen9 =       {0.0, 0.9, 0.0},
-  RgbBlue =         {0.0, 0.0, 1.0},
-  RgbBlue1 =        {0.0, 0.0, 0.1},
-  RgbBlue2 =        {0.0, 0.0, 0.2},
-  RgbBlue3 =        {0.0, 0.0, 0.3},
-  RgbBlue4 =        {0.0, 0.0, 0.4},
-  RgbBlue5 =        {0.0, 0.0, 0.5},
-  RgbBlue6 =        {0.0, 0.0, 0.6},
-  RgbBlue7 =        {0.0, 0.0, 0.7},
-  RgbBlue8 =        {0.0, 0.0, 0.8},
-  RgbBlue9 =        {0.0, 0.0, 0.9},
-  RgbYellow =       {1.0, 1.0, 0.0},
-  RgbYellow1 =      {0.1, 0.1, 0.0},
-  RgbYellow2 =      {0.2, 0.2, 0.0},
-  RgbYellow3 =      {0.3, 0.3, 0.0},
-  RgbYellow4 =      {0.4, 0.4, 0.0},
-  RgbYellow5 =      {0.5, 0.5, 0.0},
-  RgbYellow6 =      {0.6, 0.6, 0.0},
-  RgbYellow7 =      {0.7, 0.7, 0.0},
-  RgbYellow8 =      {0.8, 0.8, 0.0},
-  RgbYellow9 =      {0.9, 0.9, 0.0},
-  RgbMagenta =      {1.0, 0.0, 1.0},
-  RgbMagenta1 =     {0.1, 0.0, 0.1},
-  RgbMagenta2 =     {0.2, 0.0, 0.2},
-  RgbMagenta3 =     {0.3, 0.0, 0.3},
-  RgbMagenta4 =     {0.4, 0.0, 0.4},
-  RgbMagenta5 =     {0.5, 0.0, 0.5},
-  RgbMagenta6 =     {0.6, 0.0, 0.6},
-  RgbMagenta7 =     {0.7, 0.0, 0.7},
-  RgbMagenta8 =     {0.8, 0.0, 0.8},
-  RgbMagenta9 =     {0.9, 0.0, 0.9},
-  RgbCyan =         {0.0, 1.0, 1.0},
-  RgbCyan1 =        {0.0, 0.1, 0.1},
-  RgbCyan2 =        {0.0, 0.2, 0.2},
-  RgbCyan3 =        {0.0, 0.3, 0.3},
-  RgbCyan4 =        {0.0, 0.4, 0.4},
-  RgbCyan5 =        {0.0, 0.5, 0.5},
-  RgbCyan6 =        {0.0, 0.6, 0.6},
-  RgbCyan7 =        {0.0, 0.7, 0.7},
-  RgbCyan8 =        {0.0, 0.8, 0.8},
-  RgbCyan9 =        {0.0, 0.9, 0.9};
+  RgbTransparent =  Rgb{-2.0, -2.0, -2.0},
+  RgbNone =         Rgb{-1.0, -1.0, -1.0},
+  RgbWhite =        Rgb{1.0, 1.0, 1.0},
+  RgbBlack =        Rgb{0.0, 0.0, 0.0},
+  RgbGray1 =        Rgb{0.1, 0.1, 0.1},
+  RgbGray2 =        Rgb{0.2, 0.2, 0.2},
+  RgbGray3 =        Rgb{0.3, 0.3, 0.3},
+  RgbGray4 =        Rgb{0.4, 0.4, 0.4},
+  RgbGray5 =        Rgb{0.5, 0.5, 0.5},
+  RgbGray6 =        Rgb{0.6, 0.6, 0.6},
+  RgbGray7 =        Rgb{0.7, 0.7, 0.7},
+  RgbGray8 =        Rgb{0.8, 0.8, 0.8},
+  RgbGray9 =        Rgb{0.9, 0.9, 0.9},
+  RgbRed =          Rgb{1.0, 0.0, 0.0},
+  RgbRed1 =         Rgb{0.1, 0.0, 0.0},
+  RgbRed2 =         Rgb{0.2, 0.0, 0.0},
+  RgbRed3 =         Rgb{0.3, 0.0, 0.0},
+  RgbRed4 =         Rgb{0.4, 0.0, 0.0},
+  RgbRed5 =         Rgb{0.5, 0.0, 0.0},
+  RgbRed6 =         Rgb{0.6, 0.0, 0.0},
+  RgbRed7 =         Rgb{0.7, 0.0, 0.0},
+  RgbRed8 =         Rgb{0.8, 0.0, 0.0},
+  RgbRed9 =         Rgb{0.9, 0.0, 0.0},
+  RgbGreen =        Rgb{0.0, 1.0, 0.0},
+  RgbGreen1 =       Rgb{0.0, 0.1, 0.0},
+  RgbGreen2 =       Rgb{0.0, 0.2, 0.0},
+  RgbGreen3 =       Rgb{0.0, 0.3, 0.0},
+  RgbGreen4 =       Rgb{0.0, 0.4, 0.0},
+  RgbGreen5 =       Rgb{0.0, 0.5, 0.0},
+  RgbGreen6 =       Rgb{0.0, 0.6, 0.0},
+  RgbGreen7 =       Rgb{0.0, 0.7, 0.0},
+  RgbGreen8 =       Rgb{0.0, 0.8, 0.0},
+  RgbGreen9 =       Rgb{0.0, 0.9, 0.0},
+  RgbBlue =         Rgb{0.0, 0.0, 1.0},
+  RgbBlue1 =        Rgb{0.0, 0.0, 0.1},
+  RgbBlue2 =        Rgb{0.0, 0.0, 0.2},
+  RgbBlue3 =        Rgb{0.0, 0.0, 0.3},
+  RgbBlue4 =        Rgb{0.0, 0.0, 0.4},
+  RgbBlue5 =        Rgb{0.0, 0.0, 0.5},
+  RgbBlue6 =        Rgb{0.0, 0.0, 0.6},
+  RgbBlue7 =        Rgb{0.0, 0.0, 0.7},
+  RgbBlue8 =        Rgb{0.0, 0.0, 0.8},
+  RgbBlue9 =        Rgb{0.0, 0.0, 0.9},
+  RgbYellow =       Rgb{1.0, 1.0, 0.0},
+  RgbYellow1 =      Rgb{0.1, 0.1, 0.0},
+  RgbYellow2 =      Rgb{0.2, 0.2, 0.0},
+  RgbYellow3 =      Rgb{0.3, 0.3, 0.0},
+  RgbYellow4 =      Rgb{0.4, 0.4, 0.0},
+  RgbYellow5 =      Rgb{0.5, 0.5, 0.0},
+  RgbYellow6 =      Rgb{0.6, 0.6, 0.0},
+  RgbYellow7 =      Rgb{0.7, 0.7, 0.0},
+  RgbYellow8 =      Rgb{0.8, 0.8, 0.0},
+  RgbYellow9 =      Rgb{0.9, 0.9, 0.0},
+  RgbMagenta =      Rgb{1.0, 0.0, 1.0},
+  RgbMagenta1 =     Rgb{0.1, 0.0, 0.1},
+  RgbMagenta2 =     Rgb{0.2, 0.0, 0.2},
+  RgbMagenta3 =     Rgb{0.3, 0.0, 0.3},
+  RgbMagenta4 =     Rgb{0.4, 0.0, 0.4},
+  RgbMagenta5 =     Rgb{0.5, 0.0, 0.5},
+  RgbMagenta6 =     Rgb{0.6, 0.0, 0.6},
+  RgbMagenta7 =     Rgb{0.7, 0.0, 0.7},
+  RgbMagenta8 =     Rgb{0.8, 0.0, 0.8},
+  RgbMagenta9 =     Rgb{0.9, 0.0, 0.9},
+  RgbCyan =         Rgb{0.0, 1.0, 1.0},
+  RgbCyan1 =        Rgb{0.0, 0.1, 0.1},
+  RgbCyan2 =        Rgb{0.0, 0.2, 0.2},
+  RgbCyan3 =        Rgb{0.0, 0.3, 0.3},
+  RgbCyan4 =        Rgb{0.0, 0.4, 0.4},
+  RgbCyan5 =        Rgb{0.0, 0.5, 0.5},
+  RgbCyan6 =        Rgb{0.0, 0.6, 0.6},
+  RgbCyan7 =        Rgb{0.0, 0.7, 0.7},
+  RgbCyan8 =        Rgb{0.0, 0.8, 0.8},
+  RgbCyan9 =        Rgb{0.0, 0.9, 0.9};
+
+const int HighColor{255};
 
 ///
 /// Attributes for the Char type.
-typedef u8 Attributes;
+using Attributes = unsigned;
 
 const Attributes
-  bold = 1,
-  underline = 2,
-  reverse = 4,
-  blink = 8;
+  bold = 1U,
+  underline = 2U,
+  reverse = 4U,
+  blink = 8U;
 
 ///
 /// Attribute combining mode for the Char type.
@@ -180,10 +192,12 @@ extern vector<string> AttributeMode2String;
 ///
 /// This struct describes character attributes.
 struct CharAttributes {
+  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
   Rgb           fg;   ///< foreground
   Rgb           bg;   ///< background
   Attributes    attr; ///< attributes
   AttributeMode mix;  ///< attribute mapping
+  // NOLINTEND(misc-non-private-member-variables-in-classes)
 
   ///
   /// Constructor
@@ -192,7 +206,7 @@ struct CharAttributes {
   /// @param[in]  bg    The background
   /// @param[in]  attr  The attribute
   /// @param[in]  mix   The mix
-  CharAttributes(
+  explicit CharAttributes(
     const Rgb &fg=RgbNone,
     const Rgb &bg=RgbNone,
     const Attributes &attr={},
@@ -201,7 +215,7 @@ struct CharAttributes {
 
   ///
   /// String conversion operator.
-  operator string() const;
+  explicit operator string() const;
 
   ///
   /// Equality operator.
@@ -209,7 +223,7 @@ struct CharAttributes {
   /// @param[in]  other  The other
   ///
   /// @return     The result of the equality
-  bool operator ==(const CharAttributes &other) const;
+  auto operator ==(const CharAttributes &other) const -> bool;
 
   ///
   /// Inequality operator.
@@ -217,7 +231,7 @@ struct CharAttributes {
   /// @param[in]  other  The other
   ///
   /// @return     The result of the inequality
-  bool operator !=(const CharAttributes &other) const;
+  auto operator !=(const CharAttributes &other) const -> bool;
 };
 
 ///
@@ -229,11 +243,7 @@ enum Orientation {
 
 ///
 /// Line segments
-typedef array<u1, 4> Segments;
-
-///
-/// Quad tuple: north, south, west, east, mode
-typedef array<u1, 5> QuadTuple;
+using Segments = array<u1, 4>;
 
 ///
 /// Quad
@@ -246,15 +256,32 @@ enum QuadTupleField {
 };
 
 ///
+/// Quad tuple: north, south, west, east, mode
+using QuadTuple = array<u1, mode + 1>;
+
+///
 /// Quad value (unsigned with encoded bit fields)
-typedef u2 QuadValue;
+using QuadValue = u2;
+
+/// Quad fields shift positions
+const unsigned
+  QuadNorthShift = 9U,
+  QuadSouthShift = 7U,
+  QuadWestShift = 5U,
+  QuadEasthShift = 3U;
+
+const u1
+  MinDash = 1,
+  MaxDash = 2;
 
 ///
 /// Line drawing attributes.
 struct Draw {
+  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
   u1    strength = 1;
   u1    dash = 0;
   bool  roundedCorners = false;
+  // NOLINTEND(misc-non-private-member-variables-in-classes)
 
   ///
   /// Constructor
@@ -276,17 +303,16 @@ struct Line {
 ///
 /// This struct describes a box.
 struct Box: public Draw {
+  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
   Rectangle area = RectangleMax;
+  // NOLINTEND(misc-non-private-member-variables-in-classes)
 
-  Box(const Rectangle &area=RectangleMax, u1 strength=1, u1 dash=0, bool roundedCorners=false);
+  explicit Box(const Rectangle &area=RectangleMax, u1 strength=1, u1 dash=0, bool roundedCorners=false);
 };
 
 ///
 /// This struct describes a character.
 struct Char {
-  Unicode         rune;       ///< Unicode code point
-  CharAttributes  attributes; ///< attributes
-
   Char();
   ///
   /// Constructor
@@ -296,7 +322,13 @@ struct Char {
   /// @param      bg    The background
   /// @param[in]  attr  The attribute
   /// @param[in]  mix   The mix
-  Char(Unicode c, const Rgb &fg=RgbNone, const Rgb &bg=RgbNone, const Attributes &attr={}, const AttributeMode &mix=default_);
+  explicit Char(
+    Unicode c,
+    const Rgb &fg=RgbNone,
+    const Rgb &bg=RgbNone,
+    const Attributes &attr={},
+    const AttributeMode &mix=default_
+  );
 
   ///
   /// Constructor
@@ -307,7 +339,7 @@ struct Char {
 
   ///
   /// String conversion operator.
-  operator string() const;
+  explicit operator string() const;
 
   ///
   /// Char with attributes replaced
@@ -315,14 +347,14 @@ struct Char {
   /// @param[in]  attr  The attributes
   ///
   /// @return     Char with new attributes
-  Char withAttr(const CharAttributes &attr) const;
+  [[nodiscard]] auto withAttr(const CharAttributes &attr) const -> Char;
 
-  Char combine(
+  [[nodiscard]] auto combine(
     const Char &other,
     const AttributeMode &mixDefaultMode=merge,
     const AttributeMode &overrideMixMode=default_,
     const AttributeMode &resetMixMode=default_
-  );
+  ) const -> Char;
 
   ///
   /// Draw line in Char.
@@ -338,7 +370,7 @@ struct Char {
   /// @param[in]  other  The other
   ///
   /// @return     Whether Chars are equal
-  bool operator ==(const Char &other) const;
+  auto operator ==(const Char &other) const -> bool;
 
   ///
   /// Inequality operator.
@@ -347,24 +379,33 @@ struct Char {
   ///
   /// @return     Whether Chars are unequal
   ///
-  bool operator !=(const Char &other) const;
+  auto operator !=(const Char &other) const -> bool;
 
-  string utf8() const;
+  [[nodiscard]] auto utf8() const -> string;
+
+  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
+  Unicode         rune;       ///< Unicode code point
+  CharAttributes  attributes; ///< attributes
+  // NOLINTEND(misc-non-private-member-variables-in-classes)
 };
+
+inline auto operator ""_C(char ch) -> Char {
+  return Char(ch);
+}
 
 const Char
   Space(32),
   Null(0),
   Transparent(32, RgbTransparent, RgbTransparent);
 
-typedef vector<Char> String;
+using String = vector<Char>;
 
-extern const string asString(const String &s);
+extern auto asString(const String &s) -> string;
 
 ///
 /// This struct describes a rectangle of text.
 struct Text {
-  Text() {}
+  Text() = default;
 
   ///
   /// Constructor
@@ -376,7 +417,7 @@ struct Text {
   /// @param[in]  bg    The background
   /// @param[in]  attr  The attribute
   /// @param[in]  mix   The mix
-  Text(
+  explicit Text(
     const string_view &str,
     const Rgb &fg=RgbNone,
     const Rgb &bg=RgbNone,
@@ -405,25 +446,25 @@ struct Text {
   /// Get height.
   ///
   /// @return     Height
-  Dim height() const;
+  [[nodiscard]] auto height() const -> Dim;
 
   ///
   /// Get width.
   ///
   /// @return     Width
-  Dim width() const;
+  [[nodiscard]] auto width() const -> Dim;
 
   ///
   /// Get size.
   ///
   /// @return     Size
-  Vector size() const;
+  [[nodiscard]] auto size() const -> Vector;
 
   ///
   /// String conversion operator.
-  operator string() const;
+  explicit operator string() const;
 
-  string repr() const;
+  [[nodiscard]] auto repr() const -> string;
 
   ///
   /// Get right-aligned Text
@@ -431,7 +472,7 @@ struct Text {
   /// @param[in]  width  The width
   ///
   /// @return     Text, right-adjusted to @c width characters
-  Text rightAligned(Dim width=DimLow);
+  [[nodiscard]] auto rightAligned(Dim width=DimLow) const -> Text;
 
   ///
   /// Get horizontally centered text
@@ -439,7 +480,7 @@ struct Text {
   /// @param[in]  width  The width
   ///
   /// @return     Centered Text
-  Text centered(Dim width=DimLow);
+  [[nodiscard]] auto centered(Dim width=DimLow) const -> Text;
 
   ///
   /// Extend text to specified dimensions
@@ -464,7 +505,7 @@ struct Text {
   /// @param[in]  resetMixMode     The reset mix mode
   void patch(
     const Text &other,
-    const Vector &position={0, 0},
+    const Vector &position=Vector{0, 0},
     const AttributeMode &mixDefaultMode=replace,
     const AttributeMode &overrideMixMode=default_,
     const AttributeMode &resetMixMode=default_
@@ -506,7 +547,7 @@ struct Text {
   /// @param[in]  area  The area
   ///
   /// @return     The result of the array indexer
-  Text operator [](const Rectangle &area) const;
+  auto operator [](const Rectangle &area) const -> Text;
 
   ///
   /// Get char at position.
@@ -516,7 +557,7 @@ struct Text {
   /// @param[in]  position  The position
   ///
   /// @return     Char (Null if position is outside of text)
-  Char operator [](const Vector &position) const;
+  auto operator [](const Vector &position) const -> Char;
 
   ///
   /// Get reference to char at position.
@@ -526,7 +567,7 @@ struct Text {
   /// @param[in]  position  The position
   ///
   /// @return     Char (Null if position is outside of text)
-  Char &operator [](const Vector &position);
+  auto operator [](const Vector &position) -> Char &;
 
   ///
   /// Get char at position.
@@ -538,7 +579,7 @@ struct Text {
   /// @param[in]  position  The position
   ///
   /// @return     Char
-  Char &at(const Vector &position);
+  auto at(const Vector &position) -> Char &;
 
   ///
   /// Draw horizontal or vertical line.
@@ -548,18 +589,20 @@ struct Text {
   /// @param[in]  line  The line
   ///
   /// @return     Rectangle spanning the area of modification
-  Rectangle line(
+  auto line(
     const Line &line,
     u1 strength=1,
     u1 dash=0,
     bool roundedCorners=false
-  );
+  ) -> Rectangle;
 
-  vector<Rectangle> box(const Box &box={});
+  auto box(const Box &box=Box{}) -> vector<Rectangle>;
 
-  bool operator ==(const Text &other) const;
+  auto operator ==(const Text &other) const -> bool;
 
+  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
   vector<String> data; ///< text
+  // NOLINTEND(misc-non-private-member-variables-in-classes)
 };
 
-}
+} // namespace jwezel

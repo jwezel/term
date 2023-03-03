@@ -2,6 +2,8 @@
 
 #include "event.hh"
 
+namespace jwezel {
+
 struct WindowEvent: public Event {
   CLASS_ID(WindowEvent);
 };
@@ -17,3 +19,5 @@ struct WindowVisibilityChanged: public WindowEvent {
 struct WindowFocusChanged: public WindowEvent {
   CLASS_ID(WindowFocusChanged);
 };
+
+} // namespace jwezel

@@ -3,11 +3,11 @@
 #include <string_view>
 
 #include "geometry.hh"
-#include "text.hh"
 #include "keyboard.hh"
+#include "text.hh"
 #include "update.hh"
 
-using namespace jwezel;
+namespace jwezel {
 
 ///
 /// This class describes a display.
@@ -16,7 +16,6 @@ using namespace jwezel;
 ///
 /// Render content on a terminal device
 struct Display {
-
   ///
   /// Create Display
   ///
@@ -24,14 +23,23 @@ struct Display {
   /// @param[in]  output    Output file descriptor
   /// @param[in]  position  The position (VectorMin=current)
   /// @param[in]  size      Start size
-  /// @param[in]  expandTo  Max size (VectorMin=start size, VectorMax=screen size)
-  Display(
+  /// @param[in]  expandTo  Max size (VectorMin=start size, VectorMax=screen
+  /// size)
+  explicit Display(
     Keyboard &keyboard,
     int output=1,
     const Vector &position=VectorMin,
     const Vector &size=VectorMin,
     const Vector &expandTo=VectorMax
   );
+
+  Display(const Display &) = default;
+
+  Display(Display &&) = delete;
+
+  auto operator=(const Display &) -> Display & = delete;
+
+  auto operator=(Display &&) -> Display & = delete;
 
   ///
   /// Destroy Display
@@ -47,7 +55,7 @@ struct Display {
   /// Get cursor position from terminal
   ///
   /// @return     cursor position
-  Vector cursor();
+  auto cursor() -> Vector;
 
   ///
   /// Move cursor
@@ -56,7 +64,7 @@ struct Display {
   /// @param[in]  y     0-based line
   ///
   /// @return     string with ANSI sequence
-  void cursor(int x, int y);
+  void cursor(Dim column, Dim line);
 
   ///
   /// Turn cursor on/off
@@ -64,7 +72,7 @@ struct Display {
   /// @param[in]  mode  The mode
   ///
   /// @return     string with ANSI sequence
-  void cursor(bool mode);
+  void cursor(bool mode) const;
 
   ///
   /// Set foreground
@@ -102,7 +110,7 @@ struct Display {
   ///
   /// @return     Terminal size
   ///
-  Vector size() const;
+  [[nodiscard]] auto size() const -> Vector;
 
   ///
   /// Set terminal size
@@ -112,8 +120,9 @@ struct Display {
 
   ///
   /// Get "physical" terminal size
-  Vector terminalSize();
+  auto terminalSize() -> Vector;
 
+  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
   Keyboard &keyboard_;                //< Keyboard
   int output_;                        //< Output file descriptor
   Vector cursor_;                     //< Current cursor position
@@ -124,4 +133,7 @@ struct Display {
   Vector position_;                   //< Display position
   Vector maxSize_;                    //< Maximum display size
   Text text_;                         //< Display text
+  // NOLINTEND(misc-non-private-member-variables-in-classes)
 };
+
+} // namespace jwezel

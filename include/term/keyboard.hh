@@ -1,18 +1,20 @@
 #pragma once
 
+#include <deque>
 #include <map>
 #include <memory>
 #include <optional>
 #include <string>
 #include <termios.h>
-#include <deque>
 
 #include "basic.hh"
-#include "text.hh"
 #include "event.hh"
+#include "text.hh"
 #include <typeinfo>
 
 namespace jwezel {
+
+using std::tuple, std::unique_ptr;
 
 enum Key: Unicode {
   None = 0x0fff0000,
@@ -178,10 +180,12 @@ struct InputEvent: public Event {
 };
 
 struct KeyEvent: public InputEvent {
-  KeyEvent(const Unicode &key): key{key} {}
+  explicit KeyEvent(const Unicode &key): key{key} {}
 
+  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
   Unicode key;
   CLASS_ID(KeyEvent);
+  // NOLINTEND(misc-non-private-member-variables-in-classes)
 };
 
 struct MouseEvent: public InputEvent {
@@ -193,18 +197,22 @@ struct MouseButtonEvent: public MouseEvent {
   button(button), modifiers(modifiers), x(x), y(y), action(action)
   {}
 
+  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
   MouseButton button;
   MouseModifiers modifiers;
   u2 x;
   u2 y;
   MouseAction action;
   CLASS_ID(MouseButtonEvent);
+  // NOLINTEND(misc-non-private-member-variables-in-classes)
 };
 
 struct MouseMoveEvent: public MouseEvent {
   MouseMoveEvent(u2 x, u2 y): x{x}, y{y} {}
+  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
   u2 x;
   u2 y;
+  // NOLINTEND(misc-non-private-member-variables-in-classes)
   CLASS_ID(MouseMoveEvent);
 };
 
@@ -213,7 +221,15 @@ struct Keyboard {
   /// Constructor
   ///
   /// @param[in]  device  Terminal device
-  Keyboard(int device=0);
+  explicit Keyboard(int device=0);
+
+  Keyboard(const Keyboard &) = default;
+
+  Keyboard(Keyboard &&) = delete;
+
+  auto operator=(const Keyboard &) -> Keyboard & = default;
+
+  auto operator=(Keyboard &&) -> Keyboard & = delete;
 
   ///
   /// Destructor
@@ -231,34 +247,33 @@ struct Keyboard {
   /// Get key
   ///
   /// @return     key
-  Unicode key();
+  auto key() -> Unicode;
 
   ///
   /// Mouse report
   ///
   /// @return     Terminal mouse event data
-  tuple<MouseButton, MouseModifiers, u2, u2, MouseAction> mouseReport();
+  auto mouseReport() -> tuple<MouseButton, MouseModifiers, u2, u2, MouseAction>;
 
   ///
   /// Get input event
   ///
   /// @return     The input event.
-  InputEvent *event();
+  auto event() -> InputEvent *;
 
   ///
   /// Key prefix tree node
   struct PrefixNode {
     Unicode key = Key::None;
-    std::map<char, unique_ptr<PrefixNode>> nodes;
+    std::map<char, unique_ptr<PrefixNode>> nodes{};
   };
 
+  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
   std::deque<Unicode> keyBuffer; //< Key buffer
-
   PrefixNode keyPrefixes; //< Key prefix tree
-
   int fd; //< Terminal file descriptor
-
   std::optional<termios> originalState; //< Original terminal state
+  // NOLINTEND(misc-non-private-member-variables-in-classes)
 };
 
-} // namespace
+} // namespace jwezel

@@ -5,9 +5,10 @@
 #include "keyboard.hh"
 #include "screen.hh"
 #include "text.hh"
+#include <algorithm>
 #include <unistd.h>
 
-using namespace jwezel;
+namespace jwezel {
 
 Terminal::Terminal(
   const Char background,
@@ -19,97 +20,93 @@ Terminal::Terminal(
   bool expand,
   bool contract
 ):
-keyboard{keyboardFd == -1? terminalFd: keyboardFd},
-display{keyboard, terminalFd, initialPosition, initialSize == VectorMin? Vector{1, 1}: initialSize, maxSize},
-minimumSize(display.size()),
+keyboard_{keyboardFd == -1? terminalFd: keyboardFd},
+display_{keyboard_, terminalFd, initialPosition, initialSize == VectorMin? Vector{1, 1}: initialSize, maxSize},
+minimumSize_(display_.size()),
 expand_(expand),
 contract_(contract),
 running_{false}
 {
-  auto [window, updates] = screen.addWindow(Rectangle{{0, 0}, display.size()}, background);
-  desktop = window;
-  display.update(updates);
+  auto [window, updates] = screen_.addWindow(Rectangle{Vector{0, 0}, display_.size()}, background);
+  desktop_ = window; // NOLINT (needs elaborate initialization)
+  display_.update(updates);
 }
 
-jwezel::Window Terminal::newWindow(const Rectangle &area, const Char &background, const optional<jwezel::Window> &below) {
-  expand(Vector{area.x2, area.y2});
-  const auto [window, updates]{screen.addWindow(area, background, below.has_value()? below.value().window: 0)};
-  display.update(updates);
-  return {*this, window};
+auto Terminal::newWindow(const Rectangle &area, const Char &background, const optional<jwezel::Window> &below) -> jwezel::Window {
+  expand(Vector{area.x2(), area.y2()});
+  const auto [window_, updates]{screen_.addWindow(area, background, below.has_value()? below.value().window(): 0)};
+  display_.update(updates);
+  return {*this, window_};
 }
 
 void Terminal::deleteWindow(const jwezel::Window &window) {
-  Vector size{window.window->area().x1, window.window->area().y1};
-  const auto updates{screen.deleteWindow(window.window)};
-  display.update(updates);
+  Vector size{window.area().x1(), window.area().y1()};
+  const auto updates{screen_.deleteWindow(window.window())};
+  display_.update(updates);
   contract();
 }
 
 void Terminal::moveWindow(const jwezel::Window &window, const Rectangle &area) {
-  expand(Vector{area.x2, area.y2});
-  display.update(screen.reshapeWindow(window.window, area));
+  expand(Vector{area.x2(), area.y2()});
+  display_.update(screen_.reshapeWindow(window.window(), area));
   contract();
 }
 
-Rectangle Terminal::windowArea(const jwezel::Window &window) const {
-  return window.window->area();
-}
-
 void Terminal::write(const jwezel::Window &window, const Vector &position, const Text &text) {
-  display.update(screen.text(window.window, position, text));
+  display_.update(screen_.text(window.window(), position, text));
 }
 
 void Terminal::focus(const jwezel::Window &window, bool status) {
   if (status) {
-    screen.focus(window.window);
+    screen_.focus(window.window());
   } else {
-    screen.unfocus(window.window);
+    screen_.unfocus(window.window());
   }
 }
 
 void Terminal::line(const jwezel::Window &window, const Line &line) {
-  display.update(screen.line(window.window, line));
+  display_.update(screen_.line(window.window(), line));
 }
 
 void Terminal::fill(const jwezel::Window &window, const Char &fill, const Rectangle &area) {
-  display.update(screen.fill(window.window, fill, area));
+  display_.update(screen_.fill(window.window(), fill, area));
 }
 
 void Terminal::box(const jwezel::Window &window, const Box &box) {
-  display.update(screen.box(window.window, box));
+  display_.update(screen_.box(window.window(), box));
 }
 
-Event *Terminal::event() {
-  return keyboard.event();
+auto Terminal::event() -> Event * {
+  return keyboard_.event();
 }
 
 void Terminal::run() {
   while (running_) {
-    keyboard.event();
+    keyboard_.event();
   }
 }
 
-bool Terminal::expand(const Vector &size) {
+auto Terminal::expand(const Vector &size) -> bool {
   if (!expand_) {
     return false;
   }
-  const auto size_ = max(min(display.maxSize_, size), display.size());
-  if (size_ != display.size()) {
-    display.resize(size_);
-    display.update(screen.reshapeWindow(desktop, Rectangle{Vector{0, 0}, size_}));
+  const auto size_ = max(min(display_.maxSize_, size), display_.size());
+  if (size_ != display_.size()) {
+    display_.resize(size_);
+    display_.update(screen_.reshapeWindow(desktop_, Rectangle{Vector{0, 0}, size_}));
     return true;
   }
   return false;
 }
 
-bool Terminal::contract() {
+auto Terminal::contract() -> bool {
   if (!contract_) {
     return false;
   }
-  const auto size_{max(max(screen.minSize(desktop), {1, 1}), minimumSize)};
-  if (size_ != display.size()) {
-    display.update(screen.reshapeWindow(desktop, Rectangle{Vector{0, 0}, size_}));
-    display.resize(size_);
+  const auto size_{max(max(screen_.minSize(desktop_), Vector{1, 1}), minimumSize_)};
+  if (size_ != display_.size()) {
+    display_.update(screen_.reshapeWindow(desktop_, Rectangle{Vector{0, 0}, size_}));
+    display_.resize(size_);
     return true;
   }
   return false;
@@ -118,49 +115,51 @@ bool Terminal::contract() {
 // ~Window~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 void jwezel::Window::destroy() {
-  terminal.deleteWindow(*this);
+  terminal_.deleteWindow(*this);
 }
 
 void jwezel::Window::move(const Rectangle &area) {
-  terminal.moveWindow(*this, area);
+  terminal_.moveWindow(*this, area);
 }
 
-Rectangle jwezel::Window::area() const {
-  return terminal.windowArea(*this);
+auto jwezel::Window::area() const -> Rectangle {
+  return window_->area();
 }
 
-Vector jwezel::Window::size() const {
-  return terminal.windowArea(*this).size();
+auto jwezel::Window::size() const -> Vector {
+  return window_->area().size();
 }
 
-Dim jwezel::Window::width() const {
-  return terminal.windowArea(*this).width();
+auto jwezel::Window::width() const -> Dim {
+  return window_->area().width();
 }
 
-Dim jwezel::Window::height() const {
-  return terminal.windowArea(*this).height();
+auto jwezel::Window::height() const -> Dim {
+  return window_->area().height();
 }
 
 void jwezel::Window::focus(bool status) {
-  terminal.focus(*this, status);
+  terminal_.focus(*this, status);
 }
 
 void jwezel::Window::write(const Vector &position, const string_view &str) {
-  terminal.write(*this, position, Text(str, RgbNone, RgbNone, {}, mix));
+  window_->write(position, Text(str, RgbNone, RgbNone, {}, mix));
 }
 
 void jwezel::Window::write(const Vector &position, const Text &text) {
-  terminal.write(*this, position, text);
+  window_->write(position, text);
 }
 
 void jwezel::Window::box(const Box &box) {
-  terminal.box(*this, box);
+  window_->box(box);
 }
 
 void jwezel::Window::line(const Line &line) {
-  terminal.line(*this, line);
+  window_->line(line);
 }
 
 void jwezel::Window::fill(const Char &fill, const Rectangle &area) {
-  terminal.fill(*this, fill, area);
+  window_->fill(fill, area);
 }
+
+} // namespace jwezel

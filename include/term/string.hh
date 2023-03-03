@@ -9,26 +9,26 @@
 
 #pragma once
 
-#include <cstddef>
-#include <stdexcept>
-#include <string>
-#include <vector>
-#include <string_view>
 #include <algorithm>
-#include <assert.h>
+#include <cassert>
+#include <cstddef>
 #include <exception>
 #include <iostream>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <vector>
 
 #include <fmt/core.h>
 
 namespace jwezel {
 
 template<typename T>
-std::string str(const T &v) {
+auto str(const T &v) -> std::string {
   return string(v);
 }
 
-std::string repr(const std::string_view &str);
+auto repr(const std::string_view &str) -> std::string;
 
-} // namespace
+} // namespace jwezel
 

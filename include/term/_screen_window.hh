@@ -2,18 +2,25 @@
 
 #include "surface.hh"
 
-#include <string>
 #include <basic.hh>
 #include <geometry.hh>
+#include <string>
 #include <string_view>
 #include <text.hh>
 
-namespace jwezel {
-namespace screen {
+namespace jwezel::screen {
 
 ///
 /// Base Window
 struct BaseWindow: Surface::Element {
+
+  BaseWindow(const BaseWindow &) = default;
+
+  BaseWindow(BaseWindow &&) = delete;
+
+  auto operator=(const BaseWindow &) -> BaseWindow & = default;
+
+  auto operator=(BaseWindow &&) -> BaseWindow & = delete;
 
   ///
   /// Constructor
@@ -21,14 +28,14 @@ struct BaseWindow: Surface::Element {
   /// @param[in]  id    The identifier
   /// @param[in]  area  The area
   ///
-  BaseWindow(const Rectangle &area, const Char &background=Space);
+  explicit BaseWindow(const Rectangle &area, const Char &background=Space);
 
   ///
   /// Destroy BaseWindow
-  virtual ~BaseWindow() {}
+   ~BaseWindow() override = default;
 
   /// String representation of WindowObj
-  virtual operator string() const;
+  virtual explicit operator string() const;
 
   ///
   /// Write text to window
@@ -42,7 +49,7 @@ struct BaseWindow: Surface::Element {
   ///
   /// @param[in]  position  The position
   /// @param[in]  text      The text
-  virtual void write(const Vector &position, const Text &text_);
+  virtual void write(const Vector &position, const Text &txt_);
 
   ///
   /// Fill window with Char
@@ -73,31 +80,31 @@ struct BaseWindow: Surface::Element {
   /// @param[in]  box   The box
   ///
   /// @return     vector of rectangles
-  virtual vector<Rectangle> box(const Box &box);
+  virtual auto box(const Box &box) -> vector<Rectangle>;
 
   ///
   /// Get window size
   ///
   /// @return     Window size
-  virtual Vector size() const;
+  [[nodiscard]] virtual auto size() const -> Vector;
 
   ///
   /// Move window
   ///
   /// @param[in]  area  The area
-  virtual void move(const Rectangle &area);
+   void move(const Rectangle &area) override;
 
   ///
   /// Get window area
   ///
   /// @return     Window area
-  virtual Rectangle area() const;
+  [[nodiscard]] auto area() const -> Rectangle override;
 
   ///
   /// Get window text
   ///
   /// @return     Text
-  virtual const Text &text() const;
+  [[nodiscard]] virtual auto text() const -> const Text &;
 
   ///
   /// Get area of window text
@@ -105,10 +112,12 @@ struct BaseWindow: Surface::Element {
   /// @param[in]  area  The area
   ///
   /// @return     text
-  virtual Text text(const Rectangle &area) const;
+  [[nodiscard]] auto text(const Rectangle &area) const -> Text override;
 
+  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
   Vector position;
   Char background;
+  // NOLINTEND(misc-non-private-member-variables-in-classes)
 };
 
 ///
@@ -121,29 +130,37 @@ struct Backdrop: public BaseWindow {
   ///
   /// @param[in]  id    The identifier
   /// @param[in]  area  The area
-  Backdrop(const Char &background=Space);
+  explicit Backdrop(const Char &background=Space);
+
+  Backdrop(const Backdrop &) = default;
+
+  Backdrop(Backdrop &&) = delete;
+
+  auto operator=(const Backdrop &) -> Backdrop & = default;
+
+  auto operator=(Backdrop &&) -> Backdrop & = delete;
 
   ///
   /// Destroy Backdrop
-  ~Backdrop() override {}
+  ~Backdrop() override = default;
 
   ///
   /// Get backdrop area
   ///
   /// @return     RectangleMax
-  Rectangle area() const override;
+  [[nodiscard]] auto area() const -> Rectangle override;
 
   ///
   /// Get backdrop size
   ///
   /// @return     VectorMax
-  Vector size() const override;
+  [[nodiscard]] auto size() const -> Vector override;
 
   ///
   /// Get window text
   ///
   /// @return     Text
-  const Text &text() const override;
+  [[nodiscard]] auto text() const -> const Text & override;
 
   ///
   /// Get area of window text
@@ -151,27 +168,34 @@ struct Backdrop: public BaseWindow {
   /// @param[in]  area  The area
   ///
   /// @return     text
-  Text text(const Rectangle &area) const override;
+  [[nodiscard]] auto text(const Rectangle &area) const -> Text override;
 };
 
 ///
 /// Window
 struct Window: public BaseWindow {
-
   ///
   /// Constructor
   ///
   /// @param[in]  id    The identifier
   /// @param[in]  area  The area
   ///
-  Window(const Rectangle &area, const Char &background=Space);
+  explicit Window(const Rectangle &area, const Char &background=Space);
+
+  Window(const Window &) = default;
+
+  Window(Window &&) = delete;
+
+  auto operator=(const Window &) -> Window & = default;
+
+  auto operator=(Window &&) -> Window & = delete;
 
   ///
   /// Destroy Window
-   ~Window() override {}
+   ~Window() override = default;
 
   /// String representation of Window
-  operator string() const override;
+  explicit operator string() const override;
 
   ///
   /// Write string to window
@@ -185,7 +209,7 @@ struct Window: public BaseWindow {
   ///
   /// @param[in]  position  The position
   /// @param[in]  text      The text
-  void write(const Vector &position, const Text &text_) override;
+  void write(const Vector &position, const Text &txt_) override;
 
   ///
   /// Fill window with Char
@@ -203,12 +227,12 @@ struct Window: public BaseWindow {
   /// @param[in]  roundedCorners  Whether to round corners
   ///
   /// @return     Rectangle
-  Rectangle line(
+  auto line(
     const Line &line,
     u1 strength=1,
     u1 dash=0,
     bool roundedCorners=false
-  ) override;
+  ) -> Rectangle override;
 
   ///
   /// Draw box
@@ -216,13 +240,13 @@ struct Window: public BaseWindow {
   /// @param[in]  box   The box
   ///
   /// @return     vector of rectangles
-  vector<Rectangle> box(const Box &box) override;
+  auto box(const Box &box) -> vector<Rectangle> override;
 
   ///
   /// Get window size
   ///
   /// @return     Window size
-  Vector size() const override;
+  [[nodiscard]] auto size() const -> Vector override;
 
   ///
   /// Move window
@@ -234,13 +258,13 @@ struct Window: public BaseWindow {
   /// Get window area
   ///
   /// @return     Window area
-  Rectangle area() const override;
+  [[nodiscard]] auto area() const -> Rectangle override;
 
   ///
   /// Get window text
   ///
   /// @return     Text
-  const Text &text() const override {
+  [[nodiscard]] auto text() const -> const Text & override {
     return text_;
   }
 
@@ -250,12 +274,12 @@ struct Window: public BaseWindow {
   /// @param[in]  area  The area
   ///
   /// @return     text
-  Text text(const Rectangle &area) const override {
+  [[nodiscard]] auto text(const Rectangle &area) const -> Text override {
     return text_[area];
   }
 
+  private:
   Text text_;
 };
 
-} // namespace screen
-} // namespace jwezel
+} // namespace jwezel::screen

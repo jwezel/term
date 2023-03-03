@@ -1,10 +1,13 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
+#include <exception>
+#include <iostream>
+#include <ostream>
+#include <regex>
 #include <stdexcept>
 #include <string>
 #include <system_error>
-#include <regex>
 #include <unistd.h>
 
 #include <utility>
@@ -13,20 +16,29 @@
 #include "fmt/core.h"
 #include "fmt/format.h"
 #include "geometry.hh"
+#include "string.hh"
 #include "text.hh"
 #include "update.hh"
-#include "string.hh"
 
-using namespace jwezel;
+namespace jwezel {
 
 using fmt::format;
-using std::array;
+using
+  std::array,
+  std::basic_regex,
+  std::cerr,
+  std::endl,
+  std::exception,
+  std::runtime_error,
+  std::smatch,
+  std::system_category,
+  std::system_error;
 
 Display::Display(
   Keyboard &keyboard,
   int output,
-  const Vector &position__,
-  const Vector &size__,
+  const Vector &position,
+  const Vector &size,
   const Vector &expandTo
 ):
 keyboard_(keyboard),
@@ -37,34 +49,40 @@ foreground_{RgbWhite},
 background_{RgbNone},
 attributes_{},
 position_{
-  position__ == VectorMin?
+  position == VectorMin?
     cursor_
   :
-    position__
+    position
 },
 maxSize_{min(expandTo == VectorMax? terminalSize_: expandTo, terminalSize_ - position_)},
-text_(Null, size__ == VectorMin? Vector{1, 1}: min(size__, maxSize_))
+text_(Null, size == VectorMin? Vector{1, 1}: min(size, maxSize_))
 {
   cursor(false);
 }
 
 Display::~Display() {
-  cursor(true);
-  foreground(RgbNone);
-  background(RgbNone);
-  attributes({});
-  cursor(0, size().y + position_.y - 1);
-  write("\n");
+  try {
+    cursor(true);
+    foreground(RgbNone);
+    background(RgbNone);
+    attributes({});
+    cursor(0, toDim(size().y() + position_.y() - 1));
+    write("\n");
+  } catch (exception & error) {
+    cerr << "Error: " << error.what() << endl;
+  } catch (...) {
+    // shut up linter
+  }
 }
 
 void Display::write(const string_view &str) const {
   if (!str.empty()) {
     string outstr{str};
-    auto wp{outstr.c_str()};
+    const auto *wp{outstr.c_str()};
     size_t wt{0};
     size_t ws{outstr.size()};
-    while (wt < outstr.size()) {
-      auto wc{::write(output_, wp + wt, ws - wt)};
+    while (wt < ws) {
+      auto wc{::write(output_, wp + wt, ws - wt)}; // NOLINT
       if (wc < 0) {
         throw system_error(errno, system_category(), format("Could not write to display {}", output_));
       }
@@ -73,35 +91,35 @@ void Display::write(const string_view &str) const {
   }
 }
 
-Vector Display::cursor() {
+auto Display::cursor() -> Vector {
   static const basic_regex reportPattern("\x1b\\[(\\d+);(\\d+)R");
+  static const size_t MaxChars{10};
   string report;
-  report.reserve(10);
-  for (int i = 0; i < 10; ++i) {
+  for (size_t i = 0; i < MaxChars; ++i) {
     write("\x1b[6n");
-    Unicode key;
+    Unicode key{0};
     do {
       key = keyboard_.key();
-      report += key;
+      report += static_cast<string::value_type>(key);
     } while (key != 'R');
     smatch subMatch;
     if (regex_match(report, subMatch, reportPattern)) {
-      return cursor_ = Vector(Dim(stoi(subMatch[2].str()) - 1), Dim(stoi(subMatch[1].str()) - 1));
+      return cursor_ = Vector(static_cast<Dim>(stoi(subMatch[2].str()) - 1), static_cast<Dim>(stoi(subMatch[1].str()) - 1));
     }
   }
   throw runtime_error("Terminal did not report cursor position");
 }
 
-void Display::cursor(int x, int y) {
-  if (cursor_.x != x or cursor_.y != y) {
-    cursor_ = Vector(x, y);
-    write(format("\x1b[{};{}H", y + 1, x + 1));
+void Display::cursor(Dim column, Dim line) {
+  if (cursor_.x() != column or cursor_.y() != line) {
+    cursor_ = Vector(column, line);
+    write(format("\x1b[{};{}H", line + 1, column + 1));
   }
 }
 
-void Display::cursor(bool mode) {
+void Display::cursor(bool mode) const {
   static const array<string, 2> sequence{"\x1b[?25l", "\x1b[?25h"};
-  write(sequence[int(mode)]);
+  write(sequence[mode? 1: 0]); // NOLINT
 }
 
 void Display::foreground(const Rgb &color) {
@@ -110,7 +128,14 @@ void Display::foreground(const Rgb &color) {
     if (color == RgbNone) {
       write("\x1b[39m");
     } else {
-      write(format("\x1b[38;2;{};{};{}m", int(255 * color.r), int(255 * color.g), int(255 * color.b)));
+      write(
+        format(
+          "\x1b[38;2;{};{};{}m",
+          static_cast<int>(HighColor * color.r),
+          static_cast<int>(HighColor * color.g),
+          static_cast<int>(HighColor * color.b)
+        )
+      );
     }
   }
 }
@@ -121,25 +146,33 @@ void Display::background(const Rgb &color) {
     if (color == RgbNone) {
       write("\x1b[49m");
     } else {
-      write(format("\x1b[48;2;{};{};{}m", int(255 * color.r), int(255 * color.g), int(255 * color.b)));
+      write(
+        format(
+          "\x1b[48;2;{};{};{}m",
+          static_cast<int>(HighColor * color.r),
+          static_cast<int>(HighColor * color.g),
+          static_cast<int>(HighColor * color.b)
+        )
+      );
     }
   }
 }
 
 void Display::attributes(const Attributes &attributes) {
-  static const vector<array<string, 2>> sequence{
-    {"22", "1"},
-    {"24", "4"},
-    {"27", "7"},
-    {"25", "5"}
+  static const array<array<string, 2>, 4> sequence{
+    array<string, 2>{"22", "1"},
+    array<string, 2>{"24", "4"},
+    array<string, 2>{"27", "7"},
+    array<string, 2>{"25", "5"}
   };
-  static const vector<string> sepString{"\x1b[", ";"};
+  static const array<string, 2> sepString{"\x1b[", ";"};
   string output;
-  output.reserve(16);
   for (unsigned b = 0, sep = 0; b < sequence.size(); ++b, sep = 1) {
-    const unsigned a = 1 << b;
-    if ((attributes & a) != (attributes_ & a)) {
-      output += sepString[sep] + sequence[b][bool(attributes & a) - bool(attributes_ & a) + 1 >> 1];
+    const int
+      nattr = (/*NOLINT*/attributes >> b) & 1,
+      eattr = (/*NOLINT*/attributes_ >> b) & 1;
+    if (nattr != eattr) {
+      output += sepString.at(sep) + sequence.at(b).at((nattr - eattr) + 1U >> 1U);
     }
   }
   if (!output.empty()) {
@@ -149,43 +182,44 @@ void Display::attributes(const Attributes &attributes) {
   write(output);
 }
 
-Vector Display::terminalSize() {
+auto Display::terminalSize() -> Vector {
   // Maybe also consider COLUMNS & LINES and ioctl-based terminal size
   const auto current{cursor()};
-  cursor(9999, 9999); // Will set the cursor to max col, max line
-  auto c{cursor()};
-  Vector result{c + 1};
-  cursor(current.x, current.y);
+  static const int HighScreenDim{9999};
+  cursor(HighScreenDim, HighScreenDim); // Will set the cursor to max col, max line
+  auto cursorPos{cursor()};
+  Vector result{cursorPos + 1};
+  cursor(current.x(), current.y());
   return result;
 }
 
 
 void Display::update(const Vector &position, const Text &text) {
-  auto area{Rectangle{position, position + text.size()} & Rectangle{0, size()}};
+  auto area{Rectangle{position, position + text.size()} & Rectangle{Vector{0, 0}, size()}};
   if (!area) {
     return;
   }
   auto textArea{area.value() - position};
   // text_.extend(min(position + text.size(), maxSize_));
-  for (Dim line = textArea.y1, dline = area.value().y1; line < textArea.y2; ++line, ++dline) {
-    assert(line < (int)text.data.size());
-    while (line + position.y >= (int)text_.data.size()) {
-      text_.data.push_back(String(text.data[line].size(), Null));
+  for (Dim line = textArea.y1(), dline = area.value().y1(); line < textArea.y2(); ++line, ++dline) {
+    assert(line < toDim(text.data.size())); // NOLINT
+    while (toDim(line + position.y()) >= text_.height()) {
+      text_.data.emplace_back(text.data[line].size(), Null);
     }
-    for (Dim column = textArea.x1, dcolumn = area.value().x1; column < textArea.x2; ++column, ++dcolumn) {
+    for (Dim column = textArea.x1(), dcolumn = area.value().x1(); column < textArea.x2(); ++column, ++dcolumn) {
       const auto &ch{text.data[line][column]};
       if (text_.data[dline][dcolumn] != ch) {
-        cursor(dcolumn + position_.x, dline + position_.y);
+        cursor(toDim(dcolumn + position_.x()), toDim(dline + position_.y()));
         foreground(ch.attributes.fg);
         background(ch.attributes.bg);
         attributes(ch.attributes.attr);
         write(ch.utf8());
-        cursor_.x += 1;
-        if (cursor_.x > maxSize_.x) {
-          cursor_.x = 0;
-          cursor_.y += 1;
+        cursor_ = cursor_.right();
+        if (cursor_.x() > maxSize_.x()) {
+          cursor_ = Vector{0, cursor_.y()};
+          cursor_ = cursor_.down();
         }
-        assert(dcolumn < (int)text_.data[dline].size());
+        assert(dcolumn < (int)text_.data[dline].size()); // NOLINT
         text_.data[dline][dcolumn] = ch;
       }
     }
@@ -198,10 +232,11 @@ void Display::update(const Updates &updates) {
   }
 }
 
-Vector Display::size() const {
+auto Display::size() const -> Vector {
   return text_.size();
 }
 
 void Display::resize(const Vector &size) {
   text_.resize(min(maxSize_, size), Null);
 }
+} // namespace jwezel

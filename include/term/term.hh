@@ -11,8 +11,12 @@
 
 namespace jwezel {
 
+using std::nullopt;
+
 struct Window
 {
+  Window(struct Terminal &terminal, screen::Window *window): terminal_(terminal), window_(window) {}
+
   ///
   /// Destroy window
   void destroy();
@@ -23,17 +27,21 @@ struct Window
   /// @param[in]  area  The area
   void move(const Rectangle &area=RectangleMax);
 
+  [[nodiscard]] inline auto window() const {
+    return window_;
+  }
+
   ///
   /// Get window area
   ///
   /// @return     Area
-  Rectangle area() const;
+  [[nodiscard]] auto area() const -> Rectangle;
 
-  Vector size() const;
+  [[nodiscard]] auto size() const -> Vector;
 
-  Dim width() const;
+  [[nodiscard]] auto width() const -> Dim;
 
-  Dim height() const;
+  [[nodiscard]] auto height() const -> Dim;
 
   ///
   /// Focus/unfocus window
@@ -57,7 +65,7 @@ struct Window
   /// Draw box in window
   ///
   /// @param[in]  box   The box
-  void box(const Box &box={});
+  void box(const Box &box=Box{});
 
   ///
   /// Draw line in window
@@ -72,28 +80,35 @@ struct Window
   /// @param[in]  area  The area
   void fill(const Char &fill=Space, const Rectangle &area=RectangleMax);
 
-  struct Terminal &terminal;  ///< Terminal
-  screen::Window *window;     ///< Pointer to window
+  private:
+  struct Terminal &terminal_;  ///< Terminal
+  screen::Window *window_;     ///< Pointer to window
 };
 
 ///
 /// Terminal
 ///
 /// Responsibilites:
-///   - control display size
+///   - Provide a:
+///     - Display
+///     - Keyboard
+///   - Control display size
 struct Terminal {
   using WinId = i2;
 
   ///
   /// Constructor
   ///
+  /// @param[in]  background       The background
   /// @param[in]  initialPosition  The initial position
   /// @param[in]  initialSize      The initial size
   /// @param[in]  maxSize          The maximum size
-  /// @param[in]  terminalFd       The terminal fd
-  /// @param[in]  keyboardFd       The keyboard fd
-  Terminal(
-    const Char background=Space,
+  /// @param[in]  terminalFd       The terminal fd (default stdout)
+  /// @param[in]  keyboardFd       The keyboard fd (default stdin)
+  /// @param[in]  expand           Whether terminal can expand (default true)
+  /// @param[in]  contract         Whether terminal can contract (default true)
+  explicit Terminal(
+    Char background=Space,
     const Vector &initialPosition=VectorMin,
     const Vector &initialSize=VectorMin,
     const Vector &maxSize=VectorMax,
@@ -109,11 +124,11 @@ struct Terminal {
   /// @param[in]  area  The area
   ///
   /// @return     The window identifier.
-  jwezel::Window newWindow(
+  auto newWindow(
     const Rectangle &area=RectangleDefault,
     const Char &background=Space,
     const optional<jwezel::Window> &below=nullopt
-  );
+  ) -> jwezel::Window;
 
   ///
   /// Delete window
@@ -167,45 +182,43 @@ struct Terminal {
   void fill(const jwezel::Window &window, const Char &fill=Space, const Rectangle &area=RectangleMax);
 
   ///
-  /// Get window area
-  ///
-  /// @param[in]  windowId  The window identifier
-  ///
-  /// @return     Window area
-  Rectangle windowArea(const jwezel::Window &window) const;
-
-  ///
   /// Get event
   ///
   /// @return     Event
-  Event *event();
+  auto event() -> Event *;
 
   ///
   /// Run loop
   void run();
 
-  Keyboard keyboard;
-  Display display;
-  Screen screen;
-  screen::Window *desktop;
+  auto display() -> Display & {return display_;}
+
+  auto desktop() -> screen::Window & {return *desktop_;}
+
+  auto keyboard() -> Keyboard & {return keyboard_;}
 
   protected:
   ///
   /// Possibly expand display and screen
   ///
   /// @param[in]  size  The size
-  bool expand(const Vector &size);
+  auto expand(const Vector &size) -> bool;
 
   ///
   /// Possibly contract display and screen
   ///
   /// @param[in]  size  The size
-  bool contract();
+  auto contract() -> bool;
 
-  Vector minimumSize;
+  private:
+  Keyboard keyboard_;
+  Display display_;
+  screen::Screen screen_;
+  screen::Window *desktop_;
+  Vector minimumSize_;
   bool expand_;
   bool contract_;
   bool running_;
 };
 
-} // namespace
+} // namespace jwezel

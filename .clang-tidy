@@ -1,0 +1,26 @@
+---
+Checks: >
+  *,
+  -llvmlibc-*,
+  -fuchsia-*,
+  -altera-*,
+  -bugprone-easily-swappable-parameters,
+  -readability-isolate-declaration,
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -google-readability-casting,
+  -google-runtime-int,
+  -modernize-use-nullptr,
+  -hicpp-use-nullptr,
+  -cppcoreguidelines-owning-memory
+CheckOptions:
+  readability-identifier-length.MinimumVariableNameLength: 2
+  readability-identifier-length.IgnoredVariableNames: _.*
+  readability-identifier-length.MinimumParameterNameLength: 1
+  readability-identifier-length.IgnoredParameterNames: _.*
+  readability-identifier-length.MinimumLoopCounterNameLength: 1
+  readability-identifier-length.IgnoredLoopCounterNames: _.*
+  readability-identifier-length.MinimumExceptionNameLength: 2
+  readability-identifier-length.IgnoredExceptionVariableNames: _.*
+  cppcoreguidelines-narrowing-conversions.IgnoreConversionFromTypes: Dim
+  cppcoreguidelines-narrowing-conversions.WarnOnIntegerNarrowingConversion: false
+  readability-implicit-bool-conversion.AllowPointerConditions: true

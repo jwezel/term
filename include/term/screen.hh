@@ -7,15 +7,15 @@
 
 #include <algorithm>
 #include <exception>
-#include <memory>
-#include <tuple>
-#include <iostream>
-#include <set>
 #include <functional>
+#include <iostream>
+#include <memory>
+#include <set>
+#include <tuple>
 
-namespace jwezel {
+namespace jwezel::screen {
 
-using namespace screen;
+using std::exception, std::tuple;
 
 // struct FragmentRef {
 //   FragmentRef(const Rectangle *area, const BaseWindow *window): area(area), window(window) {}
@@ -43,7 +43,7 @@ struct Screen: Surface {
   /// Get focus window
   ///
   /// @return     Focus window
-  BaseWindow *focus() const;
+  auto focus() const -> BaseWindow *;
 
   ///
   /// Move focus away from window
@@ -54,7 +54,7 @@ struct Screen: Surface {
   ///
   /// @return     false if the window had the focus or true otherwise
   ///
-  bool unfocus(Window *window);
+  auto unfocus(Window *window) -> bool;
 
   ///
   /// Add a window
@@ -64,12 +64,12 @@ struct Screen: Surface {
   /// @param      parent  The parent
   ///
   /// @return     Tuple with window pointer and screen updates
-  tuple<Window *, Updates> addWindow(
-    const Rectangle &area={-1, -1, -1, -1},
+  auto addWindow(
+    const Rectangle &area=Rectangle{-1, -1, -1, -1},
     const Char &background=Space,
     Window *below=0,
     Window *parent=0
-  );
+  ) -> tuple<Window *, Updates>;
 
   ///
   /// Delete window
@@ -77,7 +77,7 @@ struct Screen: Surface {
   /// @param      window  The window
   ///
   /// @return     Screen updates
-  Updates deleteWindow(Window *window);
+  auto deleteWindow(Window *window) -> Updates;
 
   ///
   /// Move or reshape window
@@ -86,7 +86,7 @@ struct Screen: Surface {
   /// @param[in]  area    The area
   ///
   /// @return     Screen updates
-  Updates reshapeWindow(Window *window, const Rectangle &area);
+  auto reshapeWindow(Window *window, const Rectangle &area) -> Updates;
 
   ///
   /// Fill window with character
@@ -96,7 +96,7 @@ struct Screen: Surface {
   ///
   /// @return     Screen updates
   ///
-  Updates fill(Window *window, const Char &fillChar=Space, const Rectangle &area=RectangleMax);
+  auto fill(Window *window, const Char &fillChar=Space, const Rectangle &area=RectangleMax) -> Updates;
 
   ///
   /// Write text to window
@@ -106,7 +106,7 @@ struct Screen: Surface {
   /// @param[in]  text      The text
   ///
   /// @return     Screen updates
-  Updates text(Window *window, const Vector &position, const Text &text);
+  auto text(Window *window, const Vector &position, const Text &text) -> Updates;
 
   ///
   /// Draw line
@@ -119,7 +119,7 @@ struct Screen: Surface {
   ///
   /// @return     Screen updates
   ///
-  Updates line(Window * window, const Line &line, u1 strength=1, u1 dash=0, bool roundedCorners=false);
+  auto line(Window * window, const Line &line, u1 strength=1, u1 dash=0, bool roundedCorners=false) -> Updates;
 
   ///
   /// Draw box
@@ -128,9 +128,9 @@ struct Screen: Surface {
   /// @param[in]  box     The box
   ///
   /// @return     Screen updates
-  Updates box(Window *window, const Box &box);
+  auto box(Window *window, const Box &box) -> Updates;
 
-  Vector relative(Window *window, const Vector &position) const;
+  auto relative(Window *window, const Vector &position) const -> Vector;
 
   ///
   /// Get minimum size to accomodate all windows
@@ -138,10 +138,11 @@ struct Screen: Surface {
   /// @param      exclude  Window to exclude
   ///
   /// @return     Minimum size
-  Vector minSize(Window *exclude=0) const;
+  auto minSize(Window *exclude=0) const -> Vector;
 
-  Backdrop backdrop;
-  BaseWindow *focusWindow;
+  private:
+  Backdrop backdrop_;
+  BaseWindow *focusWindow_;
 };
 
-} // namespace
+} // namespace jwezel::screen

@@ -1,35 +1,48 @@
-#include <assert.h>
 #include <asm-generic/errno-base.h>
+#include <cassert>
+#include <cerrno>
 #include <chrono>
 #include <cstdio>
 #include <cstring>
+#include <fcntl.h>
 #include <initializer_list>
 #include <iostream>
 #include <iterator>
 #include <map>
+#include <ratio>
 #include <regex>
 #include <stdexcept>
 #include <string>
 #include <system_error>
-#include <cerrno>
 #include <termios.h>
-#include <fcntl.h>
+#include <thread>
 #include <tuple>
 #include <unistd.h>
 #include <utility>
-#include <thread>
 
 #include "fmt/core.h"
 
 #include "fmt/format.h"
-#include "fmt/chrono.h"
+#include "geometry.hh"
 #include "keyboard.hh"
 #include "text.hh"
 
-using namespace jwezel;
+namespace jwezel {
 using fmt::format, fmt::print;
 using std::chrono::steady_clock;
 using std::this_thread::sleep_for;
+using
+  std::pair,
+  std::smatch,
+  std::basic_regex,
+  std::make_pair,
+  std::runtime_error,
+  std::cerr,
+  std::endl,
+  std::strerror,
+  std::u32string,
+  std::this_thread::sleep_for;
+using namespace std::chrono_literals;
 
 static vector<pair<string, Unicode>> KeyFromName {
   {"Left", Key::Left},
@@ -297,7 +310,7 @@ static std::vector<pair<std::string, Unicode>> keyTranslations {
 /// @param[in]  translations  The translations
 ///
 /// @return     key prefix tree
-static Keyboard::PrefixNode loadKeyTranslations(const std::vector<pair<std::string, Unicode>> &translations) {
+static auto loadKeyTranslations(const std::vector<pair<std::string, Unicode>> &translations) -> Keyboard::PrefixNode {
   Keyboard::PrefixNode result;
   for (const auto &[keys, key]: translations) {
     Keyboard::PrefixNode *node{&result};
@@ -321,7 +334,6 @@ static Keyboard::PrefixNode loadKeyTranslations(const std::vector<pair<std::stri
 //~Keyboard~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Keyboard::Keyboard(int device):
-keyBuffer(),
 keyPrefixes(loadKeyTranslations(keyTranslations)),
 fd(device)
 {
@@ -329,29 +341,37 @@ fd(device)
 }
 
 Keyboard::~Keyboard() {
-  reset();
+  try {
+    reset();
+  } catch (...) {
+    cerr << "Error closing keyboard" << endl;
+  }
 }
 
 void Keyboard::raw() {
-  if (isatty(fd)) {
-    termios old;
+  if (isatty(fd) /*NOLINT*/) {
+    termios old{};
     if (!originalState) {
-      if (tcgetattr(fd, &old)) {
+      if (tcgetattr(fd, &old) != 0) {
         throw std::system_error(
-          errno, std::system_category(), format("Could not get terminal state for fd {}: {}", fd, std::strerror(errno))
+          errno,
+          std::system_category(),
+          format("Could not get terminal state for fd {}: {}", fd, strerror(errno) /*NOLINT*/)
         );
       }
       originalState.emplace(old);
     }
     termios new_{old};
-    new_.c_iflag = new_.c_iflag & !(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
-    new_.c_oflag = new_.c_oflag & !OPOST;
-    new_.c_lflag = new_.c_lflag & !(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
-    new_.c_cflag = new_.c_cflag & !(CSIZE | PARENB);
+    // NOLINTBEGIN(hicpp-signed-bitwise)
+    new_.c_iflag = new_.c_iflag & ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+    new_.c_oflag = new_.c_oflag & ~OPOST;
+    new_.c_lflag = new_.c_lflag & ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+    new_.c_cflag = new_.c_cflag & ~(CSIZE | PARENB);
     new_.c_cflag = new_.c_cflag | CS8;
-    if (tcsetattr(fd, TCSANOW, &new_)) {
+    // NOLINTEND(hicpp-signed-bitwise)
+    if (tcsetattr(fd, TCSANOW, &new_) != 0) {
       throw std::system_error(
-        errno, std::system_category(), format("Could not set terminal state for fd {}: {}", fd, std::strerror(errno))
+        errno, std::system_category(), format("Could not set terminal state for fd {}: {}", fd, std::strerror(errno)/*NOLINT*/)
       );
     }
   }
@@ -359,9 +379,9 @@ void Keyboard::raw() {
 
 void Keyboard::reset() {
   if (originalState) {
-    if (tcsetattr(fd, TCSANOW, &originalState.value())) {
+    if (tcsetattr(fd, TCSANOW, &originalState.value()) != 0) {
       throw std::system_error(
-        errno, std::system_category(), format("Could not set terminal state for fd {}: {}", fd, std::strerror(errno))
+        errno, std::system_category(), format("Could not set terminal state for fd {}: {}", fd, std::strerror(errno)/*NOLINT*/)
       );
     }
   }
@@ -374,17 +394,19 @@ Unicode Keyboard::key() {
     keyBuffer.pop_front();
     return key;
   }
-  char inputKey;
-  auto node{&keyPrefixes};
+  char inputKey = 0;
+  auto *node{&keyPrefixes};
   // PrefixNode *previousNode;
   u32string inputBuffer;
   while (true) {
-    int readLength;
+    ssize_t readLength = 0;
     steady_clock::duration readTime;
     auto onSublevel{node != &keyPrefixes}; // If true expect more keys in quick succession
     if (onSublevel) {
-      auto st{fcntl(fd, F_SETFL, fcntl(0, F_GETFL) | O_NONBLOCK)};
-      if (st) print("fcntl(F_SETFL, O_NONBLOCK) returned {}", st);
+      auto st{fcntl(fd, F_SETFL, fcntl(0, F_GETFL) | O_NONBLOCK)/*NOLINT*/};
+      if (st != 0) {
+        print("fcntl(F_SETFL, O_NONBLOCK) returned {}", st);
+      }
     }
     auto start{steady_clock::now()};
     auto attempt{0};
@@ -393,13 +415,13 @@ Unicode Keyboard::key() {
       readLength = read(fd, &inputKey, 1);
       if (readLength < 0) {
         if (errno != EAGAIN) {
-          throw std::system_error(errno, std::system_category(), format("Could not get key: {}", fd, std::strerror(errno)));
+          throw std::system_error(errno, std::system_category(), format("Could not get key: {}", fd, std::strerror(errno)/*NOLINT*/));
         }
         // Wait twice for a key, then give up
         if (attempt++ > 1) {
           break;
         }
-        sleep_for(1ms); // TODO: make this much smaller (based on 19200 cps) and configurable
+        sleep_for(1ms); // TODO(j): make this much smaller (based on 19200 cps) and configurable
       } else if (readLength > 0 and inputKey == '\xff') {
         // '\xff' simulates a delay
         sleep_for(1ms);
@@ -409,8 +431,10 @@ Unicode Keyboard::key() {
     };
     readTime = steady_clock::now() - start;
     if (onSublevel) {
-      auto st{fcntl(fd, F_SETFL, fcntl(0, F_GETFL) & ~O_NONBLOCK)};
-      if (st) print("fcntl(F_SETFL, 0) returned {}", st);
+      auto st{fcntl(fd, F_SETFL, fcntl(0, F_GETFL) & ~O_NONBLOCK)/*NOLINT*/};
+      if (st != 0) {
+        print("fcntl(F_SETFL, 0) returned {}", st);
+      }
     }
     if (readLength == 0) {
       inputKey = '\0';
@@ -436,23 +460,27 @@ Unicode Keyboard::key() {
   return key;
 }
 
-tuple<MouseButton, MouseModifiers, u2, u2, MouseAction> Keyboard::mouseReport() {
-  static const basic_regex reportPattern("(\\d+);(\\d+);(\\d+)([Mm])");
-  Unicode key_;
+auto Keyboard::mouseReport() -> tuple<MouseButton, MouseModifiers, u2, u2, MouseAction> {
+  static const basic_regex reportPattern(R"((\d+);(\d+);(\d+)([Mm]))");
+  static const auto reportBufferSize{16}, MaxAscii{255};
+  Unicode key_ = 0;
   string report;
-  report.reserve(16);
+  report.reserve(reportBufferSize);
   do {
     key_ = key();
-    report += key_;
+    if (key_ > MaxAscii) {
+      throw range_error("Got character > 127");
+    }
+    report += key_/*NOLINT*/;
   } while (key_ != 'M' and key_ != 'm');
   smatch subMatch;
   if (regex_match(report, subMatch, reportPattern)) {
     return {
-      static_cast<MouseButton>((stoi(subMatch[1].str()) & 3) + 1),
+      static_cast<MouseButton>((stoul(subMatch[1].str()) & 3U) + 1U),
       MouseModifiers{
-        static_cast<u1>(stoi(subMatch[1].str()) & 4),
-        static_cast<u1>(stoi(subMatch[1].str()) & 16),
-        static_cast<u1>(stoi(subMatch[1].str()) & 8)
+        static_cast<u1>(stoul(subMatch[1].str()) & 4U),
+        static_cast<u1>(stoul(subMatch[1].str()) & 16U),
+        static_cast<u1>(stoul(subMatch[1].str()) & 8U)
       },
       stoi(subMatch[2].str()) - 1,
       u1(stoi(subMatch[3].str()) - 1),
@@ -462,16 +490,17 @@ tuple<MouseButton, MouseModifiers, u2, u2, MouseAction> Keyboard::mouseReport() 
   throw runtime_error("Could not parse terminal mouse report");
 }
 
-InputEvent *Keyboard::event() {
+auto Keyboard::event() -> InputEvent * {
+  static const auto MouseMove{35};
   auto key_ = key();
   if (key_ == Mouse) {
     auto [button, modifiers, x, y, action]{mouseReport()};
-    if (button == MouseButton(35)) {
+    if (button == MouseButton(MouseMove)) {
       return new MouseMoveEvent{x, y};
-    } else {
-      return new MouseButtonEvent{button, modifiers, x, y, action};
     }
-  } else {
-    return new KeyEvent{key_};
+    return new MouseButtonEvent{button, modifiers, x, y, action};
   }
+  return new KeyEvent{key_};
 }
+
+} // namespace jwezel

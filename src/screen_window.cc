@@ -1,15 +1,17 @@
 #include <fmt/core.h>
 
-#include <cmath>
-#include <stdexcept>
-#include <vector>
 #include "_screen_window.hh"
 #include "geometry.hh"
 #include "text.hh"
 
-using namespace jwezel;
-using namespace jwezel::screen;
+#include <cmath>
+#include <stdexcept>
+#include <vector>
+
+namespace jwezel::screen {
+
 using fmt::format;
+using std::runtime_error;
 
 #define NOT_IMPLEMENTED throw runtime_error(format("Not implemented in {}", typeid(this).name()));
 
@@ -23,66 +25,66 @@ BaseWindow::operator string() const {
   return format("{}}(id={}, area={})", typeid(this).name(), long(this), string(area()));
 }
 
-void BaseWindow::write(const Vector &, const string_view &) {
+void BaseWindow::write(const Vector & /*unused*/, const string_view & /*unused*/) {
   NOT_IMPLEMENTED
 }
 
-void BaseWindow::write(const Vector &, const Text &) {
+void BaseWindow::write(const Vector & /*unused*/, const Text & /*unused*/) {
   NOT_IMPLEMENTED
 }
 
-void BaseWindow::fill(const Char &, const Rectangle &) {
+void BaseWindow::fill(const Char & /*unused*/, const Rectangle & /*unused*/) {
   NOT_IMPLEMENTED
 }
 
-Rectangle BaseWindow::line(const Line &, u1, u1, bool) {
+auto BaseWindow::line(const Line & /*unused*/, u1 /*unused*/, u1 /*unused*/, bool /*unused*/) -> Rectangle {
   NOT_IMPLEMENTED
 }
 
-vector<Rectangle> BaseWindow::box(const Box &) {
+auto BaseWindow::box(const Box & /*unused*/) -> vector<Rectangle> {
   NOT_IMPLEMENTED
 }
 
-void BaseWindow::move(const Rectangle &) {
+void BaseWindow::move(const Rectangle & /*area*/) {
   NOT_IMPLEMENTED
 }
 
-Rectangle BaseWindow::area() const {
+auto BaseWindow::area() const -> Rectangle {
   NOT_IMPLEMENTED
 }
 
-Vector BaseWindow::size() const {
+auto BaseWindow::size() const -> Vector {
   NOT_IMPLEMENTED
 }
 
-const Text &BaseWindow::text() const {
+auto BaseWindow::text() const -> const Text & {
   NOT_IMPLEMENTED
 }
 
-Text BaseWindow::text(const Rectangle &) const {
+auto BaseWindow::text(const Rectangle & /*area*/) const -> Text {
   NOT_IMPLEMENTED
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Backdrop::Backdrop(const Char &background):
-BaseWindow{Rectangle{{0, 0}, VectorMax}, background}
+BaseWindow{Rectangle{Vector{0, 0}, VectorMax}, background}
 {}
 
-Rectangle Backdrop::area() const {
-  return Rectangle{{0, 0}, VectorMax};
+auto Backdrop::area() const -> Rectangle {
+  return Rectangle{Vector{0, 0}, VectorMax};
 }
 
-Vector Backdrop::size() const {
+auto Backdrop::size() const -> Vector {
   return VectorMax;
 }
 
-const Text &Backdrop::text() const {
+auto Backdrop::text() const -> const Text & {
   NOT_IMPLEMENTED
 }
 
-Text Backdrop::text(const Rectangle &area) const {
-  return Text(Space, area.size());
+auto Backdrop::text(const Rectangle &area) const -> Text {
+  return Text{Space, area.size()};
 }
 
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -101,24 +103,24 @@ void Window::write(const Vector &position, const string_view &str) {
   text_.patch(Text(str, RgbNone, RgbNone, {}, mix), position);
 }
 
-void Window::write(const Vector &position, const Text &text__) {
-  text_.patch(text__, position);
+void Window::write(const Vector &position, const Text &txt_) {
+  text_.patch(txt_, position);
 }
 
 void Window::fill(const Char &fillChar, const Rectangle &area) {
   text_.fill(fillChar, area);
 }
 
-Rectangle Window::line(
+auto Window::line(
   const Line &line,
   u1 strength,
   u1 dash,
   bool roundedCorners
-) {
+) -> Rectangle {
   return text_.line(line, strength, dash, roundedCorners);
 }
 
-vector<Rectangle> Window::box(const Box &box) {
+auto Window::box(const Box &box) -> vector<Rectangle> {
   return text_.box(box);
 }
 
@@ -127,10 +129,12 @@ void Window::move(const Rectangle &area) {
   text_.resize(area.size(), background);
 }
 
-Vector Window::size() const {
+auto Window::size() const -> Vector {
   return text_.size();
 }
 
-Rectangle Window::area() const {
+auto Window::area() const -> Rectangle {
   return Rectangle{position, position + text_.size()};
 }
+
+} // namespace jwezel::screen

@@ -9,18 +9,21 @@
 #pragma once
 
 // Geometric shapes
+#include "fmt/color.h"
+#include "fmt/core.h"
 #include <cstdint>
-#include <string>
 #include <optional>
-#include <vector>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace jwezel {
 
-using namespace std;
+using std::string, std::logic_error, std::vector, std::optional, std::range_error;
+using fmt::format;
 
 /// Dimension (x, y) in a @class Vector.
-typedef int16_t Dim;
+using Dim = int16_t;
 
 extern const Dim DimLow;  ///< Lowest possible value of a dimension
 extern const Dim DimHigh; ///< Highest possible value of a dimension
@@ -28,8 +31,18 @@ extern const Dim DimHigh; ///< Highest possible value of a dimension
 class RectangleError: public logic_error
 {
   public:
-  RectangleError(const string &what): logic_error(what) {}
+  explicit RectangleError(const string &what): logic_error(what) {}
 };
+
+template<typename T>
+inline auto toDim(T v)->Dim {
+#ifndef NDEBUG
+  if (static_cast<Dim>(v) > DimHigh || static_cast<Dim>(v) < DimLow) {
+    throw range_error(format("Dim {} is out of range", v));
+  }
+#endif
+  return static_cast<Dim>(v);
+}
 
 ///
 /// A vector
@@ -38,54 +51,84 @@ struct Vector {
   ///
   /// @param[in]  x
   /// @param[in]  y
-  Vector(Dim x=0, Dim y=0);
+  explicit Vector(Dim x=0, Dim y=0) noexcept;
 
   ///
   /// Convert Vector to string
-  operator string() const;
+  [[nodiscard]] explicit operator string() const;
 
   ///
   /// Convert Vector to string
   ///
   /// Alias for operator string()
-  std::ostream& operator<<(std::ostream& os) const;
+  auto operator<<(std::ostream& os) const -> std::ostream&;
 
   /// Compare two vectors for equality.
   ///
-  /// @param[in]  other  The other
+  /// @param[in]  other  The other vector
   ///
   /// @return     True if equal
-  bool operator ==(const Vector &other) const;
+  [[nodiscard]] auto operator==(const Vector &other) const -> bool {
+    return x_ == other.x() && y_ == other.y();
+  }
 
   /// Compare two vectors for inequality.
   ///
-  /// @param[in]  other  The other
+  /// @param[in]  other  The other vector
   ///
   /// @return     True in not equal
-  bool operator !=(const Vector &other) const;
+  [[nodiscard]] auto operator!=(const Vector &other) const -> bool {
+    return !(*this == other);
+  }
 
   ///
   /// Compare vector less than other
   ///
-  /// @param[in]  other  The other
+  /// @param[in]  other  The other vector
   ///
   /// @return     True if less
-  bool operator <(const Vector &other) const;
+  [[nodiscard]] auto operator<(const Vector &other) const -> bool {
+    return x_ < other.x() or x_ == other.x() and y_ < other.y();
+  }
 
-  bool operator >(const Vector &other) const;
+  ///
+  /// Compare vector greater than other
+  ///
+  /// @param[in]  other  The other vector
+  ///
+  /// @return     True if greater
+  [[nodiscard]] auto operator>(const Vector &other) const -> bool {
+    return other.x() < x_ or x_ == other.x() and other.y() < y_;
+  }
 
-  bool operator <=(const Vector &other) const;
+  ///
+  /// Compare vector less or equal than other
+  ///
+  /// @param[in]  other  The other vector
+  ///
+  /// @return     True if less or equal
+  [[nodiscard]] auto operator<=(const Vector &other) const -> bool {
+    return x_ <= other.x() && y_ <= other.y();
+  }
 
-  bool operator >=(const Vector &other) const;
+  ///
+  /// Compare vector greater than equal than other
+  ///
+  /// @param[in]  other  The other vector
+  ///
+  /// @return     True if greater than equal
+  [[nodiscard]] auto operator>=(const Vector &other) const -> bool {
+    return x_ >= other.x() && y_ >= other.y();
+  }
 
   ///
   /// Replace negative elements in @c *this with sum of element in @c *this and
   /// @arg position such that -1 becomes last.
   ///
-  /// @param[in]  other  The other
+  /// @param[in]  other  The other vector
   ///
   /// @return     Vector with adjusted values
-  Vector position(const Vector &position) const;
+  [[nodiscard]] auto position(const Vector &position) const -> Vector;
 
   /// Apply defaults
   ///
@@ -94,15 +137,23 @@ struct Vector {
   /// @param[in]  default_  The default
   ///
   /// @return     Vector with defaults applied
-  Vector defaultTo(const Vector &default_) const;
+  [[nodiscard]] auto defaultTo(const Vector &default_) const -> Vector;
 
   ///
   /// Addition operator.
   ///
-  /// @param[in]  other  The other
+  /// @param[in]  other  The other vector
   ///
   /// @return     The result of the addition
-  Vector operator +(const Vector &other) const;
+  [[nodiscard]] auto operator +(const Vector &other) const -> Vector;
+
+  ///
+  /// Subtract vectors.
+  ///
+  /// @param[in]  other  The other vector
+  ///
+  /// @return     The result of the subtraction
+  [[nodiscard]] auto operator -(const Vector &other) const -> Vector;
 
   ///
   /// Enlarge Vector
@@ -110,7 +161,7 @@ struct Vector {
   /// @param[in]  size  The size
   ///
   /// @return     Enlarged Vector
-  Vector operator +(Dim size) const;
+  [[nodiscard]] auto operator +(Dim size) const -> Vector;
 
   ///
   /// Enlarge Vector destructively
@@ -118,15 +169,7 @@ struct Vector {
   /// @param[in]  size  The size
   ///
   /// @return     Enlarged Vector
-  Vector &operator +=(Dim size);
-
-  ///
-  /// Subtract vectors.
-  ///
-  /// @param[in]  other  The other
-  ///
-  /// @return     The result of the subtraction
-  Vector operator -(const Vector &other) const;
+  auto operator +=(Dim size) -> Vector &;
 
   ///
   /// Decrease Vector
@@ -134,7 +177,7 @@ struct Vector {
   /// @param[in]  size  The size
   ///
   /// @return     Decreased Vector
-  Vector operator -(Dim size) const;
+  [[nodiscard]] auto operator -(Dim size) const -> Vector;
 
   ///
   /// Decrease Vector destructively
@@ -142,7 +185,11 @@ struct Vector {
   /// @param[in]  size  The size
   ///
   /// @return     Decreased Vector
-  Vector &operator -=(Dim size);
+  auto operator-=(Dim size) -> Vector & {
+    x_ = toDim(x_ - size);
+    y_ = toDim(y_ - size);
+    return *this;
+  }
 
   ///
   /// Multiply Vector with factor
@@ -150,7 +197,7 @@ struct Vector {
   /// @param[in]  factor  The factor
   ///
   /// @return     The result of the multiplication
-  Vector operator *(double factor) const;
+  [[nodiscard]] auto operator *(double factor) const -> Vector;
 
   ///
   /// Divide Vector by divisor
@@ -158,7 +205,7 @@ struct Vector {
   /// @param[in]  divisor  The divisor
   ///
   /// @return     The result of the division
-  Vector operator /(double divisor) const;
+  [[nodiscard]] auto operator /(double divisor) const -> Vector;
 
   ///
   /// Shift Vector left
@@ -166,7 +213,7 @@ struct Vector {
   /// @param[in]  shift  The shift
   ///
   /// @return     Shifted Vector
-  Vector left(Dim shift=1) const;
+  [[nodiscard]] auto left(Dim shift=1) const -> Vector;
 
   ///
   /// Shift Vector right
@@ -174,7 +221,7 @@ struct Vector {
   /// @param[in]  shift  The shift
   ///
   /// @return     Shifted Vector
-  Vector right(Dim shift=1) const;
+  [[nodiscard]] auto right(Dim shift=1) const -> Vector;
 
   ///
   /// Shift Vector up
@@ -182,7 +229,7 @@ struct Vector {
   /// @param[in]  shift  The shift
   ///
   /// @return     Shifted Vector
-  Vector up(Dim shift=1) const;
+  [[nodiscard]] auto up(Dim shift=1) const -> Vector;
 
   ///
   /// Shift Vector down
@@ -190,19 +237,74 @@ struct Vector {
   /// @param[in]  shift  The shift
   ///
   /// @return     Shifted Vector
-  Vector down(Dim shift=1) const;
+  [[nodiscard]] auto down(Dim shift=1) const -> Vector;
+
+  ///
+  /// Shift Vector left
+  ///
+  /// @param[in]  shift  The shift
+  ///
+  /// @return     Shifted Vector
+  auto left(Dim shift=1) -> Vector &;
+
+  ///
+  /// Shift Vector right
+  ///
+  /// @param[in]  shift  The shift
+  ///
+  /// @return     Shifted Vector
+  auto right(Dim shift=1) -> Vector &;
+
+  ///
+  /// Shift Vector up
+  ///
+  /// @param[in]  shift  The shift
+  ///
+  /// @return     Shifted Vector
+  auto up(Dim shift=1) -> Vector &;
+
+  ///
+  /// Shift Vector down
+  ///
+  /// @param[in]  shift  The shift
+  ///
+  /// @return     Shifted Vector
+  auto down(Dim shift=1) -> Vector &;
 
   ///
   /// Span of two Vectors.
   ///
-  /// @param[in]  other  The other
+  /// @param[in]  other  The other vector
   ///
   /// @return     Span of the Vectors
-  Vector operator |(const Vector &other) const;
+  auto operator |(const Vector &other) const -> Vector;
 
-  Dim x;
-  Dim y;
+  [[nodiscard]] inline auto x() const -> Dim {return x_;}
+
+  [[nodiscard]] inline auto y() const -> Dim {return y_;}
+
+  private:
+  Dim x_;
+  Dim y_;
 };
+
+///
+/// Minimum of two Vectors
+///
+/// @param[in]  v1    Vector 1
+/// @param[in]  v2    Vector 2
+///
+/// @return     Minimum
+auto min(const Vector &v1, const Vector &v2) -> Vector;
+
+///
+/// Maximum of two Vectors
+///
+/// @param[in]  v1    Vector 1
+/// @param[in]  v2    Vector 2
+///
+/// @return     Maximum
+auto max(const Vector &v1, const Vector &v2) -> Vector;
 
 ///
 /// A rectangle
@@ -215,18 +317,18 @@ struct Rectangle {
   /// @param[in]  y1
   /// @param[in]  x2
   /// @param[in]  y2
-  Rectangle(Dim x1=0, Dim y1=0, Dim x2=0, Dim y2=0);
+  explicit Rectangle(Dim x1=0, Dim y1=0, Dim x2=0, Dim y2=0) noexcept;
 
   ///
   /// Constructor
   ///
   /// @param[in]  v1
   /// @param[in]  v2
-  Rectangle(const Vector &v1, const Vector &v2);
+  Rectangle(const Vector &v1, const Vector &v2) noexcept;
 
   ///
   /// String conversion operator.
-  operator string() const;
+  [[nodiscard]] explicit operator string() const;
 
   ///
   /// Write Vector to stream
@@ -234,7 +336,7 @@ struct Rectangle {
   /// @param      os    The output stream
   ///
   /// @return     Reference to output stream
-  friend std::ostream& operator <<(std::ostream& os, const Rectangle &rect);
+  friend auto operator <<(std::ostream& os, const Rectangle &rect) -> std::ostream&;
 
   ///
   /// Equality operator.
@@ -242,7 +344,7 @@ struct Rectangle {
   /// @param[in]  other  Other rectangle
   ///
   /// @return     True if equal
-  bool operator ==(const Rectangle &other) const;
+  [[nodiscard]] auto operator ==(const Rectangle &other) const -> bool;
 
   ///
   /// Inequality operator.
@@ -250,7 +352,7 @@ struct Rectangle {
   /// @param[in]  other  Other rectangle
   ///
   /// @return     True if not equal
-  bool operator !=(const Rectangle &other) const;
+  [[nodiscard]] auto operator !=(const Rectangle &other) const -> bool;
 
   ///
   /// Rectangle intersection.
@@ -260,7 +362,7 @@ struct Rectangle {
   /// @param[in]  other  Other rectangle
   ///
   /// @return     Intersecting rectangle [optional]
-  optional<Rectangle> operator &(const Rectangle &other) const;
+  [[nodiscard]] auto operator &(const Rectangle &other) const -> optional<Rectangle>;
 
   ///
   /// Test for intersection.
@@ -268,7 +370,7 @@ struct Rectangle {
   /// @param[in]  other  Other rectangle
   ///
   /// @return     True if @a other intersects
-  bool intersects(const Rectangle &other) const;
+  [[nodiscard]] auto intersects(const Rectangle &other) const -> bool;
 
   ///
   /// Shift rectangle by vector.
@@ -276,7 +378,7 @@ struct Rectangle {
   /// @param[in]  v     The vector
   ///
   /// @return     Shifted rectangle
-  Rectangle operator +(const Vector &v) const;
+  [[nodiscard]] auto operator +(const Vector &v) const -> Rectangle;
 
   ///
   /// Get area spanning two rectangles.
@@ -284,7 +386,7 @@ struct Rectangle {
   /// @param[in]  other  Other rectangle
   ///
   /// @return     Rectangle spanning @c *this and @arg other
-  Rectangle operator |(const Rectangle &other) const;
+  [[nodiscard]] auto operator |(const Rectangle &other) const -> Rectangle;
 
   ///
   /// Assign spanning rectangle.
@@ -293,7 +395,7 @@ struct Rectangle {
   ///
   /// @return     Rectangle spanning @c *this and
   /// @arg        other
-  const Rectangle &operator |=(const Rectangle &other);
+  auto operator |=(const Rectangle &other) -> const Rectangle &;
 
   ///
   /// Move rectangle by vector.
@@ -301,7 +403,7 @@ struct Rectangle {
   /// @param[in]  vector  The vector
   ///
   /// @return     Moved rectangle
-  Rectangle operator -(const Vector &vector) const;
+  [[nodiscard]] auto operator -(const Vector &vector) const -> Rectangle;
 
   ///
   /// Get vector of rectangle parts from clipping two rectangles.
@@ -312,7 +414,71 @@ struct Rectangle {
   /// @param[in]  other  Other rectangle
   ///
   /// @return     Vector of parts
-  vector<Rectangle> operator -(const struct Rectangle &other) const;
+  [[nodiscard]] auto operator -(const struct Rectangle &other) const -> vector<Rectangle>;
+
+  ///
+  /// Shift Rectangle left
+  ///
+  /// @param[in]  shift  The shift
+  ///
+  /// @return     Shifted Rectangle
+  [[nodiscard]] auto left(Dim shift=1) const -> Rectangle;
+
+  ///
+  /// Shift Rectangle right
+  ///
+  /// @param[in]  shift  The shift
+  ///
+  /// @return     Shifted Rectangle
+  [[nodiscard]] auto right(Dim shift=1) const -> Rectangle;
+
+  ///
+  /// Shift Rectangle up
+  ///
+  /// @param[in]  shift  The shift
+  ///
+  /// @return     Shifted Rectangle
+  [[nodiscard]] auto up(Dim shift=1) const -> Rectangle;
+
+  ///
+  /// Shift Rectangle down
+  ///
+  /// @param[in]  shift  The shift
+  ///
+  /// @return     Shifted Rectangle
+  [[nodiscard]] auto down(Dim shift=1) const -> Rectangle;
+
+  ///
+  /// Shift Rectangle left
+  ///
+  /// @param[in]  shift  The shift
+  ///
+  /// @return     Shifted Rectangle
+  auto left(Dim shift=1) -> Rectangle &;
+
+  ///
+  /// Shift Rectangle right
+  ///
+  /// @param[in]  shift  The shift
+  ///
+  /// @return     Shifted Rectangle
+  auto right(Dim shift=1) -> Rectangle &;
+
+  ///
+  /// Shift Rectangle up
+  ///
+  /// @param[in]  shift  The shift
+  ///
+  /// @return     Shifted Rectangle
+  auto up(Dim shift=1) -> Rectangle &;
+
+  ///
+  /// Shift Rectangle down
+  ///
+  /// @param[in]  shift  The shift
+  ///
+  /// @return     Shifted Rectangle
+  auto down(Dim shift=1) -> Rectangle &;
 
   ///
   /// Get vector of rectangle parts from clipping two rectangles.
@@ -323,7 +489,7 @@ struct Rectangle {
   /// @param[in]  other  Other rectangle
   ///
   /// @return     std::vector of parts
-  vector<Rectangle> defaultIntersection(const Rectangle &other) const;
+  [[nodiscard]] auto defaultIntersection(const Rectangle &other) const -> vector<Rectangle>;
 
   ///
   /// Determines whether the specified @arg other is joined horizontally.
@@ -331,7 +497,7 @@ struct Rectangle {
   /// @param[in]  other  Other rectangle
   ///
   /// @return     True if the specified @arg other is joined horizontally, false otherwise.
-  bool isJoinedX(const Rectangle &other) const;
+  [[nodiscard]] auto isJoinedX(const Rectangle &other) const -> bool;
 
   ///
   /// Determines whether the specified @arg other is joined vertically.
@@ -339,7 +505,7 @@ struct Rectangle {
   /// @param[in]  other  Other rectangle
   ///
   /// @return     True if the specified @arg other is joined vertically, false otherwise.
-  bool isJoinedY(const Rectangle &other) const;
+  [[nodiscard]] auto isJoinedY(const Rectangle &other) const -> bool;
 
   ///
   /// Determines whether the specified @arg other is joined vertically or horizontally.
@@ -347,7 +513,7 @@ struct Rectangle {
   /// @param[in]  other  Other rectangle
   ///
   /// @return     True if the specified @arg other is joined, false otherwise.
-  bool isJoined(const Rectangle &other) const;
+  [[nodiscard]] auto isJoined(const Rectangle &other) const -> bool;
 
   ///
   /// Join two rectangles.
@@ -355,31 +521,33 @@ struct Rectangle {
   /// @param[in]  other  Other rectangle
   ///
   /// @return     Joined rectangles
-  optional<Rectangle> joinedWith(const Rectangle &other) const;
+  [[nodiscard]] auto joinedWith(const Rectangle &other) const -> optional<Rectangle>;
 
   ///
   // Get height of rectangle.
   ///
   /// @return     Height of rectangle
-  Dim height() const;
+  [[nodiscard]] auto height() const -> Dim;
 
   ///
   /// Get width of rectangle.
   ///
   /// @return     Width of rectangle
-  Dim width() const;
+  [[nodiscard]] auto width() const -> Dim;
 
   ///
   /// Get size of rectangle.
   ///
   /// @return     Size of rectangle
-  Vector size() const;
+  [[nodiscard]] auto size() const -> Vector {
+    return Vector(width(), height());
+  }
 
   ///
   /// Get position of rectangle.
   ///
   /// @return     Position of rectangle
-  Vector position() const;
+  [[nodiscard]] auto position() const -> Vector { return Vector(x1_, y1_); }
 
   ///
   /// Decrease rectangle equally on all sides.
@@ -387,7 +555,7 @@ struct Rectangle {
   /// @param[in]  size  The size
   ///
   /// @return     Decreased rectangle
-  Rectangle operator -(Dim size) const;
+  [[nodiscard]] auto operator -(Dim size) const -> Rectangle;
 
   ///
   /// Enlarge rectangle equally on all sides.
@@ -395,7 +563,7 @@ struct Rectangle {
   /// @param[in]  size  The size
   ///
   /// @return     Enlarged rectangle
-  Rectangle operator +(Dim size) const;
+  [[nodiscard]] auto operator +(Dim size) const -> Rectangle;
 
   ///
   /// Apply defaults.
@@ -405,12 +573,15 @@ struct Rectangle {
   /// @param[in]  default_  The default
   ///
   /// @return     Rectangle with defaults applied
-  Rectangle defaultTo(const Rectangle &default_) const;
+  [[nodiscard]] auto defaultTo(const Rectangle &default_) const -> Rectangle;
 
-  Dim x1;
-  Dim y1;
-  Dim x2;
-  Dim y2;
+  [[nodiscard]] auto x1() const -> Dim {return x1_;}
+
+  [[nodiscard]] auto x2() const -> Dim {return x2_;}
+
+  [[nodiscard]] auto y1() const -> Dim {return y1_;}
+
+  [[nodiscard]] auto y2() const -> Dim {return y2_;}
 
   private:
   ///
@@ -419,6 +590,11 @@ struct Rectangle {
   /// @param[out] result  The result
   /// @param[in]  other   The other
   void intersect(vector<Rectangle> &result, const Rectangle &other) const;
+
+  Dim x1_;
+  Dim y1_;
+  Dim x2_;
+  Dim y2_;
 };
 
 /// Get difference between two Dims
@@ -427,7 +603,7 @@ struct Rectangle {
 /// @param[in]  x2
 ///
 /// @return     Difference
-Dim diff(Dim x1, Dim x2);
+[[nodiscard]] auto diff(Dim x1, Dim x2) -> Dim;
 
 /// Get rectangle from one vector centered in another
 ///
@@ -435,29 +611,11 @@ Dim diff(Dim x1, Dim x2);
 /// @param[in]  other  vector to be centered within reference
 ///
 /// @return     Rectangle from centering operation
-Rectangle centered(const Vector &one, const Vector &other);
-
-///
-/// Minimum of two Vectors
-///
-/// @param[in]  v1    Vector 1
-/// @param[in]  v2    Vector 2
-///
-/// @return     Minimum
-Vector min(const Vector &v1, const Vector &v2);
-
-///
-/// Maximum of two Vectors
-///
-/// @param[in]  v1    Vector 1
-/// @param[in]  v2    Vector 2
-///
-/// @return     Maximum
-Vector max(const Vector &v1, const Vector &v2);
+[[nodiscard]] auto centered(const Vector &one, const Vector &other) -> Rectangle;
 
 extern const Rectangle RectangleDefault;
 extern const Rectangle RectangleMax;
 extern const Vector VectorMin;
 extern const Vector VectorMax;
 
-}
+} // namespace jwezel

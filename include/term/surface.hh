@@ -10,40 +10,59 @@
 
 namespace jwezel {
 
+using std::initializer_list, std::unique_ptr, std::unordered_map;
+
 struct Surface {
   struct Element {
-    Element(const Rectangle &area): fragments{area} {}
+    virtual ~Element() = default;
 
-    virtual Text text(const Rectangle &area) const = 0;
+    Element(const Element &) = default;
 
-    virtual Rectangle area() const = 0;
+    Element(Element &&) = delete;
+
+    auto operator=(const Element &) -> Element & = default;
+
+    auto operator=(Element &&) -> Element & = delete;
+
+    explicit Element(const Rectangle &area) : fragments{area} {}
+
+    [[nodiscard]] virtual auto text(const Rectangle &area) const -> Text = 0;
+
+    [[nodiscard]] virtual auto area() const -> Rectangle = 0;
 
     virtual void move(const Rectangle &area) = 0;
 
+    // NOLINTNEXTLINE
     vector<Rectangle> fragments;
   };
 
   struct Fragment {
-    Rectangle area;
-    Element *element;
+    explicit Fragment(Rectangle area, Element *element) : area(area),element(element) {}
 
-    operator string() const;
+    explicit operator string() const;
+
+    // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
+    Rectangle area;
+    Element *element{};
+    // NOLINTEND(misc-non-private-member-variables-in-classes)
   };
 
-  Surface() {}
+  Surface() = default;
 
   Surface(initializer_list<Element *>);
 
-  Updates addElement(Surface::Element * element, Surface::Element *below);
+  auto addElement(Surface::Element * element, Surface::Element *below) -> Updates;
 
-  Updates deleteElement(Element *element);
+  auto deleteElement(Element *element) -> Updates;
 
-  Updates reshapeElement(Element *element, const Rectangle &area);
+  auto reshapeElement(Element *element, const Rectangle &area) -> Updates;
 
+  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
   vector<Element *> zorder;
-  unordered_map<Element *, unique_ptr<Element>> elements;
+  unordered_map<Element *, unique_ptr<Element>> elements{};
+  // NOLINTEND(misc-non-private-member-variables-in-classes)
 };
 
-Updates SurfaceUpdates(const vector<Surface::Fragment> &fragments);
+auto SurfaceUpdates(const vector<Surface::Fragment> &fragments) -> Updates;
 
 } //namespace jwezel
