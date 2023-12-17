@@ -1,28 +1,40 @@
 #pragma once
 
+#include "geometry.hh"
 #include "surface.hh"
 #include "term.hh"
-#include "widget.hh"
+#include "ui/container.hh"
+#include "ui/visible_element.hh"
 
 namespace jwezel::ui {
 
-struct Window: public Widget, public Surface
-{
-  Window(struct Ui *ui, const Char &background=Space, const Rectangle &area=RectangleDefault);
+struct Window: Container, VisibleElement, Surface {
+  explicit Window(struct Ui &ui, const Char &background = Space, const Rectangle &area = RectangleDefault);
 
-  virtual Rectangle area() const override;
+  Window(const Window &) = default;
 
-  virtual const jwezel::ui::Element *window() const override {return this;}
+  Window(Window &&) = default;
 
-  virtual Vector size() const override;
+  auto operator=(const Window &) -> Window & = delete;
 
-  virtual Dim width() const override;
+  auto operator=(Window &&) -> Window & = delete;
 
-  virtual Dim height() const override;
+  ~Window() override = default;
 
-  virtual void update(const Updates &updates) override;
+  [[nodiscard]] auto area() const -> Rectangle;
 
+  void area(const Rectangle &area);
+
+  auto size() const -> Vector;
+
+  auto width() const -> Dim;
+
+  auto height() const -> Dim;
+
+  [[nodiscard]] inline auto window() -> ui::Element * override {return this;}
+
+  private:
   jwezel::Window window_;
 };
 
-} // namespace
+} // namespace jwezel::ui

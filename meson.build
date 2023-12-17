@@ -3,7 +3,7 @@ project(
   'cpp',
   version: '0.1',
   license: 'Apache-2.0',
-  default_options: ['warning_level=3', 'cpp_std=c++17', 'debug=true']
+  default_options: ['warning_level=3', 'cpp_std=c++23', 'buildtype=debug']
 )
 
 add_project_arguments('-Wno-parentheses', language: ['c', 'cpp'])
@@ -13,76 +13,84 @@ add_project_arguments('-Wno-parentheses', language: ['c', 'cpp'])
 lib_args = ['-DBUILDING_TERM']
 
 sources = [
-  'extern/yoga/yoga/YGLayout.cpp',
-  'extern/yoga/yoga/event/event.cpp',
-  'extern/yoga/yoga/YGStyle.cpp',
-  'extern/yoga/yoga/YGNode.cpp',
-  'extern/yoga/yoga/YGConfig.cpp',
-  'extern/yoga/yoga/YGNodePrint.cpp',
-  'extern/yoga/yoga/YGValue.cpp',
-  'extern/yoga/yoga/YGEnums.cpp',
-  'extern/yoga/yoga/Utils.cpp',
-  'extern/yoga/yoga/Yoga.cpp',
-  'extern/yoga/yoga/log.cpp',
   'src/display.cc',
   'src/geometry.cc',
   'src/keyboard.cc',
-  'src/screen.cc',
-  'src/screen_window.cc',
   'src/string.cc',
   'src/surface.cc',
   'src/term.cc',
   'src/text.cc',
-  'src/ui/element.cc',
-  'src/ui/ui.cc',
-  'src/ui/widget.cc',
-  'src/ui/window.cc',
+  'src/window.cc',
+  #'src/ui/container.cc',
+  #'src/ui/element.cc',
+  #'src/ui/ui.cc',
+  #'src/ui/visible_element.cc',
+  #'src/ui/widget.cc',
+  #'src/ui/window.cc',
+  'src/util/error.cc',
+  'extern/Taitank/src/taitank_cache.cc',
+  'extern/Taitank/src/taitank.cc',
+  'extern/Taitank/src/taitank_config.cc',
+  'extern/Taitank/src/taitank_flex.cc',
+  'extern/Taitank/src/taitank_flexline.cc',
+  'extern/Taitank/src/taitank_node.cc',
+  'extern/Taitank/src/taitank_style.cc',
+  'extern/Taitank/src/taitank_util.cc',
 ]
 headers = [
-  'extern/yoga/yoga/YGLayout.h',
-  'extern/yoga/yoga/YGNodePrint.h',
-  'extern/yoga/yoga/event/event.h',
-  'extern/yoga/yoga/log.h',
-  'extern/yoga/yoga/YGEnums.h',
-  'extern/yoga/yoga/YGValue.h',
-  'extern/yoga/yoga/CompactValue.h',
-  'extern/yoga/yoga/Utils.h',
-  'extern/yoga/yoga/YGFloatOptional.h',
-  'extern/yoga/yoga/YGNode.h',
-  'extern/yoga/yoga/BitUtils.h',
-  'extern/yoga/yoga/Yoga-internal.h',
-  'extern/yoga/yoga/Yoga.h',
-  'extern/yoga/yoga/YGMacros.h',
-  'extern/yoga/yoga/YGConfig.h',
-  'extern/yoga/yoga/YGStyle.h',
-  'include/term/_screen_window.hh',
   'include/term/basic.hh',
   'include/term/display.hh',
   'include/term/geometry.hh',
   'include/term/keyboard.hh',
-  'include/term/screen.hh',
   'include/term/string.hh',
   'include/term/surface.hh',
   'include/term/term.hh',
   'include/term/text.hh',
-  'include/ui/element.hh',
-  'include/ui/ui.hh',
-  'include/ui/widget.hh',
-  'include/ui/window.hh',
+  'include/term/window.hh',
+  #'include/ui/container.hh',
+  #'include/ui/element.hh',
+  #'include/ui/ui.hh',
+  #'include/ui/visible_element.hh',
+  #'include/ui/widget.hh',
+  #'include/ui/window.hh',
+  'include/util/error.hh',
+  'extern/Taitank/src/taitank_cache.h',
+  'extern/Taitank/src/taitank_config.h',
+  'extern/Taitank/src/taitank_flex.h',
+  'extern/Taitank/src/taitank_flexline.h',
+  'extern/Taitank/src/taitank.h',
+  'extern/Taitank/src/taitank_node.h',
+  'extern/Taitank/src/taitank_style.h',
+  'extern/Taitank/src/taitank_util.h',
+  #'extern/yoga/yoga/YGLayout.h',
+  #'extern/yoga/yoga/YGNodePrint.h',
+  #'extern/yoga/yoga/event/event.h',
+  #'extern/yoga/yoga/log.h',
+  #'extern/yoga/yoga/YGEnums.h',
+  #'extern/yoga/yoga/YGValue.h',
+  #'extern/yoga/yoga/CompactValue.h',
+  #'extern/yoga/yoga/Utils.h',
+  #'extern/yoga/yoga/YGFloatOptional.h',
+  #'extern/yoga/yoga/YGNode.h',
+  #'extern/yoga/yoga/BitUtils.h',
+  #'extern/yoga/yoga/Yoga-internal.h',
+  #'extern/yoga/yoga/Yoga.h',
+  #'extern/yoga/yoga/YGMacros.h',
+  #'extern/yoga/yoga/YGConfig.h',
+  #'extern/yoga/yoga/YGStyle.h',
 ]
 
 incdir = include_directories([
-  'include/term',
-  'include/ui',
-  'extern/yoga',
   'include',
-  'extern'
+  'include/term',
+  'include/util',
+  'extern',
+  'extern/Taitank/src',
+  #'extern/yoga',
 ])
 
 lib_dep = [
-  dependency('fmt'),
   dependency('utfcpp'),
-  dependency('range-v3'),
   dependency('rxcpp'),
   dependency('tl-optional'),
 ]
@@ -99,7 +107,6 @@ shlib = shared_library(
 
 test_dep = [
   dependency('doctest'),
-  dependency('fmt')
 ]
 
 test_exe = executable(
@@ -107,7 +114,7 @@ test_exe = executable(
   'test/test_display.cc',
   'test/test_geometry.cc',
   'test/test_keyboard.cc',
-  'test/test_screen.cc',
+  'test/test_surface.cc',
   'test/test_term.cc',
   'test/test_text.cc',
   link_with: shlib,
@@ -115,6 +122,13 @@ test_exe = executable(
   include_directories: incdir
 )
 test('term', test_exe)
+
+example_exe = executable(
+  'ex1',
+  'examples/ex1/ex1.cc',
+  link_with: shlib,
+  include_directories: incdir
+)
 
 # Make this library usable as a Meson subproject.
 term_dep = declare_dependency(

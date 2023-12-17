@@ -13,7 +13,7 @@ using
   jwezel::DimHigh,
   jwezel::Hsv,
   jwezel::Line,
-  jwezel::mix,
+  jwezel::AttributeMode,
   jwezel::Rectangle,
   jwezel::Rgb,
   jwezel::RgbBlue,
@@ -121,12 +121,12 @@ TEST_CASE("Char") {
     Char ch('x');
     CHECK_EQ(ch, Char('x', RgbNone, RgbNone, Attributes(), AttributeMode()));
     SUBCASE("string") {
-      CHECK_EQ(string(ch), "'x'(fg=RgbNone, bg=RgbNone, attr=, mix=default_)");
+      CHECK_EQ(string(ch), "'x'(fg=RgbNone, bg=RgbNone, attr=, mix=AttributeMode::default_)");
     }
   }
   SUBCASE("Char only") {
-    Char ch('a', RgbGray1, RgbGray2, bold, mix);
-    CHECK_EQ(ch, Char('a', RgbGray1, RgbGray2, bold, mix));
+    Char ch('a', RgbGray1, RgbGray2, bold, AttributeMode::mix);
+    CHECK_EQ(ch, Char('a', RgbGray1, RgbGray2, bold, AttributeMode::mix));
     SUBCASE("string") {
       CHECK_EQ(string(ch), "'a'(fg=Rgb(r=0.1, g=0.1, b=0.1), bg=Rgb(r=0.2, g=0.2, b=0.2), attr=bold, mix=mix)");
     }
@@ -193,6 +193,11 @@ TEST_CASE("Text") {
       t2.extend(Vector(12, 4), Char('.', attr));
       CHECK_EQ(t2, Text("line1 ......\nline 2......\n............\n............", attr));
     }
+    SUBCASE("Extend empty") {
+      Text t2;
+      t2.extend(Vector(12, 4), Char('.', attr));
+      CHECK_EQ(t2, Text("............\n............\n............\n............", attr));
+    }
     SUBCASE("Patch") {
       auto t2 = text;
       t2.patch(Text("xx\nyy", attr), Vector(1, 0));
@@ -230,7 +235,7 @@ TEST_CASE("Text") {
     }
     SUBCASE("setAttr") {
       auto t2 = text;
-      t2.setAttr(CharAttributes(RgbGreen, RgbYellow, jwezel::reverse, jwezel::replace), Rectangle{0, 0, 2, 2});
+      t2.setAttr(CharAttributes(RgbGreen, RgbYellow, jwezel::reverse, jwezel::AttributeMode::replace), Rectangle{0, 0, 2, 2});
       CHECK_EQ(t2, Text("line1\nline 2", attr));
     }
   }

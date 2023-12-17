@@ -1,8 +1,9 @@
+#include "keyboard.hh"
+
 #include <cstdio>
 #include <doctest/doctest.h>
-#include <fstream>
+#include <iostream>
 
-#include "keyboard.hh"
 
 using namespace jwezel;
 
@@ -32,7 +33,7 @@ TEST_CASE("Keyboard") {
 }
 TEST_CASE("Real user-operated keyboard" * doctest::skip(true)) {
   Keyboard k;
-  fmt::print("Press F1\n");
+  std::cout << "Press F1\n";
   k.raw();
   auto key{k.key()};
   k.reset();

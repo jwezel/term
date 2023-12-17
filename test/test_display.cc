@@ -1,12 +1,13 @@
-#include <cstdio>
-#include <doctest/doctest.h>
-#include <unistd.h>
-
 #include "display.hh"
 #include "geometry.hh"
 #include "keyboard.hh"
 #include "string.hh"
 #include "text.hh"
+
+#include <cstdio>
+#include <cstring>
+#include <doctest/doctest.h>
+#include <unistd.h>
 
 using
   jwezel::blink,

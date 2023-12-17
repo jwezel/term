@@ -1,33 +1,24 @@
-#include <algorithm>
+#include "display.hh"
+
 #include <array>
-#include <cstddef>
+#include <cassert>
 #include <exception>
 #include <iostream>
 #include <ostream>
 #include <regex>
 #include <stdexcept>
-#include <string>
 #include <system_error>
 #include <unistd.h>
 
-#include <utility>
-#define FMT_HEADER_ONLY
-#include "display.hh"
-#include "fmt/core.h"
-#include "fmt/format.h"
-#include "geometry.hh"
-#include "string.hh"
-#include "text.hh"
-#include "update.hh"
+#include <format>
 
 namespace jwezel {
 
-using fmt::format;
+using std::format;
 using
   std::array,
   std::basic_regex,
   std::cerr,
-  std::endl,
   std::exception,
   std::runtime_error,
   std::smatch,
@@ -69,9 +60,7 @@ Display::~Display() {
     cursor(0, toDim(size().y() + position_.y() - 1));
     write("\n");
   } catch (exception & error) {
-    cerr << "Error: " << error.what() << endl;
-  } catch (...) {
-    // shut up linter
+    cerr << "Error: " << error.what() << "\n";
   }
 }
 
@@ -193,14 +182,12 @@ auto Display::terminalSize() -> Vector {
   return result;
 }
 
-
 void Display::update(const Vector &position, const Text &text) {
   auto area{Rectangle{position, position + text.size()} & Rectangle{Vector{0, 0}, size()}};
   if (!area) {
     return;
   }
   auto textArea{area.value() - position};
-  // text_.extend(min(position + text.size(), maxSize_));
   for (Dim line = textArea.y1(), dline = area.value().y1(); line < textArea.y2(); ++line, ++dline) {
     assert(line < toDim(text.data.size())); // NOLINT
     while (toDim(line + position.y()) >= text_.height()) {
@@ -239,4 +226,5 @@ auto Display::size() const -> Vector {
 void Display::resize(const Vector &size) {
   text_.resize(min(maxSize_, size), Null);
 }
+
 } // namespace jwezel

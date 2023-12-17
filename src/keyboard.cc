@@ -1,15 +1,10 @@
-#include <asm-generic/errno-base.h>
-#include <cassert>
 #include <cerrno>
 #include <chrono>
-#include <cstdio>
 #include <cstring>
 #include <fcntl.h>
-#include <initializer_list>
 #include <iostream>
 #include <iterator>
 #include <map>
-#include <ratio>
 #include <regex>
 #include <stdexcept>
 #include <string>
@@ -20,15 +15,12 @@
 #include <unistd.h>
 #include <utility>
 
-#include "fmt/core.h"
-
-#include "fmt/format.h"
 #include "geometry.hh"
 #include "keyboard.hh"
 #include "text.hh"
 
 namespace jwezel {
-using fmt::format, fmt::print;
+using std::format;
 using std::chrono::steady_clock;
 using std::this_thread::sleep_for;
 using
@@ -38,13 +30,14 @@ using
   std::make_pair,
   std::runtime_error,
   std::cerr,
-  std::endl,
   std::strerror,
   std::u32string,
   std::this_thread::sleep_for;
 using namespace std::chrono_literals;
 
-static vector<pair<string, Unicode>> KeyFromName {
+namespace
+{
+const vector<pair<string, Unicode>> KeyFromName { // NOLINT(cert-err58-cpp)
   {"Left", Key::Left},
   {"Right", Key::Right},
   {"Up", Key::Up},
@@ -172,7 +165,7 @@ static vector<pair<string, Unicode>> KeyFromName {
   {"AltF12", Key::AltF12}
 };
 
-static std::vector<pair<std::string, Unicode>> keyTranslations {
+const std::vector<pair<std::string, Unicode>> keyTranslations { // NOLINT(cert-err58-cpp)
   {"\x1b[D", Key::Left},
   {"\x1b[C", Key::Right},
   {"\x1b[A", Key::Up},
@@ -301,16 +294,19 @@ static std::vector<pair<std::string, Unicode>> keyTranslations {
   {"\x1b\x1b[24~", Key::AltF12},
   {"\x1b[<", Key::Mouse}
 };
+} // namespace
 
 //~Static functions~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+namespace
+{
 ///
 /// Load key translations
 ///
 /// @param[in]  translations  The translations
 ///
 /// @return     key prefix tree
-static auto loadKeyTranslations(const std::vector<pair<std::string, Unicode>> &translations) -> Keyboard::PrefixNode {
+auto loadKeyTranslations(const std::vector<pair<std::string, Unicode>> &translations) -> Keyboard::PrefixNode {
   Keyboard::PrefixNode result;
   for (const auto &[keys, key]: translations) {
     Keyboard::PrefixNode *node{&result};
@@ -330,6 +326,7 @@ static auto loadKeyTranslations(const std::vector<pair<std::string, Unicode>> &t
   }
   return result;
 }
+} // namespace
 
 //~Keyboard~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -344,12 +341,12 @@ Keyboard::~Keyboard() {
   try {
     reset();
   } catch (...) {
-    cerr << "Error closing keyboard" << endl;
+    cerr << "Error closing keyboard" << "\n";
   }
 }
 
 void Keyboard::raw() {
-  if (isatty(fd) /*NOLINT*/) {
+  if (bool(isatty(fd))) {
     termios old{};
     if (!originalState) {
       if (tcgetattr(fd, &old) != 0) {
@@ -405,7 +402,7 @@ Unicode Keyboard::key() {
     if (onSublevel) {
       auto st{fcntl(fd, F_SETFL, fcntl(0, F_GETFL) | O_NONBLOCK)/*NOLINT*/};
       if (st != 0) {
-        print("fcntl(F_SETFL, O_NONBLOCK) returned {}", st);
+        cerr << format("fcntl(F_SETFL, O_NONBLOCK) returned {}\n", st);
       }
     }
     auto start{steady_clock::now()};
@@ -433,7 +430,7 @@ Unicode Keyboard::key() {
     if (onSublevel) {
       auto st{fcntl(fd, F_SETFL, fcntl(0, F_GETFL) & ~O_NONBLOCK)/*NOLINT*/};
       if (st != 0) {
-        print("fcntl(F_SETFL, 0) returned {}", st);
+        cerr << format("fcntl(F_SETFL, 0) returned {}\n", st);
       }
     }
     if (readLength == 0) {

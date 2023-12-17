@@ -1,14 +1,16 @@
-#include "ui.hh"
+#include "ui/ui.hh"
 #include "term.hh"
-#include "window.hh"
+#include "ui/window.hh"
+
 #include <memory>
 
-using namespace jwezel::ui;
+namespace jwezel::ui {
 
 Ui::Ui(Terminal &terminal):
-terminal(terminal)
+terminal_(terminal)
 {}
 
 void Ui::add(jwezel::ui::Window *window) {
-  windows.insert(make_pair(window, unique_ptr<Window>(window)));
+  windows_.emplace(window, unique_ptr<Window>(window));
 }
+} // namespace jwezel::ui

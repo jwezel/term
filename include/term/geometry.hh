@@ -9,9 +9,8 @@
 #pragma once
 
 // Geometric shapes
-#include "fmt/color.h"
-#include "fmt/core.h"
 #include <cstdint>
+#include <format>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -20,7 +19,7 @@
 namespace jwezel {
 
 using std::string, std::logic_error, std::vector, std::optional, std::range_error;
-using fmt::format;
+using std::format;
 
 /// Dimension (x, y) in a @class Vector.
 using Dim = int16_t;
@@ -548,6 +547,12 @@ struct Rectangle {
   ///
   /// @return     Position of rectangle
   [[nodiscard]] auto position() const -> Vector { return Vector(x1_, y1_); }
+
+  ///
+  /// Get position2 of rectangle.
+  ///
+  /// @return     Position of rectangle
+  [[nodiscard]] auto position2() const -> Vector { return Vector(x2_, y2_); }
 
   ///
   /// Decrease rectangle equally on all sides.

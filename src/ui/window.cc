@@ -1,42 +1,44 @@
-#include "surface.hh"
-#include "ui.hh"
 #include "geometry.hh"
-#include "text.hh"
-#include "widget.hh"
+#include "ui/ui.hh"
+#include "ui/window.hh"
 
 #include <fmt/core.h>
 
-using namespace jwezel::ui;
+namespace jwezel::ui {
 
-jwezel::ui::Window::Window(Ui *ui, const Char &background, const Rectangle &area):
-Widget(0, background, area.size()),
-Surface(),
-window_{ui->terminal.newWindow(area, background)}
-{
-  if (ui) {
-    ui->add(this);
+static auto DefaultSize(Ui &ui, const Rectangle &area) {
+  if (area == RectangleDefault) {
+    return Rectangle{Vector{0, 0}, ui.terminal().display().maxSize() * 3 / 2};
   }
+  return area;
 }
 
-Rectangle jwezel::ui::Window::area() const {
+Window::Window(Ui &ui, const Char &background, const Rectangle &area):
+VisibleElement(background, 0),
+window_{ui.terminal().newWindow(DefaultSize(ui, area), background)}
+{
+  ui.add(this);
+}
+
+auto Window::area() const -> Rectangle {
   return window_.area();
 }
 
-Vector jwezel::ui::Window::size() const {
+void Window::area(const Rectangle &area) {
+  if (area != RectangleDefault) {
+  }
+}
+
+auto Window::size() const -> Vector {
   return window_.size();
 }
 
-Dim jwezel::ui::Window::width() const {
+auto Window::width() const -> Dim {
   return window_.width();
 }
 
-Dim jwezel::ui::Window::height() const {
+auto Window::height() const -> Dim {
   return window_.height();
 }
 
-void jwezel::ui::Window::update(const Updates &updates) {
-  for (auto update: updates) {
-    // fmt::print(stderr, "{}: {} {}\n", string(update.position), update.text.repr(), update.text.height()? string(update.text.at({0, 0})): "-");
-    window_.write(update.position, update.text);
-  }
-}
+} // namespace jwezel::ui

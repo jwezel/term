@@ -1,9 +1,8 @@
 #pragma once
 
-#include <string_view>
-
-#include "geometry.hh"
 #include "keyboard.hh"
+#include "device.hh"
+#include "geometry.hh"
 #include "text.hh"
 #include "update.hh"
 
@@ -15,7 +14,7 @@ namespace jwezel {
 /// Responsibility:
 ///
 /// Render content on a terminal device
-struct Display {
+struct Display: Device {
   ///
   /// Create Display
   ///
@@ -43,7 +42,7 @@ struct Display {
 
   ///
   /// Destroy Display
-  ~Display();
+  ~Display() override;
 
   ///
   /// Write string
@@ -103,7 +102,7 @@ struct Display {
   /// Update screen
   ///
   /// @param[in]  updates  The updates
-  void update(const Updates &updates);
+  void update(const Updates &updates) override;
 
   ///
   /// Get terminal size
@@ -121,6 +120,8 @@ struct Display {
   ///
   /// Get "physical" terminal size
   auto terminalSize() -> Vector;
+
+  [[nodiscard]] auto maxSize() const {return maxSize_;}
 
   // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
   Keyboard &keyboard_;                //< Keyboard

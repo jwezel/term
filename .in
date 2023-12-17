@@ -1,0 +1,2 @@
+echo export 'PKG_CONFIG_PATH="packages"'
+echo export 'LD_LIBRARY_PATH="build"'

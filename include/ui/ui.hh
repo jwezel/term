@@ -7,9 +7,8 @@
 
 namespace jwezel::ui {
 
-struct Ui
-{
-  Ui(Terminal &terminal);
+struct Ui {
+  explicit Ui(Terminal &terminal);
 
   ///
   /// Add window
@@ -17,8 +16,11 @@ struct Ui
   /// @param      window  The window
   void add(jwezel::ui::Window *window);
 
-  Terminal &terminal;
-  unordered_map<jwezel::ui::Window *, unique_ptr<jwezel::ui::Window>> windows;
+  inline auto terminal() -> auto & {return terminal_;}
+
+  private:
+  Terminal &terminal_;
+  unordered_map<jwezel::ui::Window *, unique_ptr<jwezel::ui::Window>> windows_;
 };
 
-} // namespace
+} // namespace jwezel::ui

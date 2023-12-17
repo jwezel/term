@@ -9,17 +9,8 @@
 
 #pragma once
 
-#include <algorithm>
-#include <cassert>
-#include <cstddef>
-#include <exception>
-#include <iostream>
-#include <stdexcept>
 #include <string>
 #include <string_view>
-#include <vector>
-
-#include <fmt/core.h>
 
 namespace jwezel {
 

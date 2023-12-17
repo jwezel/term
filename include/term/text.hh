@@ -14,9 +14,6 @@
 #include <array>
 #include <string>
 #include <string_view>
-#include <vector>
-
-#include <fmt/core.h> // TESTING ONLY
 
 namespace jwezel {
 
@@ -161,7 +158,7 @@ const int HighColor{255};
 
 ///
 /// Attributes for the Char type.
-using Attributes = unsigned;
+using Attributes = u1;
 
 const Attributes
   bold = 1U,
@@ -171,7 +168,7 @@ const Attributes
 
 ///
 /// Attribute combining mode for the Char type.
-enum AttributeMode {
+enum class AttributeMode: u1 {
   default_, ///< default
   merge,
   mix,
@@ -181,13 +178,13 @@ enum AttributeMode {
 
 ///
 /// Alignment
-enum Alignment {
+enum class Alignment: u1 {
   left,
   center,
   right
 };
 
-extern vector<string> AttributeMode2String;
+const extern vector<string> AttributeMode2String;
 
 ///
 /// This struct describes character attributes.
@@ -327,7 +324,7 @@ struct Char {
     const Rgb &fg=RgbNone,
     const Rgb &bg=RgbNone,
     const Attributes &attr={},
-    const AttributeMode &mix=default_
+    const AttributeMode &mix=AttributeMode::default_
   );
 
   ///
@@ -351,9 +348,9 @@ struct Char {
 
   [[nodiscard]] auto combine(
     const Char &other,
-    const AttributeMode &mixDefaultMode=merge,
-    const AttributeMode &overrideMixMode=default_,
-    const AttributeMode &resetMixMode=default_
+    const AttributeMode &mixDefaultMode=AttributeMode::merge,
+    const AttributeMode &overrideMixMode=AttributeMode::default_,
+    const AttributeMode &resetMixMode=AttributeMode::default_
   ) const -> Char;
 
   ///
@@ -393,10 +390,12 @@ inline auto operator ""_C(char ch) -> Char {
   return Char(ch);
 }
 
+// NOLINTBEGIN(cert-err58-cpp)
 const Char
   Space(32),
   Null(0),
   Transparent(32, RgbTransparent, RgbTransparent);
+// NOLINTEND(cert-err58-cpp)
 
 using String = vector<Char>;
 
@@ -422,7 +421,7 @@ struct Text {
     const Rgb &fg=RgbNone,
     const Rgb &bg=RgbNone,
     const Attributes &attr={},
-    const AttributeMode &mix=default_
+    const AttributeMode &mix=AttributeMode::default_
   );
 
   ///
@@ -440,7 +439,7 @@ struct Text {
   /// @param[in]  c           The character
   /// @param[in]  size        The size
   /// @param[in]  mixDefault  The mix default
-  Text(Char c, const Vector &size, const AttributeMode &mixDefault=default_);
+  Text(Char c, const Vector &size, const AttributeMode &mixDefault=AttributeMode::default_);
 
   ///
   /// Get height.
@@ -506,9 +505,9 @@ struct Text {
   void patch(
     const Text &other,
     const Vector &position=Vector{0, 0},
-    const AttributeMode &mixDefaultMode=replace,
-    const AttributeMode &overrideMixMode=default_,
-    const AttributeMode &resetMixMode=default_
+    const AttributeMode &mixDefaultMode=AttributeMode::replace,
+    const AttributeMode &overrideMixMode=AttributeMode::default_,
+    const AttributeMode &resetMixMode=AttributeMode::default_
   );
 
   ///
@@ -522,9 +521,9 @@ struct Text {
   void patchArea(
     const Text &other,
     const Rectangle &area=RectangleMax,
-    const AttributeMode &mixDefault=replace,
-    const AttributeMode &overrideMix=default_,
-    const AttributeMode &resetMix=default_
+    const AttributeMode &mixDefault=AttributeMode::replace,
+    const AttributeMode &overrideMix=AttributeMode::default_,
+    const AttributeMode &resetMix=AttributeMode::default_
   );
 
   ///
@@ -539,7 +538,7 @@ struct Text {
   /// @param[in]  attr    The attribute
   /// @param[in]  area    The area
   /// @param[in]  setMix  The set mix
-  void setAttr(const CharAttributes &attr, const Rectangle &area=RectangleMax, const AttributeMode &setMix=default_);
+  void setAttr(const CharAttributes &attr, const Rectangle &area=RectangleMax, const AttributeMode &setMix=AttributeMode::default_);
 
   ///
   /// Get sub-rectangle.

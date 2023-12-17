@@ -4,13 +4,11 @@
 #include <map>
 #include <memory>
 #include <optional>
-#include <string>
 #include <termios.h>
 
 #include "basic.hh"
 #include "event.hh"
 #include "text.hh"
-#include <typeinfo>
 
 namespace jwezel {
 
@@ -176,44 +174,61 @@ struct MouseModifiers {
 };
 
 struct InputEvent: public Event {
+  private:
   CLASS_ID(InputEvent);
 };
 
 struct KeyEvent: public InputEvent {
-  explicit KeyEvent(const Unicode &key): key{key} {}
+  [[nodiscard]] explicit KeyEvent(Unicode key):
+    key_(key) {}
 
-  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
-  Unicode key;
+  [[nodiscard]] inline auto key() const {return key_;}
+
+  private:
   CLASS_ID(KeyEvent);
-  // NOLINTEND(misc-non-private-member-variables-in-classes)
+  Unicode key_;
 };
 
 struct MouseEvent: public InputEvent {
+  private:
   CLASS_ID(MouseEvent);
 };
 
-struct MouseButtonEvent: public MouseEvent {
-  MouseButtonEvent(MouseButton button, MouseModifiers modifiers, u2 x, u2 y, MouseAction action):
-  button(button), modifiers(modifiers), x(x), y(y), action(action)
+struct MouseButtonEvent: MouseEvent {
+  MouseButtonEvent(MouseButton button, MouseModifiers modifiers, u2 column, u2 line, MouseAction action):
+  button_(button), modifiers_(modifiers), column_(column), line_(line), action_(action)
   {}
 
-  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
-  MouseButton button;
-  MouseModifiers modifiers;
-  u2 x;
-  u2 y;
-  MouseAction action;
+  [[nodiscard]] inline auto button() const {return button_;}
+
+  [[nodiscard]] inline auto modifiers() const {return modifiers_;}
+
+  [[nodiscard]] inline auto column() const {return column_;}
+
+  [[nodiscard]] inline auto line() const {return line_;}
+
+  [[nodiscard]] inline auto action() const {return action_;}
+
+  private:
   CLASS_ID(MouseButtonEvent);
-  // NOLINTEND(misc-non-private-member-variables-in-classes)
+  MouseButton button_;
+  MouseModifiers modifiers_;
+  u2 column_;
+  u2 line_;
+  MouseAction action_;
 };
 
-struct MouseMoveEvent: public MouseEvent {
-  MouseMoveEvent(u2 x, u2 y): x{x}, y{y} {}
-  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
-  u2 x;
-  u2 y;
-  // NOLINTEND(misc-non-private-member-variables-in-classes)
+struct MouseMoveEvent: MouseEvent {
+  MouseMoveEvent(u2 column, u2 line): column_{column}, line_{line} {}
+
+  [[nodiscard]] inline auto column() const {return column_;}
+
+  [[nodiscard]] inline auto line() const {return line_;}
+
+  private:
   CLASS_ID(MouseMoveEvent);
+  u2 column_;
+  u2 line_;
 };
 
 struct Keyboard {

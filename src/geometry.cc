@@ -1,17 +1,16 @@
 // Geometric shapes
+
+#include "geometry.hh"
+
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <optional>
-#include <string>
-#define FMT_HEADER_ONLY
-#include <fmt/format.h>
-
-#include "geometry.hh"
+#include <format>
 
 namespace jwezel {
 
-using fmt::format;
+using std::format;
 using std::nullopt, std::make_optional;
 
 using Dim = int16_t;

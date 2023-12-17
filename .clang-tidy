@@ -9,9 +9,11 @@ Checks: >
   -cppcoreguidelines-pro-bounds-pointer-arithmetic,
   -google-readability-casting,
   -google-runtime-int,
+  -google-default-arguments,
   -modernize-use-nullptr,
   -hicpp-use-nullptr,
-  -cppcoreguidelines-owning-memory
+  -cppcoreguidelines-owning-memory,
+  -cppcoreguidelines-avoid-do-while
 CheckOptions:
   readability-identifier-length.MinimumVariableNameLength: 2
   readability-identifier-length.IgnoredVariableNames: _.*
@@ -24,3 +26,4 @@ CheckOptions:
   cppcoreguidelines-narrowing-conversions.IgnoreConversionFromTypes: Dim
   cppcoreguidelines-narrowing-conversions.WarnOnIntegerNarrowingConversion: false
   readability-implicit-bool-conversion.AllowPointerConditions: true
+  readability-function-cognitive-complexity

@@ -1,25 +1,25 @@
+#include "geometry.hh"
 #include "surface.hh"
 #include "update.hh"
 
 #include <algorithm>
-
-#include <fmt/format.h>
 #include <initializer_list>
-#include <range/v3/action/push_back.hpp>
-#include <range/v3/action/remove_if.hpp>
-#include <range/v3/range/conversion.hpp>
-#include <range/v3/view/remove_if.hpp>
-#include <range/v3/view/transform.hpp>
+#include <iterator>
+#include <ranges>
 #include <stdexcept>
 #include <vector>
 
+#include <format>
+
 namespace jwezel {
 
-using ranges::views::transform, ranges::_to_::to, ranges::push_back, ranges::views::remove_if;
-using fmt::format;
+using std::ranges::views::transform, std::ranges::views::filter;
+using std::format;
 using std::vector, std::domain_error;
 
-static void split(const Rectangle &area, vector<Rectangle> &fragments1, const vector<Rectangle> &fragments2) {
+namespace
+{
+void split(const Rectangle &area, vector<Rectangle> &fragments1, const vector<Rectangle> &fragments2) {
   for (const auto &fragment2: fragments2) {
     if (area.intersects(fragment2)) {
       vector<Rectangle> fragments;
@@ -31,33 +31,56 @@ static void split(const Rectangle &area, vector<Rectangle> &fragments1, const ve
     }
   }
 }
+} // namespace
 
-auto SurfaceUpdates(const vector<Surface::Fragment> &fragments) -> Updates {
+template<class Range>
+auto SurfaceUpdates(const Range &fragments) -> Updates {
   Updates result;
-  result.reserve(fragments.size());
+  result.reserve(std::ranges::distance(fragments));
   for (const auto &fragment: fragments) {
     const auto area = fragment.area;
     result.emplace_back(
       Update{
         Vector(fragment.area.x1(), fragment.area.y1()),
-        fragment.element->text(area - Vector(fragment.element->area().x1(), fragment.element->area().y1()))
+        fragment.element->text(
+          area -
+          fragment.element->area().position()
+        )
       }
     );
   }
   return result;
 }
 
+Surface::Element::Element(Surface *surface, const Rectangle &area):
+fragments{area},
+surface_{surface}
+{}
+
+void Surface::Element::update(const vector<Rectangle> &areas) {
+  vector<Fragment> updates;
+  for (const auto &fragment: fragments) {
+    for (const auto &area_: areas) {
+      const auto update{fragment & area_ + area().position()};
+      if (update) {
+        updates.emplace_back(update.value(), this);
+      }
+    }
+  }
+  surface_->device_->update(SurfaceUpdates(updates));
+
+}
+
 Surface::Fragment::operator string() const {
   return format("Fragment({})", string(area));
 }
 
-Surface::Surface(initializer_list<Element *> initializer):
-zorder{initializer}
+Surface::Surface(Device *device, initializer_list<Element *> initializer):
+zorder{initializer},
+device_{device}
 {}
 
-auto Surface::addElement(Surface::Element *element, Surface::Element *below) -> Updates {
-  // Create element
-  elements.insert(make_pair(element, unique_ptr<Element>(element)));
+void Surface::addElement(Surface::Element *element, Surface::Element *below) {
   // Add element to surface
   const auto insertPos =
     below?
@@ -72,20 +95,26 @@ auto Surface::addElement(Surface::Element *element, Surface::Element *below) -> 
   // Create fragments of all elements overlayed by this
   for (auto z = ze - 1; z >= 0; --z) {
     auto *const elementBelow = zorder[z];
-    if (elementBelow->area().intersects(element->area())) {
+    if (
+      bool is = elementBelow->area().
+      intersects(
+        element->area())
+    ) {
       split(elementBelow->area(), elementBelow->fragments, element->fragments);
     }
   }
-  return SurfaceUpdates(
-    element->fragments | transform([element](const Rectangle &area){return Fragment{area, element};}) | to<vector>()
+  device_->update(
+    SurfaceUpdates(
+      element->fragments | transform([element](const Rectangle &area){return Fragment{area, element};})
+    )
   );
 }
 
-auto Surface::deleteElement(Element *element) -> Updates {
+void Surface::deleteElement(Element *element) {
   Updates result;
   const auto zit{find(zorder.begin(), zorder.end(), element)};
   if (zit == zorder.end()) {
-    throw domain_error(format("Element {} not found in zorder\n", fmt::ptr(element)));
+    throw domain_error(format("Element {} not found in zorder\n", static_cast<void*>(element)));
   }
   const auto ze = std::distance(zorder.begin(), zit);
   vector<Fragment> updates;
@@ -100,40 +129,38 @@ auto Surface::deleteElement(Element *element) -> Updates {
         split(zelement->area(), zelement->fragments, zorder[z2]->fragments);
       }
       // Add surface updates for these fragments
-      updates |= push_back(
+      std::ranges::copy(
         zelement->fragments |
         transform([element](const Rectangle &r) {return r & element->area();}) |
-        remove_if([](const std::optional<Rectangle> &r) {return !r.has_value();}) |
-        transform([zelement](const std::optional<Rectangle> &r) {return Fragment{r.value(), zelement};})
+        filter([](const std::optional<Rectangle> &r) {return r.has_value();}) |
+        transform([zelement](const std::optional<Rectangle> &r) {return Fragment{r.value(), zelement};}),
+        std::back_inserter(updates)
       );
     }
   }
-  result = SurfaceUpdates(updates);
-  // Remove element from registry
-  if (elements.erase(element) == 0U) {
-    throw domain_error(format("Element {} not found in elements\n", fmt::ptr(element)));
-  }
-  return result;
+  device_->update(SurfaceUpdates(updates));
 }
 
-// NOLINTNEXTLINE(readability-function-cognitive-complexity)
-auto Surface::reshapeElement(Element *element, const Rectangle &area) -> Updates {
+void Surface::reshapeElement(Element *element, const Rectangle &area) { //NOLINT(readability-function-cognitive-complexity)
   vector<Fragment> updates;
   if (element->area() != area) {
     const auto zpos = find(zorder.begin(), zorder.end(), element);
     if (zpos == zorder.end()) {
-      throw range_error(format("Element {} not found", fmt::ptr(element)));
+      throw range_error(format("Element {} not found", static_cast<void*>(element)));
     }
     const auto ze = std::distance(zorder.begin(), zpos);
+    if (ze == 0) {
+      throw logic_error("Lowest element must be the 'backdrop', which must not be moved");
+    }
     auto damageAreas{element->area().defaultIntersection(area)};
     damageAreas.push_back(area);
     const auto searchArea = element->area() | area;
-    element->move(area);
+    element->moveEvent(area);
     // Recreate fragments
     for (auto j = ze; j >= 0; --j) {
-      if (zorder[j]->area().intersects(searchArea)) {
-        // Element fragments
-        auto * const element_ = zorder[j];
+      auto * const element_ = zorder[j];
+      if (element_->area().intersects(searchArea)) {
+        // Create fragments from elements on top it
         element_->fragments = {element_->area()};
         for (auto i = j + 1; i < int(zorder.size()); ++i) {
           split(element_->area(), element_->fragments, zorder[i]->fragments);
@@ -150,7 +177,21 @@ auto Surface::reshapeElement(Element *element, const Rectangle &area) -> Updates
       }
     }
   }
-  return SurfaceUpdates(updates);
+  device_->update(SurfaceUpdates(updates));
+}
+
+auto Surface::minSize(const Element *exclude) const -> Vector {
+  Vector result{0, 0};
+  bool consider{false};
+  for (auto *const element: zorder) {
+    if (consider) {
+      result = max(result, element->area().position2());
+    }
+    if (exclude and element == exclude) {
+      consider = true;
+    }
+  }
+  return result;
 }
 
 } // namespace jwezel

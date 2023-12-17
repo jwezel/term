@@ -1,39 +1,56 @@
 #pragma once
 
+#include "device.hh"
 #include "geometry.hh"
 #include "text.hh"
 #include "update.hh"
 
 #include <initializer_list>
-#include <memory>
-#include <unordered_map>
 
 namespace jwezel {
 
-using std::initializer_list, std::unique_ptr, std::unordered_map;
+using std::initializer_list;
 
 struct Surface {
   struct Element {
+    explicit Element(Surface *surface, const Rectangle &area);
+
+    Element() = delete;
+
     virtual ~Element() = default;
 
     Element(const Element &) = default;
 
-    Element(Element &&) = delete;
+    Element(Element &&) = default;
 
     auto operator=(const Element &) -> Element & = default;
 
     auto operator=(Element &&) -> Element & = delete;
 
-    explicit Element(const Rectangle &area) : fragments{area} {}
+    ///
+    /// Get text rectangle
+    ///
+    /// @param[in]  area  The area
+    ///
+    /// @return     Text of the specified rectangle
+    [[nodiscard]] virtual auto text(const Rectangle &area=RectangleMax) const -> Text = 0;
 
-    [[nodiscard]] virtual auto text(const Rectangle &area) const -> Text = 0;
-
+    ///
+    /// Get area
+    ///
+    /// @return     The area of the element
     [[nodiscard]] virtual auto area() const -> Rectangle = 0;
 
-    virtual void move(const Rectangle &area) = 0;
+    ///
+    /// Move element
+    ///
+    /// @param[in]  area  The area
+    virtual bool moveEvent(const Rectangle &area) = 0;
 
-    // NOLINTNEXTLINE
-    vector<Rectangle> fragments;
+    virtual void update(const vector<Rectangle> &areas);
+
+    vector<Rectangle> fragments; // NOLINT
+    Surface *surface_{0}; // NOLINT
   };
 
   struct Fragment {
@@ -49,20 +66,30 @@ struct Surface {
 
   Surface() = default;
 
-  Surface(initializer_list<Element *>);
+  explicit Surface(Device *device, initializer_list<Element *> ={});
 
-  auto addElement(Surface::Element * element, Surface::Element *below) -> Updates;
+  void addElement(Element * element, Element *below=0);
 
-  auto deleteElement(Element *element) -> Updates;
+  void deleteElement(Element *element);
 
-  auto reshapeElement(Element *element, const Rectangle &area) -> Updates;
+  void reshapeElement(Element *element, const Rectangle &area);
+
+  ///
+  /// Get minimum size to accomodate all elements
+  ///
+  /// @param      exclude  Last element to exclude
+  ///
+  /// @return     Minimum size
+  auto minSize(const struct Element *exclude=0) const -> Vector;
 
   // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
   vector<Element *> zorder;
-  unordered_map<Element *, unique_ptr<Element>> elements{};
   // NOLINTEND(misc-non-private-member-variables-in-classes)
+  private:
+  Device *device_{};
 };
 
-auto SurfaceUpdates(const vector<Surface::Fragment> &fragments) -> Updates;
+template<class Range>
+auto SurfaceUpdates(const Range &fragments) -> Updates;
 
 } //namespace jwezel
