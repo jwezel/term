@@ -155,6 +155,8 @@ TEST_CASE("Surface") {
         CHECK_EQ(scr.zorder[1]->fragments, vector<Rectangle>{Rectangle{4, 0, 10, 1}, Rectangle{9, 1, 10, 5}, Rectangle{4, 5, 10, 6}});
       }
       SUBCASE("Fill") {
+        INFO("Window 1: ", string(win1));
+        INFO("Window 2: ", string(win2));
         dev.updates_.clear();
         win1.fill(Char('1'));
         CHECK_EQ(

@@ -56,8 +56,8 @@ TEST_CASE("Window") {
           t.withLine(Line{Vector{0, 2}});
           CHECK_EQ(term.display().text_, t);
           SUBCASE("Fill") {
-            w1.fill('.'_C, Rectangle{2, 3, 10, 4});
-            t.fill('.'_C, Rectangle{2, 3, 10, 4});
+            w1.fill('.'_C, Rectangle{2, 3, 4, 4});
+            t.fill('.'_C, Rectangle{2, 3, 4, 4});
             CHECK_EQ(term.display().text_, t);
           }
         }

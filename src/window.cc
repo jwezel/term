@@ -73,8 +73,7 @@ auto Window::write(const Vector &position, const Text &txt_) -> Window & {
 }
 
 auto Window::fill(const Char &fillChar, const Rectangle &area) -> Window & {
-  text_.fill(fillChar, area);
-  update({Rectangle{Vector{0, 0}, text_.size()}});
+  update({text_.fill(fillChar, area)});
   return *this;
 }
 

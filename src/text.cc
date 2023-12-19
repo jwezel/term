@@ -731,12 +731,13 @@ void Text::extend(const Vector &size, const Char &fill) {
   }
 }
 
-void Text::fill(const Char &fill, const Rectangle &area) {
+auto Text::fill(const Char &fill, const Rectangle &area) -> Rectangle {
   auto area_{area == RectangleMax? Rectangle{Vector{0, 0}, size()}: (extend(Vector{area.x2(), area.y2()}, fill), area)};
   const auto _line{String(area_.width(), fill)};
-  for (auto &textline: data) {
-    std::copy(_line.begin(), _line.end(), textline.begin() + area_.x1());
+  for (auto l = area_.y1(); l < area_.y2(); ++l) {
+    std::copy(_line.begin(), _line.end(), data[l].begin() + area_.x1());
   }
+  return area_;
 }
 
 void Text::patch(

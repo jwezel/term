@@ -493,7 +493,7 @@ struct Text {
   /// Fill text with character
   ///
   /// @param[in]  fill  Fill character
-  void fill(const Char &fill=Space, const Rectangle &area=RectangleMax);
+  auto fill(const Char &fill=Space, const Rectangle &area=RectangleMax) -> Rectangle;
 
   ///
   /// Put one text rectangle into another at a specific position
