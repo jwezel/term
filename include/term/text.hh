@@ -161,6 +161,7 @@ const int HighColor{255};
 using Attributes = u1;
 
 const Attributes
+  clear = 0U,
   bold = 1U,
   underline = 2U,
   reverse = 4U,
@@ -588,14 +589,13 @@ struct Text {
   /// @param[in]  line  The line
   ///
   /// @return     Rectangle spanning the area of modification
-  auto line(
-    const Line &line,
-    u1 strength=1,
-    u1 dash=0,
-    bool roundedCorners=false
-  ) -> Rectangle;
+  auto line(const Line &line, u1 strength=1, u1 dash=0, bool roundedCorners=false) -> Rectangle;
+
+  auto withLine(const Line &line, u1 strength=1, u1 dash=0, bool roundedCorners=false) -> Text &;
 
   auto box(const Box &box=Box{}) -> vector<Rectangle>;
+
+  auto withBox(const Box &box=Box{}) -> Text &;
 
   auto operator ==(const Text &other) const -> bool;
 

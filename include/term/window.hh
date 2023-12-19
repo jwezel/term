@@ -159,7 +159,7 @@ struct Window: public BaseWindow {
   /// @param[in]  box   The box
   ///
   /// @return     vector of rectangles
-  auto box(const Box &box) -> Window &;
+  auto box(const Box &box = Box{}) -> Window &;
 
   ///
   /// Get window size

@@ -95,11 +95,7 @@ void Surface::addElement(Surface::Element *element, Surface::Element *below) {
   // Create fragments of all elements overlayed by this
   for (auto z = ze - 1; z >= 0; --z) {
     auto *const elementBelow = zorder[z];
-    if (
-      bool is = elementBelow->area().
-      intersects(
-        element->area())
-    ) {
+    if (elementBelow->area().intersects(element->area())) {
       split(elementBelow->area(), elementBelow->fragments, element->fragments);
     }
   }

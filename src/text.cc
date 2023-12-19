@@ -915,12 +915,7 @@ auto drawVerticalLine(
 }
 } // namespace
 
-auto Text::line(
-    const Line &line,
-    u1 strength,
-    u1 dash,
-    bool roundedCorners
-) -> Rectangle {
+auto Text::line(const Line &line, u1 strength, u1 dash, bool roundedCorners) -> Rectangle {
   if (strength < 1 or strength > 2) {
     throw range_error(format("Invalid strength: {}", strength));
   }
@@ -934,6 +929,11 @@ auto Text::line(
     line.extendBegin,
     line.extendEnd
   );
+}
+
+auto Text::withLine(const Line &line_, u1 strength, u1 dash, bool roundedCorners) -> Text & {
+  line(line_, strength, dash, roundedCorners);
+  return *this;
 }
 
 namespace {
@@ -1008,6 +1008,11 @@ auto Text::box(const Box &box) -> vector<Rectangle> {
       box.roundedCorners
     )
   };
+}
+
+auto Text::withBox(const Box &box_) -> Text & {
+  box(box_);
+  return *this;
 }
 
 } // namespace jwezel

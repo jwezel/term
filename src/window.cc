@@ -68,7 +68,7 @@ auto Window::write(const Vector &position, const string_view &str) -> Window & {
 
 auto Window::write(const Vector &position, const Text &txt_) -> Window & {
   text_.patch(txt_, position);
-  update({Rectangle{Vector{0, 0}, txt_.size()}});
+  update({Rectangle{position, position + txt_.size()}});
   return *this;
 }
 

@@ -117,6 +117,7 @@ test_exe = executable(
   'test/test_surface.cc',
   'test/test_term.cc',
   'test/test_text.cc',
+  'test/test_window.cc',
   link_with: shlib,
   dependencies: [test_dep, lib_dep],
   include_directories: incdir
