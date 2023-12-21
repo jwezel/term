@@ -61,23 +61,7 @@ headers = [
   'extern/Taitank/src/taitank.h',
   'extern/Taitank/src/taitank_node.h',
   'extern/Taitank/src/taitank_style.h',
-  'extern/Taitank/src/taitank_util.h',
-  #'extern/yoga/yoga/YGLayout.h',
-  #'extern/yoga/yoga/YGNodePrint.h',
-  #'extern/yoga/yoga/event/event.h',
-  #'extern/yoga/yoga/log.h',
-  #'extern/yoga/yoga/YGEnums.h',
-  #'extern/yoga/yoga/YGValue.h',
-  #'extern/yoga/yoga/CompactValue.h',
-  #'extern/yoga/yoga/Utils.h',
-  #'extern/yoga/yoga/YGFloatOptional.h',
-  #'extern/yoga/yoga/YGNode.h',
-  #'extern/yoga/yoga/BitUtils.h',
-  #'extern/yoga/yoga/Yoga-internal.h',
-  #'extern/yoga/yoga/Yoga.h',
-  #'extern/yoga/yoga/YGMacros.h',
-  #'extern/yoga/yoga/YGConfig.h',
-  #'extern/yoga/yoga/YGStyle.h',
+  'extern/Taitank/src/taitank_util.h'
 ]
 
 incdir = include_directories([
@@ -85,14 +69,14 @@ incdir = include_directories([
   'include/term',
   'include/util',
   'extern',
-  'extern/Taitank/src',
-  #'extern/yoga',
+  'extern/Taitank/src'
 ])
 
 lib_dep = [
   dependency('utfcpp'),
   dependency('rxcpp'),
   dependency('tl-optional'),
+  dependency('boost'),
 ]
 
 shlib = shared_library(
@@ -128,6 +112,7 @@ example_exe = executable(
   'ex1',
   'examples/ex1/ex1.cc',
   link_with: shlib,
+  dependencies: [lib_dep],
   include_directories: incdir
 )
 

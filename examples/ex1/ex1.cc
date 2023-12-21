@@ -166,6 +166,21 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
       ws[cw]->write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray7, bold, mix));
       break;
 
+      case 'd':
+      case jwezel::Delete:
+      ws.erase(ws.begin() + cw);
+      if (cw >= ws.size()) {
+        if (cw-- == 0) {
+          if (ws.size()) {
+            ++cw;
+          } else {
+            goto end;
+          }
+        }
+      }
+      ws[cw]->write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray7, bold, mix));
+      break;
+
       default:
       break;
     }

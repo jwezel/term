@@ -6,12 +6,39 @@
 #include "update.hh"
 
 #include <initializer_list>
+#include <boost/geometry/geometries/point.hpp>
+#include <boost/geometry/geometries/box.hpp>
+#include <boost/geometry/index/rtree.hpp>
+#include <boost/geometry/geometries/register/point.hpp>
+#include <boost/geometry/geometries/register/box.hpp>
+
+BOOST_GEOMETRY_REGISTER_POINT_2D(jwezel::Vector, jwezel::Dim, cs::cartesian, x(), y());
+BOOST_GEOMETRY_REGISTER_BOX_2D_4VALUES(jwezel::Rectangle, jwezel::Vector, x1(), y1(), x2(), y2());
 
 namespace jwezel {
+
 
 using std::initializer_list;
 
 struct Surface {
+  struct Element;
+
+  struct Fragment {
+    explicit Fragment(const Rectangle &area, struct Element *element):
+    area(area),
+    element(element)
+    {}
+
+    explicit operator string() const;
+
+    bool operator ==(const Surface::Fragment &other) const = default;
+
+    // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
+    Rectangle area;
+    struct Element *element{};
+    // NOLINTEND(misc-non-private-member-variables-in-classes)
+  };
+
   struct Element {
     explicit Element(Surface *surface, const Rectangle &area);
 
@@ -49,22 +76,15 @@ struct Surface {
 
     virtual void update(const vector<Rectangle> &areas);
 
-    vector<Rectangle> fragments; // NOLINT
-    Surface *surface_{0}; // NOLINT
-  };
-
-  struct Fragment {
-    explicit Fragment(Rectangle area, Element *element) : area(area),element(element) {}
-
-    explicit operator string() const;
-
-    // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
-    Rectangle area;
-    Element *element{};
-    // NOLINTEND(misc-non-private-member-variables-in-classes)
+    vector<Fragment> fragments;
+    Surface *surface_{0};
   };
 
   Surface() = default;
+
+  void removeRtreeFragments(Surface::Element &element);
+
+  void insertRtreeFragments(Surface::Element &element);
 
   explicit Surface(Device *device, initializer_list<Element *> ={});
 
@@ -80,13 +100,18 @@ struct Surface {
   /// @param      exclude  Last element to exclude
   ///
   /// @return     Minimum size
-  auto minSize(const struct Element *exclude=0) const -> Vector;
+  auto minSize(const Element *exclude=0) const -> Vector;
+
+  auto find(const Vector &position) const -> Fragment *;
 
   // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
   vector<Element *> zorder;
   // NOLINTEND(misc-non-private-member-variables-in-classes)
   private:
+  typedef std::pair<Rectangle, Surface::Fragment *> RtreeEntry;
+
   Device *device_{};
+  boost::geometry::index::rtree<RtreeEntry, boost::geometry::index::quadratic<16>> rtree;
 };
 
 template<class Range>

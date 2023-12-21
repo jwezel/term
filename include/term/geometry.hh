@@ -282,6 +282,10 @@ struct Vector {
 
   [[nodiscard]] inline auto y() const -> Dim {return y_;}
 
+  [[nodiscard]] inline auto x() -> Dim & {return x_;}
+
+  [[nodiscard]] inline auto y() -> Dim & {return y_;}
+
   private:
   Dim x_;
   Dim y_;
@@ -587,6 +591,14 @@ struct Rectangle {
   [[nodiscard]] auto y1() const -> Dim {return y1_;}
 
   [[nodiscard]] auto y2() const -> Dim {return y2_;}
+
+  [[nodiscard]] auto x1() -> Dim & {return x1_;}
+
+  [[nodiscard]] auto x2() -> Dim & {return x2_;}
+
+  [[nodiscard]] auto y1() -> Dim & {return y1_;}
+
+  [[nodiscard]] auto y2() -> Dim & {return y2_;}
 
   private:
   ///
