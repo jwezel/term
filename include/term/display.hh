@@ -15,6 +15,13 @@ namespace jwezel {
 ///
 /// Render content on a terminal device
 struct Display: Device {
+  enum class MouseMode: u1 {
+    off,
+    x10,
+    normal,
+    buttons,
+    anything
+  };
   ///
   /// Create Display
   ///
@@ -120,6 +127,8 @@ struct Display: Device {
   ///
   /// Get "physical" terminal size
   auto terminalSize() -> Vector;
+
+  void mouseMode(MouseMode mode);
 
   [[nodiscard]] auto maxSize() const {return maxSize_;}
 

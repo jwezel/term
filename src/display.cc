@@ -49,6 +49,7 @@ maxSize_{min(expandTo == VectorMax? terminalSize_: expandTo, terminalSize_ - pos
 text_(Null, size == VectorMin? Vector{1, 1}: min(size, maxSize_))
 {
   cursor(false);
+  keyboard.displayOffset(position_);
 }
 
 Display::~Display() {
@@ -189,7 +190,7 @@ void Display::update(const Vector &position, const Text &text) {
   }
   auto textArea{area.value() - position};
   for (Dim line = textArea.y1(), dline = area.value().y1(); line < textArea.y2(); ++line, ++dline) {
-    assert(line < toDim(text.data.size())); // NOLINT
+    assert(line < toDim(text.data.size()));
     while (toDim(line + position.y()) >= text_.height()) {
       text_.data.emplace_back(text.data[line].size(), Null);
     }
@@ -225,6 +226,17 @@ auto Display::size() const -> Vector {
 
 void Display::resize(const Vector &size) {
   text_.resize(min(maxSize_, size), Null);
+}
+
+void Display::mouseMode(MouseMode mode) {
+  static const array<string, 5> sequence{
+    "\x1b[?9l\x1b[?1000l\x1b[?1002l\x1b[?1003l",
+    "\x1b[?9h\x1b[?1006h",
+    "\x1b[?1000h\x1b[?1006h",
+    "\x1b[?1002h\x1b[?1006h",
+    "\x1b[?1003h\x1b[?1006h"
+  };
+  write(sequence[static_cast<int>(mode)]);
 }
 
 } // namespace jwezel

@@ -6,7 +6,6 @@
 #include "text.hh"
 #include "window.hh"
 
-#include <algorithm>
 #include <unistd.h>
 
 namespace jwezel {

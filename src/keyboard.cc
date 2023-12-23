@@ -330,9 +330,10 @@ auto loadKeyTranslations(const std::vector<pair<std::string, Unicode>> &translat
 
 //~Keyboard~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Keyboard::Keyboard(int device):
+Keyboard::Keyboard(int device, const Vector &offset):
 keyPrefixes(loadKeyTranslations(keyTranslations)),
-fd(device)
+fd(device),
+displayOffset_(offset)
 {
   raw();
 }
@@ -468,7 +469,7 @@ auto Keyboard::mouseReport() -> tuple<MouseButton, MouseModifiers, u2, u2, Mouse
     if (key_ > MaxAscii) {
       throw range_error("Got character > 127");
     }
-    report += key_/*NOLINT*/;
+    report += key_;
   } while (key_ != 'M' and key_ != 'm');
   smatch subMatch;
   if (regex_match(report, subMatch, reportPattern)) {
@@ -479,9 +480,9 @@ auto Keyboard::mouseReport() -> tuple<MouseButton, MouseModifiers, u2, u2, Mouse
         static_cast<u1>(stoul(subMatch[1].str()) & 16U),
         static_cast<u1>(stoul(subMatch[1].str()) & 8U)
       },
-      stoi(subMatch[2].str()) - 1,
-      u1(stoi(subMatch[3].str()) - 1),
-      subMatch[3].str() == "M"? MouseAction::Down: MouseAction::Up
+      stoi(subMatch[2].str()) - 1 - displayOffset_.x(),
+      u2(stoi(subMatch[3].str()) - 1 - displayOffset_.y()),
+      subMatch[4].str() == "M"? MouseAction::Down: MouseAction::Up
     };
   }
   throw runtime_error("Could not parse terminal mouse report");

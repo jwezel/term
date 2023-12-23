@@ -8,6 +8,7 @@
 
 #include "basic.hh"
 #include "event.hh"
+#include "geometry.hh"
 #include "text.hh"
 
 namespace jwezel {
@@ -174,7 +175,6 @@ struct MouseModifiers {
 };
 
 struct InputEvent: public Event {
-  private:
   CLASS_ID(InputEvent);
 };
 
@@ -184,13 +184,11 @@ struct KeyEvent: public InputEvent {
 
   [[nodiscard]] inline auto key() const {return key_;}
 
-  private:
-  CLASS_ID(KeyEvent);
   Unicode key_;
+  CLASS_ID(KeyEvent);
 };
 
 struct MouseEvent: public InputEvent {
-  private:
   CLASS_ID(MouseEvent);
 };
 
@@ -209,13 +207,12 @@ struct MouseButtonEvent: MouseEvent {
 
   [[nodiscard]] inline auto action() const {return action_;}
 
-  private:
-  CLASS_ID(MouseButtonEvent);
   MouseButton button_;
   MouseModifiers modifiers_;
   u2 column_;
   u2 line_;
   MouseAction action_;
+  CLASS_ID(MouseButtonEvent);
 };
 
 struct MouseMoveEvent: MouseEvent {
@@ -225,10 +222,9 @@ struct MouseMoveEvent: MouseEvent {
 
   [[nodiscard]] inline auto line() const {return line_;}
 
-  private:
-  CLASS_ID(MouseMoveEvent);
   u2 column_;
   u2 line_;
+  CLASS_ID(MouseMoveEvent);
 };
 
 struct Keyboard {
@@ -236,7 +232,7 @@ struct Keyboard {
   /// Constructor
   ///
   /// @param[in]  device  Terminal device
-  explicit Keyboard(int device=0);
+  explicit Keyboard(int device=0, const Vector &offset=Vector{0, 0});
 
   Keyboard(const Keyboard &) = default;
 
@@ -276,6 +272,10 @@ struct Keyboard {
   /// @return     The input event.
   auto event() -> InputEvent *;
 
+  inline void displayOffset(const Vector &offset) {
+    displayOffset_ = offset;
+  }
+
   ///
   /// Key prefix tree node
   struct PrefixNode {
@@ -289,6 +289,9 @@ struct Keyboard {
   int fd; //< Terminal file descriptor
   std::optional<termios> originalState; //< Original terminal state
   // NOLINTEND(misc-non-private-member-variables-in-classes)
+
+  private:
+  Vector displayOffset_;
 };
 
 } // namespace jwezel
