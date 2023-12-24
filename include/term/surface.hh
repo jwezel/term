@@ -90,9 +90,13 @@ struct Surface {
 
   void addElement(Element * element, Element *below=0);
 
-  void deleteElement(Element *element);
+  void deleteElement(Element *element, Element *destination=0);
 
   void reshapeElement(Element *element, const Rectangle &area);
+
+  void above(Surface::Element * element, Surface::Element * destination=0);
+
+  void below(Surface::Element * element, Surface::Element * destination=0);
 
   ///
   /// Get minimum size to accomodate all elements
@@ -104,10 +108,19 @@ struct Surface {
 
   auto find(const Vector &position) const -> Fragment *;
 
+  int position(Element *element, int default_=-1);
+
   // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
   vector<Element *> zorder;
   // NOLINTEND(misc-non-private-member-variables-in-classes)
   private:
+
+  void reorder(int source, int destination);
+
+  void cover(int pos);
+
+  void uncover(int begin, int end);
+
   typedef std::pair<Rectangle, Surface::Fragment *> RtreeEntry;
 
   Device *device_{};

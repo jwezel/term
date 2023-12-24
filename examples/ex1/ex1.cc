@@ -74,8 +74,8 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
           auto rec{ws[cw]->area()};
           rec.up();
           moveWindow(term, *ws[cw], Vector{rec.x1(), rec.y1()}, si);
-          break;
         }
+        break;
 
         case Down:
         case '2':
@@ -83,8 +83,8 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
           auto rec{ws[cw]->area()};
           rec.down();
           moveWindow(term, *ws[cw], Vector{rec.x1(), rec.y1()}, si);
-          break;
         }
+        break;
 
         case Left:
         case '4':
@@ -92,8 +92,8 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
           auto rec{ws[cw]->area()};
           rec.left();
           moveWindow(term, *ws[cw], Vector{rec.x1(), rec.y1()}, si);
-          break;
         }
+        break;
 
         case Right:
         case '6':
@@ -101,8 +101,8 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
           auto rec{ws[cw]->area()};
           rec.right();
           moveWindow(term, *ws[cw], Vector{rec.x1(), rec.y1()}, si);
-          break;
         }
+        break;
 
         case '7':
         {
@@ -110,8 +110,8 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
           rec.left();
           rec.up();
           moveWindow(term, *ws[cw], Vector{rec.x1(), rec.y1()}, si);
-          break;
         }
+        break;
 
         case '1':
         {
@@ -119,8 +119,8 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
           rec.left();
           rec.down();
           moveWindow(term, *ws[cw], Vector{rec.x1(), rec.y1()}, si);
-          break;
         }
+        break;
 
         case '9':
         {
@@ -128,8 +128,8 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
           rec.right();
           rec.up();
           moveWindow(term, *ws[cw], Vector{rec.x1(), rec.y1()}, si);
-          break;
         }
+        break;
 
         case '3':
         {
@@ -137,14 +137,13 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
           rec.right();
           rec.down();
           moveWindow(term, *ws[cw], Vector{rec.x1(), rec.y1()}, si);
-          break;
         }
+        break;
 
         case Home:
         case '5':
         {
           moveWindow(term, *ws[cw], Vector{0, 0}, si);
-          break;
         }
         break;
 
@@ -171,7 +170,6 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
         ws[cw]->write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray7, bold, mix));
         break;
 
-        case 'd':
         case jwezel::Delete:
         ws.erase(ws.begin() + cw);
         if (cw >= ws.size()) {
@@ -184,6 +182,14 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
           }
         }
         ws[cw]->write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray7, bold, mix));
+        break;
+
+        case 'd':
+        ws[cw]->below(nullptr);
+        break;
+
+        case 'D':
+        ws[cw]->above(1);
         break;
 
         default:

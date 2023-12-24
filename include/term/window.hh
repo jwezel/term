@@ -175,6 +175,14 @@ struct Window: public BaseWindow {
 
   bool moveEvent(const Rectangle &) override;
 
+  bool above(Window *window=0);
+
+  bool below(Window *window=0);
+
+  bool above(int position=0);
+
+  bool below(int position=-1);
+
   ///
   /// Get window area
   ///

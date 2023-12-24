@@ -98,6 +98,26 @@ bool Window::moveEvent(const Rectangle &area) {
   return true;
 }
 
+bool Window::above(Window *window) {
+  surface_->above(this, window? window: surface_->zorder[surface_->position(this)]);
+  return true;
+}
+
+bool Window::below(Window *window) {
+  surface_->below(this, window? window: surface_->zorder[surface_->position(this) - 1]);
+  return true;
+}
+
+bool Window::above(int position) {
+  surface_->above(this, surface_->zorder[position < 0? position + surface_->zorder.size(): position]);
+  return true;
+}
+
+bool Window::below(int position) {
+  surface_->below(this, surface_->zorder[position < 0? position + surface_->zorder.size(): position]);
+  return true;
+}
+
 auto Window::area() const -> Rectangle {
   return Rectangle{position(), position() + text_.size()};
 }
