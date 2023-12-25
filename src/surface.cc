@@ -20,26 +20,34 @@ using std::vector, std::domain_error;
 
 namespace
 {
+
 ///
-/// Cover parts of destination element with the parts of source element
+/// Get non-intersecting parts from two ranges of fragments
 ///
-/// @param      element1  Destination element
-/// @param[in]  element2  Source element
-void cover(Surface::Element &element1, const Surface::Element &element2) {
-  for (const auto &fragment2: element2.fragments) {
-    if (element1.area().intersects(fragment2.area)) {
+/// @param[in]  area        The area
+/// @param      fragments1  The fragments 1
+/// @param[in]  fragments2  The fragments 2
+void split(const Rectangle & area, vector<Surface::Fragment> &fragments1, const vector<Surface::Fragment> &fragments2) {
+  auto element{fragments1[0].element};
+  for (const auto &fragment2: fragments2) {
+    if (area.intersects(fragment2.area)) {
       vector<Surface::Fragment> fragments;
-      for (const auto &fragment1: element1.fragments) {
+      for (const auto &fragment1: fragments1) {
         const auto intersection{fragment1.area.defaultIntersection(fragment2.area)};
         std::ranges::copy(
-          intersection | transform([&element1](const Rectangle &r){return Surface::Fragment(r, &element1);}),
+          intersection | transform([element](const Rectangle &r){return Surface::Fragment(r, element);}),
           back_inserter(fragments)
         );
       }
-      element1.fragments = fragments;
+      fragments1 = fragments;
     }
   }
 }
+
+void cover(Surface::Element &element1, const Surface::Element &element2) {
+  split(element1.area(), element1.fragments, element2.fragments);
+}
+
 } // namespace
 
 template<class Range>
@@ -244,17 +252,17 @@ void Surface::reorder(int source, int destination) {
   vector<Fragment> updates;
   if (destination < source) {
     // Move down
-    auto buffer{zorder[source]};
+    auto element{zorder[source]};
     std::shift_right(zorder.begin() + destination, zorder.begin() + source + 1, 1);
-    zorder[destination] = buffer;
+    zorder[destination] = element;
     auto const searchArea = zorder[destination]->area();
     // Recreate fragments
     for (auto j = source; j >= destination; --j) {
       auto * const element_ = zorder[j];
       auto elementIntersection{element_->area() & searchArea};
       if (elementIntersection) {
-        removeRtreeFragments(*element_);
         // Create fragments from elements on top of it
+        removeRtreeFragments(*element_);
         cover(j);
         insertRtreeFragments(*element_);
         if (element_ != zorder[destination]) {
@@ -270,6 +278,33 @@ void Surface::reorder(int source, int destination) {
     }
   } else {
     // Move up
+    auto element{zorder[source]};
+    std::shift_left(zorder.begin() + source, zorder.begin() + destination--, 1);
+    zorder[destination] = element;
+    auto oldFragments = element->fragments;
+    auto const searchArea = zorder[destination]->area();
+    for (auto j = destination; j >= source; --j) {
+      auto * const element_ = zorder[j];
+      auto elementIntersection{element_->area() & searchArea};
+      if (elementIntersection) {
+        // Create fragments from elements on top of it
+        removeRtreeFragments(*element_);
+        cover(j);
+        insertRtreeFragments(*element_);
+        if (element_ != zorder[destination]) {
+          // Surface update fragments
+          for (const auto &fragment: element_->fragments) {
+            auto const intersection = fragment.area & elementIntersection.value();
+            if (intersection) {
+              updates.emplace_back(intersection.value(), element_);
+            }
+          }
+        }
+      }
+    }
+    // Surface updates
+    updates = element->fragments;
+    split(element->area(), updates, oldFragments);
   }
   device_->update(SurfaceUpdates(updates));
 }

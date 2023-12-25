@@ -283,8 +283,37 @@ TEST_CASE("Surface") {
     }
     SUBCASE("Shift down") {
       Window win2{&term, Rectangle{2, 0, 8, 6}, '.'_C};
+      TestRtree(scr);
       dev.updates_.clear();
       scr.above(&win2, &term.backdrop_);
+      TestRtree(scr);
+      auto expupdates2{
+        Updates{
+            {Vector{2, 1}, Text("      \n      \n      \n      ")},
+        }
+      };
+      std::ranges::sort(dev.updates_);
+      CHECK_EQ(dev.updates_, expupdates2);
+      CHECK_EQ(
+        scr.zorder[1]->fragments,
+        vector<Surface::Fragment>{
+          Surface::Fragment{Rectangle{2, 0, 8, 1}, scr.zorder[1]},
+          Surface::Fragment{Rectangle{2, 5, 8, 6}, scr.zorder[1]}
+        }
+      );
+      CHECK_EQ(
+        scr.zorder[2]->fragments,
+        vector<Surface::Fragment>{
+          Surface::Fragment{Rectangle{1, 1, 9, 5}, scr.zorder[2]}
+        }
+      );
+    }
+    SUBCASE("Shift up") {
+      Window win2{&term, Rectangle{2, 0, 8, 6}, '.'_C};
+      TestRtree(scr);
+      dev.updates_.clear();
+      scr.below(&win1);
+      TestRtree(scr);
       auto expupdates2{
         Updates{
             {Vector{2, 1}, Text("      \n      \n      \n      ")},

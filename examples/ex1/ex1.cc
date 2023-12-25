@@ -166,7 +166,9 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
 
         case PageUp:
         ws[cw]->write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray2, bold, mix));
-        cw = (cw - 1) % ws.size();
+        cw = (cw - 1);
+        if (cw >= ws.size())
+          cw = ws.size() - 1;
         ws[cw]->write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray7, bold, mix));
         break;
 
@@ -190,6 +192,14 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
 
         case 'D':
         ws[cw]->above(1);
+        break;
+
+        case 'u':
+        ws[cw]->above(nullptr);
+        break;
+
+        case 'U':
+        ws[cw]->above(-1);
         break;
 
         default:

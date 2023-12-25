@@ -99,7 +99,7 @@ bool Window::moveEvent(const Rectangle &area) {
 }
 
 bool Window::above(Window *window) {
-  surface_->above(this, window? window: surface_->zorder[surface_->position(this)]);
+  surface_->above(this, window? window: surface_->zorder[surface_->position(this) + 1]);
   return true;
 }
 
