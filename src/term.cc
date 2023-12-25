@@ -11,7 +11,7 @@
 namespace jwezel {
 
 Terminal::Terminal(
-  const Char background,
+  const Char &background,
   const Vector &initialPosition,
   const Vector &initialSize,
   const Vector &maxSize,

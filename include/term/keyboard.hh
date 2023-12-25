@@ -172,6 +172,9 @@ struct MouseModifiers {
   u1 shift: 1;
   u1 control: 1;
   u1 alt: 1;
+  u1 mod4: 1;
+  u1 mod5: 1;
+  u1 mod6: 1;
 };
 
 struct InputEvent: public Event {
@@ -193,7 +196,7 @@ struct MouseEvent: public InputEvent {
 };
 
 struct MouseButtonEvent: MouseEvent {
-  MouseButtonEvent(MouseButton button, MouseModifiers modifiers, u2 column, u2 line, MouseAction action):
+  MouseButtonEvent(MouseButton button, const MouseModifiers &modifiers, u2 column, u2 line, MouseAction action):
   button_(button), modifiers_(modifiers), column_(column), line_(line), action_(action)
   {}
 

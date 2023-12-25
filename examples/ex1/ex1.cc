@@ -42,6 +42,7 @@ using
 
 using std::vector;
 using std::format;
+using std::string;
 
 const Dim
   wi = 50,
@@ -54,8 +55,8 @@ void moveWindow(Terminal &term, jwezel::Window &window, const Vector &pos, const
 auto main(int /*unused*/, char * /*unused*/[]) -> int {
   auto result = 0;
   const Vector si{wi, hi};
-  Terminal term{Char(L' ', RgbNone, RgbCyan2), VectorMin, VectorMin, VectorMax, 1, 0, true, true};
-  term.display().mouseMode(jwezel::Display::MouseMode::buttons);
+  Terminal term{Char(L' ', RgbNone, RgbCyan2), VectorMin, VectorMin, VectorMax, 1, 0, true, false};
+  term.display().mouseMode(jwezel::Display::MouseMode::anything);
   vector<std::unique_ptr<jwezel::Window>> ws;
   u4 cw = 0;
   ws.push_back(std::make_unique<jwezel::Window>(&term, Rectangle{0, 0, wi, hi}, Char(' ', RgbNone, RgbBlue5)));
@@ -64,7 +65,7 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
   term.desktop().write(Vector{0, 0}, Text("Desktop", RgbWhite, RgbNone, {}, mix));
   while (true) {
     auto event{term.event()};
-    if (event->vclassname() == jwezel::KeyEvent::classname()) {
+    if (event->vid() == jwezel::KeyEvent::id()) {
       auto kbEvent{dynamic_cast<jwezel::KeyEvent *>(event)};
       switch (kbEvent->key()) {
 
@@ -150,7 +151,7 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
         case 'q':
         goto end;
 
-        case 'w':
+        case jwezel::Unicode('w'):
         ws[cw]->write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray2, bold, mix));
         ws.push_back(std::make_unique<jwezel::Window>(&term, ws[cw]->area() + Vector{1, 1}));
         cw = ws.size() - 1;
@@ -205,13 +206,48 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
         default:
         break;
       }
-    } else if (event->vclassname() == jwezel::MouseButtonEvent::classname()) {
+    } else if (event->vid() == jwezel::MouseButtonEvent::id()) {
       auto mbEvent{dynamic_cast<jwezel::MouseButtonEvent *>(event)};
+      static vector<string> mouseEvent{
+        "Nothing", "Mouse button 1 clicked", "Mouse Button 2 clicked", "Mouse button 3 clicked", "Mouse moved"
+      };
+      static vector<string> mouseState{
+        "released", "pressed"
+      };
       ws[0]->write(
         Vector{1, 1},
         format(
-          "{}, {}, {}, {}           ",
-          static_cast<int>(mbEvent->button()), mbEvent->column(), mbEvent->line(), static_cast<int>(mbEvent->action())
+          "Event: {:22s}\nColumn: {:3d}\nLine: {:3d}\nState: {}\n"
+          "Shift: {}\nControl: {}\nAlt: {}\nMod 4: {}\nMod 5: {}\nMod 6: {}",
+          mouseEvent[static_cast<int>(mbEvent->button())],
+          mbEvent->column(),
+          mbEvent->line(),
+          mouseState[static_cast<int>(mbEvent->action())],
+          mbEvent->modifiers().shift,
+          mbEvent->modifiers().control,
+          mbEvent->modifiers().alt,
+          mbEvent->modifiers().mod4,
+          mbEvent->modifiers().mod5,
+          mbEvent->modifiers().mod6
+        )
+      );
+    } else if (event->vid() == jwezel::MouseMoveEvent::id()) {
+      auto mbEvent{dynamic_cast<jwezel::MouseMoveEvent *>(event)};
+      ws[0]->write(
+        Vector{1, 1},
+        format(
+          "Event: {:22s}\nColumn: {:3d}\nLine: {:3d}\nState: {}\n"
+          "Shift: {}\nControl: {}\nAlt: {}\nMod 4: {}\nMod 5: {}\nMod 6: {}",
+          "Mouse moved",
+          mbEvent->column(),
+          mbEvent->line(),
+          "              ",
+          "              ",
+          "              ",
+          "              ",
+          "              ",
+          "              ",
+          "              "
         )
       );
     } else {

@@ -36,7 +36,7 @@ struct Terminal: TerminalInterface {
   /// @param[in]  expand           Whether terminal can expand (default true)
   /// @param[in]  contract         Whether terminal can contract (default true)
   explicit Terminal(
-    Char background=Space,
+    const Char &background=Space,
     const Vector &initialPosition=VectorMin,
     const Vector &initialSize=VectorMin,
     const Vector &maxSize=VectorMax,

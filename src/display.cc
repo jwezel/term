@@ -59,7 +59,7 @@ Display::~Display() {
     background(RgbNone);
     attributes({});
     cursor(0, toDim(size().y() + position_.y() - 1));
-    write("\n");
+    write("\x1b[?9l\x1b[?1000l\x1b[?1002l\x1b[?1003l\n");
   } catch (exception & error) {
     cerr << "Error: " << error.what() << "\n";
   }

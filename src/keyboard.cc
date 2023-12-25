@@ -20,19 +20,18 @@
 #include "text.hh"
 
 namespace jwezel {
-using std::format;
-using std::chrono::steady_clock;
-using std::this_thread::sleep_for;
 using
-  std::pair,
-  std::smatch,
   std::basic_regex,
-  std::make_pair,
-  std::runtime_error,
   std::cerr,
+  std::chrono::steady_clock,
+  std::format,
+  std::make_pair,
+  std::pair,
+  std::runtime_error,
+  std::smatch,
   std::strerror,
-  std::u32string,
-  std::this_thread::sleep_for;
+  std::this_thread::sleep_for,
+  std::u32string;
 using namespace std::chrono_literals;
 
 namespace
@@ -473,12 +472,16 @@ auto Keyboard::mouseReport() -> tuple<MouseButton, MouseModifiers, u2, u2, Mouse
   } while (key_ != 'M' and key_ != 'm');
   smatch subMatch;
   if (regex_match(report, subMatch, reportPattern)) {
+    auto value1{static_cast<u1>(stoul(subMatch[1].str()))};
     return {
-      static_cast<MouseButton>((stoul(subMatch[1].str()) & 3U) + 1U),
+      static_cast<MouseButton>((value1 & 3U) + 1U),
       MouseModifiers{
-        static_cast<u1>(stoul(subMatch[1].str()) & 4U),
-        static_cast<u1>(stoul(subMatch[1].str()) & 16U),
-        static_cast<u1>(stoul(subMatch[1].str()) & 8U)
+        static_cast<u1>((value1 & 4U) >> 2),
+        static_cast<u1>((value1 & 16U) >> 4),
+        static_cast<u1>((value1 & 8U) >> 3),
+        static_cast<u1>((value1 & 32U) >> 5),
+        static_cast<u1>((value1 & 64U) >> 6),
+        static_cast<u1>((value1 & 128U) >> 7),
       },
       stoi(subMatch[2].str()) - 1 - displayOffset_.x(),
       u2(stoi(subMatch[3].str()) - 1 - displayOffset_.y()),
@@ -489,11 +492,10 @@ auto Keyboard::mouseReport() -> tuple<MouseButton, MouseModifiers, u2, u2, Mouse
 }
 
 auto Keyboard::event() -> InputEvent * {
-  static const auto MouseMove{35};
   auto key_ = key();
   if (key_ == Mouse) {
     auto [button, modifiers, x, y, action]{mouseReport()};
-    if (button == MouseButton(MouseMove)) {
+    if (modifiers.mod4) {
       return new MouseMoveEvent{x, y};
     }
     return new MouseButtonEvent{button, modifiers, x, y, action};
