@@ -42,23 +42,23 @@ TEST_CASE("Window") {
   SUBCASE("Window") {
     auto w1 = Window(&term, Rectangle{0, 0, 10, 6}, Char{' ', jwezel::RgbWhite, jwezel::RgbBlue1});
     auto t = Text("          \n          \n          \n          \n          \n          ", jwezel::RgbWhite, jwezel::RgbBlue1);
-    CHECK_EQ(term.display().text_, t);
+    CHECK_EQ(term.display().text(), t);
     SUBCASE("Box") {
       w1.box();
       t.withBox();
-      CHECK_EQ(term.display().text_, t);
+      CHECK_EQ(term.display().text(), t);
       SUBCASE("Title") {
         w1.write(Vector{1, 0}, Text{"Title", jwezel::RgbRed, jwezel::RgbGray7, clear, mix});
         t.patch(Text{"Title", jwezel::RgbRed, jwezel::RgbGray7, clear, mix}, Vector{1, 0});
-        CHECK_EQ(term.display().text_, t);
+        CHECK_EQ(term.display().text(), t);
         SUBCASE("Line") {
           w1.line(Line{Vector{0, 2}});
           t.withLine(Line{Vector{0, 2}});
-          CHECK_EQ(term.display().text_, t);
+          CHECK_EQ(term.display().text(), t);
           SUBCASE("Fill") {
             w1.fill('.'_C, Rectangle{2, 3, 4, 4});
             t.fill('.'_C, Rectangle{2, 3, 4, 4});
-            CHECK_EQ(term.display().text_, t);
+            CHECK_EQ(term.display().text(), t);
           }
         }
       }

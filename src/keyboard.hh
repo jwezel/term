@@ -230,6 +230,9 @@ struct MouseMoveEvent: MouseEvent {
   CLASS_ID(MouseMoveEvent);
 };
 
+namespace impl
+{
+
 struct Keyboard {
   ///
   /// Constructor
@@ -286,15 +289,63 @@ struct Keyboard {
     std::map<char, unique_ptr<PrefixNode>> nodes{};
   };
 
-  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
-  std::deque<Unicode> keyBuffer; //< Key buffer
-  PrefixNode keyPrefixes; //< Key prefix tree
-  int fd; //< Terminal file descriptor
-  std::optional<termios> originalState; //< Original terminal state
-  // NOLINTEND(misc-non-private-member-variables-in-classes)
-
-  private:
+  std::deque<Unicode> keyBuffer_; //< Key buffer
+  PrefixNode keyPrefixes_; //< Key prefix tree
+  int fd_; //< Terminal file descriptor
+  std::optional<termios> originalState_; //< Original terminal state
   Vector displayOffset_;
+};
+
+}
+
+struct Keyboard {
+  ///
+  /// Constructor
+  ///
+  /// @param[in]  device  Terminal device
+  explicit Keyboard(int device=0, const Vector &offset=Vector{0, 0}):
+  p_{new impl::Keyboard{device, offset}}
+  {}
+
+  Keyboard(const Keyboard &) = delete;
+
+  Keyboard(Keyboard &&) = default;
+
+  auto operator=(const Keyboard &) -> Keyboard & = delete;
+
+  auto operator=(Keyboard &&) -> Keyboard & = default;
+
+  ///
+  /// Destructor
+  ~Keyboard() = default;
+
+  ///
+  /// Set terminal to raw mode
+  void raw() {p_->raw();}
+
+  ///
+  /// Reset terminal to original state
+  void reset() {p_->reset();}
+
+  ///
+  /// Get key
+  ///
+  /// @return     key
+  auto key() const -> Unicode {return p_->key();}
+
+  ///
+  /// Get input event
+  ///
+  /// @return     The input event.
+  auto event() const -> InputEvent * {return p_->event();}
+
+  auto keyPrefixes() const -> auto & {return p_->keyPrefixes_;}
+
+  inline void displayOffset(const Vector &offset) {
+    p_->displayOffset_ = offset;
+  }
+
+  std::shared_ptr<impl::Keyboard> p_;
 };
 
 } // namespace jwezel

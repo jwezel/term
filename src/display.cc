@@ -25,8 +25,10 @@ using
   std::system_category,
   std::system_error;
 
+namespace impl
+{
 Display::Display(
-  Keyboard &keyboard,
+  jwezel::Keyboard &keyboard,
   int output,
   const Vector &position,
   const Vector &size,
@@ -228,7 +230,7 @@ void Display::resize(const Vector &size) {
   text_.resize(min(maxSize_, size), Null);
 }
 
-void Display::mouseMode(MouseMode mode) {
+void impl::Display::mouseMode(MouseMode mode) {
   static const array<string, 5> sequence{
     "\x1b[?9l\x1b[?1000l\x1b[?1002l\x1b[?1003l",
     "\x1b[?9h\x1b[?1006h",
@@ -238,5 +240,7 @@ void Display::mouseMode(MouseMode mode) {
   };
   write(sequence[static_cast<int>(mode)]);
 }
+
+} // namespace impl
 
 } // namespace jwezel

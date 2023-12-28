@@ -56,7 +56,7 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
   auto result = 0;
   const Vector si{wi, hi};
   Terminal term{Char(L' ', RgbNone, RgbCyan2), VectorMin, VectorMin, VectorMax, 1, 0, true, false};
-  term.display().mouseMode(jwezel::Display::MouseMode::anything);
+  term.display().mouseMode(jwezel::MouseMode::anything);
   vector<std::unique_ptr<jwezel::Window>> ws;
   u4 cw = 0;
   ws.push_back(std::make_unique<jwezel::Window>(&term, Rectangle{0, 0, wi, hi}, Char(' ', RgbNone, RgbBlue5)));

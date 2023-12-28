@@ -13,7 +13,7 @@ using std::format;
 using std::cerr, std::endl;
 
 BaseWindow::BaseWindow(TerminalInterface *terminal, const Rectangle &area, const Char &background):
-Surface::Element(&terminal->screen(), area),
+Element(&terminal->screen(), area),
 terminal_{terminal},
 position_{area.position()},
 background_{background}
@@ -95,26 +95,6 @@ void Window::move(const Rectangle &area) {
 bool Window::moveEvent(const Rectangle &area) {
   position(area);
   text_.resize(area.size(), background());
-  return true;
-}
-
-bool Window::above(Window *window) {
-  surface_->above(this, window? window: surface_->zorder[surface_->position(this) + 1]);
-  return true;
-}
-
-bool Window::below(Window *window) {
-  surface_->below(this, window? window: surface_->zorder[surface_->position(this) - 1]);
-  return true;
-}
-
-bool Window::above(int position) {
-  surface_->above(this, surface_->zorder[position < 0? position + surface_->zorder.size(): position]);
-  return true;
-}
-
-bool Window::below(int position) {
-  surface_->below(this, surface_->zorder[position < 0? position + surface_->zorder.size(): position]);
   return true;
 }
 

@@ -1,8 +1,6 @@
 #include "term.hh"
-#include "display.hh"
 #include "event.hh"
 #include "geometry.hh"
-#include "keyboard.hh"
 #include "text.hh"
 #include "window.hh"
 
@@ -10,6 +8,8 @@
 
 namespace jwezel {
 
+namespace impl
+{
 Terminal::Terminal(
   const Char &background,
   const Vector &initialPosition,
@@ -20,6 +20,8 @@ Terminal::Terminal(
   bool expand,
   bool contract
 ):
+expand_{expand},
+contract_{contract},
 keyboard_{keyboardFd == -1? terminalFd: keyboardFd},
 display_{keyboard_, terminalFd, initialPosition, initialSize == VectorMin? Vector{1, 1}: initialSize, maxSize},
 backdrop_{this},
@@ -27,8 +29,6 @@ screen_{&display_, {&backdrop_}},
 desktop_{this, Rectangle{Vector{0, 0}, display_.size()}, background},
 focusWindow_{&desktop_},
 minimumSize_{display_.size()},
-expand_{expand},
-contract_{contract},
 running_{false}
 {}
 
@@ -57,7 +57,7 @@ auto Terminal::expand(const Vector &size) -> bool {
   if (!expand_) {
     return false;
   }
-  const auto size_ = max(min(display_.maxSize_, size), display_.size());
+  const auto size_ = max(min(display_.maxSize(), size), display_.size());
   if (size_ != display_.size()) {
     display_.resize(size_);
     screen_.reshapeElement(&desktop_, Rectangle{Vector{0, 0}, size_});
@@ -78,5 +78,7 @@ auto Terminal::contract() -> bool {
   }
   return false;
 }
+
+} // namespace impl
 
 } // namespace jwezel

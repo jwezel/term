@@ -96,7 +96,7 @@ TEST_CASE("Display") {
       disp.resize(Vector{10, 4});
       disp.update(Vector{0, 0}, Text("::::::::::\n::::::::::\n::::::::::\n::::::::::"));
       disp.update(Vector{1, 1}, Text("++++++++\n++++++++"));
-      CHECK_EQ(disp.text_.repr(), Text("::::::::::\n:++++++++:\n:++++++++:\n::::::::::").repr());
+      CHECK_EQ(disp.text().repr(), Text("::::::::::\n:++++++++:\n:++++++++:\n::::::::::").repr());
     }
     SUBCASE("Resize") {
       disp.resize(Vector{10, 6});

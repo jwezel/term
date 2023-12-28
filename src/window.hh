@@ -10,7 +10,7 @@ namespace jwezel {
 
 ///
 /// Base Window
-struct BaseWindow: Surface::Element {
+struct BaseWindow: Element {
 
   ///
   /// Constructor
@@ -174,14 +174,6 @@ struct Window: public BaseWindow {
   void move(const Rectangle &area);
 
   bool moveEvent(const Rectangle &) override;
-
-  bool above(Window *window=0);
-
-  bool below(Window *window=0);
-
-  bool above(int position=0);
-
-  bool below(int position=-1);
 
   ///
   /// Get window area
