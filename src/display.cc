@@ -26,7 +26,7 @@ using
   std::system_error;
 
 Display::Display(
-  Keyboard &keyboard,
+  Keyboard::ref &keyboard,
   int output,
   const Vector &position,
   const Vector &size,

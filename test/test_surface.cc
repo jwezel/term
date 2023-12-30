@@ -1,4 +1,3 @@
-
 #include "device.hh"
 #include "geometry.hh"
 #include "string.hh"
@@ -89,24 +88,24 @@ struct Terminal: jwezel::TerminalInterface {
   backdrop_{this},
   screen_{&device, {&backdrop_}}
   {}
-  ~Terminal() override = default;
+  ~Terminal() = default;
   Terminal(const Terminal &) = delete;
   Terminal(Terminal &&) = delete;
   auto operator=(const Terminal &) -> Terminal & = delete;
   auto operator=(Terminal &&) -> Terminal & = delete;
   void registerWindow(struct Window */*window*/) override {}
-  auto screen() -> Surface & override { return screen_;}
+  auto screen() -> Surface::ref & override { return screen_;}
   auto expand(const Vector &/*size*/) -> bool override {return false;}
   auto contract() -> bool override {return false;}
   void moveWindow(Window &/*window*/, const Rectangle & /*area*/) override {}
 
   Device device_;
   Backdrop backdrop_;
-  Surface screen_;
+  Surface::ref screen_;
 };
 
 // Test rtree: check whether all corners of all fragments can be found in rtree
-void TestRtree(const Surface &screen) {
+void TestRtree(const Surface::ref &screen) {
   for (const auto *element: screen.zorder()) {
     for (const auto &f: element->fragments()) {
       const auto &a{f.area};
@@ -140,7 +139,7 @@ void TestRtree(const Surface &screen) {
 TEST_CASE("Surface") {
   Device dev;
   Terminal term{dev};
-  Surface &scr{term.screen()};
+  Surface::ref &scr{term.screen()};
   SUBCASE("Constructor") {
     CHECK_EQ(scr.zorder().size(), 1);
     TestRtree(scr);

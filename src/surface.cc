@@ -59,10 +59,7 @@ auto SurfaceUpdates(const Range &fragments) -> Updates {
     result.emplace_back(
       Update{
         Vector(fragment.area.x1(), fragment.area.y1()),
-        fragment.element->text(
-          area -
-          fragment.element->area().position()
-        )
+        fragment.element->text(area - fragment.element->area().position())
       }
     );
   }
@@ -91,10 +88,10 @@ Surface::Fragment::operator string() const {
   return format("Fragment({}, {})", string(area), long(element));
 }
 
-Surface::Surface(Device *device, initializer_list<Element *> initializer):
+Surface::Surface(Device *device, initializer_list<Element *> elements):
 device_{device}
 {
-  for (auto *e: initializer) {
+  for (auto *e: elements) {
     addElement(e);
   }
 }

@@ -13,7 +13,7 @@ using std::format;
 using std::cerr;
 
 BaseWindow::BaseWindow(TerminalInterface *terminal, const Rectangle &area, const Char &background):
-Surface::Element(&terminal->screen(), area),
+Surface::Element(terminal->screen().ptr(), area),
 terminal_{terminal},
 position_{area.position()},
 background_{background}

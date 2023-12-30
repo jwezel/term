@@ -12,9 +12,15 @@ struct Device {
 
   Device(const Device &) = default;
 
-  Device(Device &&) = delete;
+  Device(Device &&) = default;
 
-  auto operator=(Device &&) -> Device & = delete;
+  ///
+  /// Assignment operator
+  ///
+  /// @param      source  The source
+  ///
+  /// @return     The result of the assignment
+  auto operator=(Device &&source) -> Device & = default;
 
   ///
   /// Assignment operator

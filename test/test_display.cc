@@ -47,7 +47,7 @@ TEST_CASE("Display") {
     CHECK_EQ(fputs("\x1b[1;1R", input), 1);
     CHECK_EQ(fputs("\x1b[20;10R", input), 1);
     CHECK_EQ(fseek(input, 0, SEEK_SET), 0);
-    Keyboard kb(input->_fileno);
+    Keyboard::ref kb(input->_fileno);
     Display disp{kb, output->_fileno};
     CHECK_EQ(fflush(output), 0);
     ftruncate(output->_fileno, 0); // Constructor requests cursor pos (writes to display)
@@ -110,7 +110,7 @@ TEST_CASE("Display") {
 }
 TEST_CASE("Optional tests" * doctest::skip(true)) {
   SUBCASE("Real") {
-    Keyboard kb(0);
+    Keyboard::ref kb(0);
     kb.raw();
     Display disp{kb};
     auto pos{disp.cursor()};

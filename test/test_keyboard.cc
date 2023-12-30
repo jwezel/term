@@ -12,7 +12,7 @@ TEST_CASE("Keyboard") {
   auto *tmpFile{tmpfile()};
   (void)fputs("\x1b\x0d\x1b\x1b\x1bO_\x1b[D\x1b[\xff\xff\xff""Dx", tmpFile); // \xff bytes simulate a delay
   (void)fseek(tmpFile, 0, SEEK_SET);
-  jwezel::Keyboard kb(tmpFile->_fileno);
+  jwezel::Keyboard::ref kb(tmpFile->_fileno);
   CHECK_EQ(kb.keyPrefixes().nodes.at('\x7f')->key, Key::Backspace);
   CHECK_EQ(kb.keyPrefixes().nodes.at('\x1b')->nodes['\x0d']->key, Key::AltEnter);
   CHECK_EQ(kb.keyPrefixes().nodes.at('\x1b')->nodes['\x0d']->nodes.size(), 0);
@@ -34,7 +34,7 @@ TEST_CASE("Keyboard") {
 }
 
 TEST_CASE("Real user-operated keyboard" * doctest::skip(true)) {
-  jwezel::Keyboard kb;
+  jwezel::Keyboard::ref kb;
   std::cout << "Press F1\n";
   kb.raw();
   auto key{kb.key()};

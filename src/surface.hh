@@ -11,12 +11,14 @@
 #include <boost/geometry/geometries/register/point.hpp>
 #include <boost/geometry/index/rtree.hpp>
 #include <initializer_list>
+#include <memory>
 
 BOOST_GEOMETRY_REGISTER_POINT_2D(jwezel::Vector, jwezel::Dim, cs::cartesian, x(), y());
 BOOST_GEOMETRY_REGISTER_BOX_2D_4VALUES(jwezel::Rectangle, jwezel::Vector, x1(), y1(), x2(), y2());
+auto const MAX_RTREE_NODE_SIZE{16};
+auto const MIN_RTREE_NODE_SIZE{4};
 
 namespace jwezel {
-
 
 using std::initializer_list;
 
@@ -88,13 +90,13 @@ struct Surface {
     friend struct Surface;
   };
 
+  explicit Surface(Device *device, initializer_list<Element *> elements={});
+
   Surface() = default;
 
   void removeRtreeFragments(Surface::Element &element);
 
   void insertRtreeFragments(Surface::Element &element);
-
-  explicit Surface(Device *device, initializer_list<Element *> ={});
 
   void addElement(Element * element, Element *below=0);
 
@@ -119,8 +121,50 @@ struct Surface {
   auto position(Element *element, int default_=-1) -> int;
 
   [[nodiscard]] auto zorder() const -> const auto & {return zorder_;}
-  private:
 
+  struct ref
+  {
+    explicit ref(Device *device, initializer_list<Element *> elements={}):
+    ptr_{new Surface{device, elements}}
+    {}
+
+    ref() = default;
+
+    void removeRtreeFragments(Surface::Element &element) {ptr_->removeRtreeFragments(element);}
+
+    void insertRtreeFragments(Surface::Element &element) {ptr_->insertRtreeFragments(element);}
+
+    void addElement(Element * element, Element *below=0) {ptr_->addElement(element, below);}
+
+    void deleteElement(Element *element, Element *destination=0) {ptr_->deleteElement(element, destination);}
+
+    void reshapeElement(Element *element, const Rectangle &area) {ptr_->reshapeElement(element, area);}
+
+    void above(Surface::Element * element, Surface::Element *destination=0) {ptr_->above(element, destination);}
+
+    void below(Surface::Element * element, Surface::Element *destination=0) {ptr_->below(element, destination);}
+
+    ///
+    /// Get minimum size to accomodate all elements
+    ///
+    /// @param      exclude  Last element to exclude
+    ///
+    /// @return     Minimum size
+    [[nodiscard]] auto minSize(const Element *exclude=0) const -> Vector {return ptr_->minSize(exclude);}
+
+    [[nodiscard]] auto find(const Vector &position) const -> Fragment * {return ptr_->find(position);}
+
+    [[nodiscard]] auto position(Element *element, int default_=-1) -> int {return ptr_->position(element, default_);}
+
+    [[nodiscard]] auto zorder() const -> const auto & {return ptr_->zorder();}
+
+    [[nodiscard]] auto ptr() -> auto {return ptr_.get();}
+
+    private:
+    std::shared_ptr<Surface> ptr_;
+  };
+
+  private:
   void reorder(int source, int destination);
 
   void cover(int pos);
@@ -131,7 +175,7 @@ struct Surface {
 
   vector<Element *> zorder_;
   Device *device_{};
-  boost::geometry::index::rtree<RtreeEntry, boost::geometry::index::quadratic<16>> rtree;
+  boost::geometry::index::rtree<RtreeEntry, boost::geometry::index::quadratic<MAX_RTREE_NODE_SIZE, MIN_RTREE_NODE_SIZE>> rtree;
 };
 
 template<class Range>

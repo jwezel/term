@@ -294,6 +294,59 @@ struct Keyboard {
     displayOffset_ = offset;
   }
 
+  struct ref
+  {
+    inline explicit ref(int device=0, const Vector &offset=Vector{0, 0}):
+    ptr_{new Keyboard{device, offset}}
+    {}
+
+    ref(const ref &) = default;
+
+    ref(ref &&) = default;
+
+    auto operator=(const ref &) -> ref & = default;
+
+    auto operator=(ref &&) -> ref & = default;
+
+    ///
+    /// Destructor
+    ~ref() = default;
+
+    ///
+    /// Set terminal to raw mode
+    inline void raw() {ptr_->raw();}
+
+    ///
+    /// Reset terminal to original state
+    inline void reset() {ptr_->reset();}
+
+    ///
+    /// Get key
+    ///
+    /// @return     key
+    [[nodiscard]] inline auto key() -> Unicode {return ptr_->key();}
+
+    ///
+    /// Mouse report
+    ///
+    /// @return     Terminal mouse event data
+    inline auto mouseReport() -> tuple<MouseButton, MouseModifiers, u2, u2, MouseAction> {return ptr_->mouseReport();}
+
+    [[nodiscard]] auto keyPrefixes() const -> const PrefixNode & {return ptr_->keyPrefixes();}
+    ///
+    /// Get input event
+    ///
+    /// @return     The input event.
+    [[nodiscard]] auto event() -> InputEvent * {return ptr_->event();}
+
+    inline void displayOffset(const Vector &offset) {
+      ptr_->displayOffset(offset);
+    }
+
+    private:
+    std::shared_ptr<Keyboard> ptr_;
+  };
+
   private:
   std::deque<Unicode> keyBuffer_; //< Key buffer
   PrefixNode keyPrefixes_; //< Key prefix tree
