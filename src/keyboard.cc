@@ -300,20 +300,76 @@ const std::vector<pair<std::string, Unicode>> keyTranslations { // NOLINT(cert-e
 namespace impl
 {
 
+struct Keyboard {
+  ///
+  /// Constructor
+  ///
+  /// @param[in]  device  Terminal device
+  explicit Keyboard(int device=0, const Vector &offset=Vector{0, 0});
+
+  Keyboard(const Keyboard &) = default;
+
+  Keyboard(Keyboard &&) = delete;
+
+  auto operator=(const Keyboard &) -> Keyboard & = default;
+
+  auto operator=(Keyboard &&) -> Keyboard & = delete;
+
+  ///
+  /// Destructor
+  ~Keyboard();
+
+  ///
+  /// Set terminal to raw mode
+  void raw();
+
+  ///
+  /// Reset terminal to original state
+  void reset();
+
+  ///
+  /// Get key
+  ///
+  /// @return     key
+  auto key() -> Unicode;
+
+  ///
+  /// Mouse report
+  ///
+  /// @return     Terminal mouse event data
+  auto mouseReport() -> tuple<MouseButton, MouseModifiers, u2, u2, MouseAction>;
+
+  ///
+  /// Get input event
+  ///
+  /// @return     The input event.
+  auto event() -> InputEvent *;
+
+  inline void displayOffset(const Vector &offset) {
+    displayOffset_ = offset;
+  }
+
+  std::deque<Unicode> keyBuffer_; //< Key buffer
+  PrefixNode keyPrefixes_; //< Key prefix tree
+  int fd_; //< Terminal file descriptor
+  std::optional<termios> originalState_; //< Original terminal state
+  Vector displayOffset_;
+};
+
 ///
 /// Load key translations
 ///
 /// @param[in]  translations  The translations
 ///
 /// @return     key prefix tree
-static auto loadKeyTranslations(const std::vector<pair<std::string, Unicode>> &translations) -> Keyboard::PrefixNode {
-  Keyboard::PrefixNode result;
+static auto loadKeyTranslations(const std::vector<pair<std::string, Unicode>> &translations) -> PrefixNode {
+  PrefixNode result;
   for (const auto &[keys, key]: translations) {
-    Keyboard::PrefixNode *node{&result};
+    PrefixNode *node{&result};
     for (auto it = keys.begin(); it != keys.end(); ++it) {
       auto elem = node->nodes.find(*it);
       if (elem == node->nodes.end()) {
-        auto insResult = node->nodes.insert(make_pair(*it, new Keyboard::PrefixNode));
+        auto insResult = node->nodes.insert(make_pair(*it, new PrefixNode));
         if (!insResult.second) {
           throw runtime_error(format("Couldn't create keyboard translation tree node for \"{}\"", keys));
         }
@@ -501,6 +557,46 @@ auto Keyboard::event() -> InputEvent * {
   return new KeyEvent{key_};
 }
 
+}
+
+Keyboard::Keyboard(int device, const Vector &offset):
+p_{new impl::Keyboard{device, offset}}
+{}
+
+///
+/// Set terminal to raw mode
+void Keyboard::raw() {
+  p_->raw();
+}
+
+///
+/// Reset terminal to original state
+void Keyboard::reset() {
+  p_->reset();
+}
+
+///
+/// Get key
+///
+/// @return     key
+auto Keyboard::key() const -> Unicode {
+  return p_->key();
+}
+
+///
+/// Get input event
+///
+/// @return     The input event.
+auto Keyboard::event() const -> InputEvent * {
+  return p_->event();
+}
+
+auto Keyboard::keyPrefixes() const -> PrefixNode & {
+  return p_->keyPrefixes_;
+}
+
+void Keyboard::displayOffset(const Vector &offset) {
+  p_->displayOffset_ = offset;
 }
 
 } // namespace jwezel

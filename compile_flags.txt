@@ -3,12 +3,7 @@
 -Wall
 -Wno-parentheses
 -I/usr/include/c++/13
--I/home/j/Projects/c++/term/include
--I/home/j/Projects/c++/term/include/term
--I/home/j/Projects/c++/term/include/ui
--I/home/j/Projects/c++/term/include/microui
--I/home/j/Projects/c++/term/extern
--I/home/j/Projects/c++/term/extern/yoga
+-I/home/j/Projects/c++/term/src
 -I/home/j/Projects/c++/term/extern/Taitank/src
 -I/home/j/Projects/c++/term/extern/Taitank/tests/gtest
 -I/home/j/.conan2/p/docte369cf786eca75/p/include

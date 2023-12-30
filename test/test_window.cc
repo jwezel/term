@@ -40,7 +40,7 @@ TEST_CASE("Window") {
   (void)fseek(input, 0, SEEK_SET);
   Terminal term('.'_C, VectorMin, VectorMin, VectorMax, output->_fileno, input->_fileno);
   SUBCASE("Window") {
-    auto w1 = Window(&term, Rectangle{0, 0, 10, 6}, Char{' ', jwezel::RgbWhite, jwezel::RgbBlue1});
+    auto w1 = Window(term, Rectangle{0, 0, 10, 6}, Char{' ', jwezel::RgbWhite, jwezel::RgbBlue1});
     auto t = Text("          \n          \n          \n          \n          \n          ", jwezel::RgbWhite, jwezel::RgbBlue1);
     CHECK_EQ(term.display().text(), t);
     SUBCASE("Box") {

@@ -3,108 +3,46 @@
 #include "basic.hh"
 #include "geometry.hh"
 #include "surface.hh"
-#include "term_interface.hh"
 #include "text.hh"
+
+#include <memory>
 
 namespace jwezel {
 
-///
-/// Base Window
-struct BaseWindow: Element {
+namespace impl
+{
+  struct Window;
 
-  ///
-  /// Constructor
-  ///
-  /// @param      terminal    The terminal
-  /// @param[in]  area        The area
-  /// @param[in]  background  The background
-  explicit BaseWindow(struct TerminalInterface *terminal, const Rectangle &area, const Char &background=Space);
+  struct Backdrop;
+}
 
-  BaseWindow(const BaseWindow &) = default;
+struct BaseWindow {
+  virtual auto text(const Rectangle &area=RectangleMax) const -> Text = 0;
 
-  BaseWindow(BaseWindow &&) = default;
+  [[nodiscard]] virtual auto area() const -> Rectangle = 0;
 
-  auto operator=(const BaseWindow &) -> BaseWindow & = default;
+  [[nodiscard]] virtual auto element() const -> Element * = 0;
 
-  auto operator=(BaseWindow &&) -> BaseWindow & = delete;
-
-  ~BaseWindow() override = default;
-
-  [[nodiscard]] inline auto terminal() const {return terminal_;}
-
-  [[nodiscard]] inline auto position() const {return position_;}
-
-  void position(const Rectangle &area);
-
-  virtual inline bool moveEvent(const Rectangle &) override {return true;}
-
-  virtual inline bool deleteEvent() {return true;}
-
-  [[nodiscard]] inline auto background() const {return background_;}
-
-  private:
-  struct TerminalInterface *terminal_;
-  Vector position_;
-  Char background_;
+  [[nodiscard]] virtual auto fragments() const -> const vector<Fragment> & = 0;
 };
 
-///
-/// A virtually infinite window, all blank with no buffer, used to represent
-/// the display in a clear state.
-struct Backdrop: public BaseWindow {
-
-  ///
-  /// Constructor
-  ///
-  /// @param[in]  id    The identifier
-  /// @param[in]  area  The area
-  explicit Backdrop(struct TerminalInterface *terminal, const Char &background=Space);
-
-  Backdrop(const Backdrop &) = delete;
-
-  Backdrop(Backdrop &&) = delete;
-
-  auto operator=(const Backdrop &) -> Backdrop & = default;
-
-  auto operator=(Backdrop &&) -> Backdrop & = delete;
-
-  ///
-  /// Destroy Backdrop
-  ~Backdrop() override;
-
-  ///
-  /// Get backdrop area
-  ///
-  /// @return     RectangleMax
-  [[nodiscard]] auto area() const -> Rectangle override;
-
-  ///
-  /// Get area of window text
-  ///
-  /// @param[in]  area  The area
-  ///
-  /// @return     text
-  [[nodiscard]] auto text(const Rectangle &area=RectangleMax) const -> Text override;
-
-  ///
-  /// Move window
-  ///
-  /// @param[in]  area  The area
-  void move(const Rectangle &/*area*/) {}
-};
-
-///
-/// Window
-struct Window: public BaseWindow {
+struct Window: BaseWindow {
   ///
   /// Constructor
   ///
   /// @param[in]  id    The identifier
   /// @param[in]  area  The area
   ///
-  explicit Window(struct TerminalInterface *terminal, const Rectangle &area, const Char &background=Space, Window *below=0);
+  explicit Window(
+    struct Terminal &terminal,
+    const Rectangle &area,
+    const Char &background=Space,
+    const Window &below={}
+  );
 
-  Window() = delete;
+  Window() {}
+
+  explicit Window(impl::Window *window);
 
   Window(const Window &) = default;
 
@@ -112,14 +50,14 @@ struct Window: public BaseWindow {
 
   auto operator=(const Window &) -> Window & = default;
 
-  auto operator=(Window &&) -> Window & = delete;
+  auto operator=(Window &&) -> Window & = default;
 
   ///
   /// Destroy Window
-  ~Window() override;
+  ~Window() = default;
 
   /// String representation of Window
-  explicit operator string() const;
+  [[nodiscard]] explicit operator string() const;
 
   ///
   /// Write string to window
@@ -165,15 +103,21 @@ struct Window: public BaseWindow {
   /// Get window size
   ///
   /// @return     Window size
-  // [[nodiscard]] auto size() const -> Vector override;
+  // [[nodiscard]] auto size() const -> Vector;
 
   ///
   /// Move window
   ///
   /// @param[in]  area  The area
-  void move(const Rectangle &area);
+  auto move(const Rectangle &area) -> Window &;
 
-  bool moveEvent(const Rectangle &) override;
+  bool above(Window &window);
+
+  bool above(int position=-1);
+
+  bool below(Window &window);
+
+  bool below(int position=0);
 
   ///
   /// Get window area
@@ -187,10 +131,67 @@ struct Window: public BaseWindow {
   /// @param[in]  area  The area
   ///
   /// @return     text
-  [[nodiscard]] auto text(const Rectangle &area = RectangleMax) const -> Text override;
+  [[nodiscard]] virtual auto text(const Rectangle &area=RectangleMax) const -> Text override;
+
+  [[nodiscard]] auto ptr() const -> auto {return p_.get();}
+
+  [[nodiscard]] auto element() const -> Element * override;
+
+  [[nodiscard]] auto fragments() const -> const vector<Fragment> & override;
 
   private:
-  Text text_;
+  std::shared_ptr<impl::Window> p_;
+};
+
+//~Backdrop~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+struct Backdrop: BaseWindow {
+
+  ///
+  /// Constructor
+  ///
+  /// @param[in]  id    The identifier
+  /// @param[in]  area  The area
+  explicit Backdrop(struct jwezel::Terminal &terminal, const Char &background=Space);
+
+  Backdrop(const Backdrop &) = default;
+
+  Backdrop(Backdrop &&) = default;
+
+  auto operator=(const Backdrop &) -> Backdrop & = default;
+
+  auto operator=(Backdrop &&) -> Backdrop & = default;
+
+  ///
+  /// Destroy Backdrop
+  ~Backdrop() = default;
+
+  ///
+  /// Get backdrop area
+  ///
+  /// @return     RectangleMax
+  [[nodiscard]] auto area() const -> Rectangle override;
+
+  ///
+  /// Get area of window text
+  ///
+  /// @param[in]  area  The area
+  ///
+  /// @return     text
+  [[nodiscard]] auto text(const Rectangle &area=RectangleMax) const -> Text override;
+
+  [[nodiscard]] auto fragments() const -> const vector<Fragment> & override;
+
+  ///
+  /// Move window
+  ///
+  /// @param[in]  area  The area
+  void move(const Rectangle &area);
+
+  [[nodiscard]] auto element() const -> Element * override;
+
+  private:
+  std::shared_ptr<impl::Backdrop> p_;
 };
 
 } // namespace jwezel

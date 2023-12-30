@@ -3,6 +3,7 @@
 
 #include "geometry.hh"
 #include "term.hh"
+#include "window.hh"
 #include "text.hh"
 
 using
@@ -44,13 +45,13 @@ TEST_CASE("Terminal") {
   (void)fseek(input, 0, SEEK_SET);
   Terminal term('.'_C, VectorMin, VectorMin, VectorMax, output->_fileno, input->_fileno);
   SUBCASE("Window") {
-    Window w1(&term, Rectangle{0, 0, 10, 4}, '1'_C);
+    Window w1(term, Rectangle{0, 0, 10, 4}, '1'_C);
     CHECK_EQ(string(term.display().size()), string(Vector{10, 4}));
     CHECK_EQ(string(term.desktop().text().size()), string(Vector{10, 4}));
     CHECK_EQ(term.display().text().repr(), Text("1111111111\n1111111111\n1111111111\n1111111111").repr());
     SUBCASE("Delete window 2") {
       SUBCASE("Another window") {
-        Window w2{&term, Rectangle{2, 2, 8, 6}, '2'_C};
+        Window w2{term, Rectangle{2, 2, 8, 6}, '2'_C};
         CHECK_EQ(string(term.display().size()), string(Vector{10, 6}));
         CHECK_EQ(string(term.desktop().text().size()), string(Vector{10, 6}));
         CHECK_EQ(term.display().text().repr(), Text("1111111111\n1111111111\n1122222211\n1122222211\n..222222..\n..222222..").repr());

@@ -1,15 +1,13 @@
 #pragma once
 
-#include <deque>
-#include <map>
-#include <memory>
-#include <optional>
-#include <termios.h>
-
 #include "basic.hh"
 #include "event.hh"
 #include "geometry.hh"
 #include "text.hh"
+
+#include <memory>
+#include <termios.h>
+#include <map>
 
 namespace jwezel {
 
@@ -230,72 +228,16 @@ struct MouseMoveEvent: MouseEvent {
   CLASS_ID(MouseMoveEvent);
 };
 
-namespace impl
-{
-
-struct Keyboard {
-  ///
-  /// Constructor
-  ///
-  /// @param[in]  device  Terminal device
-  explicit Keyboard(int device=0, const Vector &offset=Vector{0, 0});
-
-  Keyboard(const Keyboard &) = default;
-
-  Keyboard(Keyboard &&) = delete;
-
-  auto operator=(const Keyboard &) -> Keyboard & = default;
-
-  auto operator=(Keyboard &&) -> Keyboard & = delete;
-
-  ///
-  /// Destructor
-  ~Keyboard();
-
-  ///
-  /// Set terminal to raw mode
-  void raw();
-
-  ///
-  /// Reset terminal to original state
-  void reset();
-
-  ///
-  /// Get key
-  ///
-  /// @return     key
-  auto key() -> Unicode;
-
-  ///
-  /// Mouse report
-  ///
-  /// @return     Terminal mouse event data
-  auto mouseReport() -> tuple<MouseButton, MouseModifiers, u2, u2, MouseAction>;
-
-  ///
-  /// Get input event
-  ///
-  /// @return     The input event.
-  auto event() -> InputEvent *;
-
-  inline void displayOffset(const Vector &offset) {
-    displayOffset_ = offset;
-  }
-
-  ///
-  /// Key prefix tree node
-  struct PrefixNode {
-    Unicode key = Key::None;
-    std::map<char, unique_ptr<PrefixNode>> nodes{};
-  };
-
-  std::deque<Unicode> keyBuffer_; //< Key buffer
-  PrefixNode keyPrefixes_; //< Key prefix tree
-  int fd_; //< Terminal file descriptor
-  std::optional<termios> originalState_; //< Original terminal state
-  Vector displayOffset_;
+///
+/// Key prefix tree node
+struct PrefixNode {
+  Unicode key = Key::None;
+  std::map<char, unique_ptr<PrefixNode>> nodes{};
 };
 
+namespace impl
+{
+  struct Keyboard;
 }
 
 struct Keyboard {
@@ -303,9 +245,7 @@ struct Keyboard {
   /// Constructor
   ///
   /// @param[in]  device  Terminal device
-  explicit Keyboard(int device=0, const Vector &offset=Vector{0, 0}):
-  p_{new impl::Keyboard{device, offset}}
-  {}
+  explicit Keyboard(int device=0, const Vector &offset=Vector{0, 0});
 
   Keyboard(const Keyboard &) = delete;
 
@@ -321,29 +261,27 @@ struct Keyboard {
 
   ///
   /// Set terminal to raw mode
-  void raw() {p_->raw();}
+  void raw();
 
   ///
   /// Reset terminal to original state
-  void reset() {p_->reset();}
+  void reset();
 
   ///
   /// Get key
   ///
   /// @return     key
-  auto key() const -> Unicode {return p_->key();}
+  auto key() const ->Unicode;
 
   ///
   /// Get input event
   ///
   /// @return     The input event.
-  auto event() const -> InputEvent * {return p_->event();}
+  auto event() const -> InputEvent *;
 
-  auto keyPrefixes() const -> auto & {return p_->keyPrefixes_;}
+  auto keyPrefixes() const -> PrefixNode &;
 
-  inline void displayOffset(const Vector &offset) {
-    p_->displayOffset_ = offset;
-  }
+  void displayOffset(const Vector &offset);
 
   std::shared_ptr<impl::Keyboard> p_;
 };

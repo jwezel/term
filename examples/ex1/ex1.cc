@@ -1,13 +1,13 @@
 #include "basic.hh"
-#include "display.hh"
 #include "event.hh"
 #include "geometry.hh"
 #include "keyboard.hh"
 #include "term.hh"
 #include "text.hh"
+#include "window.hh"
 
+#include <algorithm>
 #include <format>
-#include <memory>
 #include <unistd.h>
 #include <vector>
 
@@ -49,7 +49,12 @@ const Dim
   hi = 20;
 
 void moveWindow(Terminal &term, jwezel::Window &window, const Vector &pos, const Vector &size) {
-  term.moveWindow(window, Rectangle{pos.x(), pos.y(), toDim(pos.x() + size.x()), toDim(pos.y() + size.y())});
+  term.moveWindow(
+    dynamic_cast<jwezel::BaseWindow &>(window),
+    Rectangle{pos.x(), pos.y(),
+    toDim(pos.x() + size.x()),
+    toDim(pos.y() + size.y())}
+  );
 }
 
 auto main(int /*unused*/, char * /*unused*/[]) -> int {
@@ -57,120 +62,120 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
   const Vector si{wi, hi};
   Terminal term{Char(L' ', RgbNone, RgbCyan2), VectorMin, VectorMin, VectorMax, 1, 0, true, false};
   term.display().mouseMode(jwezel::MouseMode::anything);
-  vector<std::unique_ptr<jwezel::Window>> ws;
+  vector<jwezel::Window> ws;
   u4 cw = 0;
-  ws.push_back(std::make_unique<jwezel::Window>(&term, Rectangle{0, 0, wi, hi}, Char(' ', RgbNone, RgbBlue5)));
-  ws[cw]->box(Box{{Vector{0, 0}, VectorMax}, 2});
-  ws[cw]->write(Vector{1, 0}, Text(format("Window {}", ws.size()), RgbRed, RgbGray7, bold, mix));
+  ws.push_back(jwezel::Window(term, Rectangle{0, 0, wi, hi}, Char(' ', RgbNone, RgbBlue5)));
+  ws[cw].box(Box{{Vector{0, 0}, VectorMax}, 2});
+  ws[cw].write(Vector{1, 0}, Text(format("Window {}", ws.size()), RgbRed, RgbGray7, bold, mix));
   term.desktop().write(Vector{0, 0}, Text("Desktop", RgbWhite, RgbNone, {}, mix));
   while (true) {
-    auto event{term.event()};
+    auto *event{term.event()};
     if (event->vid() == jwezel::KeyEvent::id()) {
-      auto kbEvent{dynamic_cast<jwezel::KeyEvent *>(event)};
+      auto *kbEvent{dynamic_cast<jwezel::KeyEvent *>(event)};
       switch (kbEvent->key()) {
 
         case Up:
         case '8':
         {
-          auto rec{ws[cw]->area()};
+          auto rec{ws[cw].area()};
           rec.up();
-          moveWindow(term, *ws[cw], Vector{rec.x1(), rec.y1()}, si);
+          moveWindow(term, ws[cw], Vector{rec.x1(), rec.y1()}, si);
         }
         break;
 
         case Down:
         case '2':
         {
-          auto rec{ws[cw]->area()};
+          auto rec{ws[cw].area()};
           rec.down();
-          moveWindow(term, *ws[cw], Vector{rec.x1(), rec.y1()}, si);
+          moveWindow(term, ws[cw], Vector{rec.x1(), rec.y1()}, si);
         }
         break;
 
         case Left:
         case '4':
         {
-          auto rec{ws[cw]->area()};
+          auto rec{ws[cw].area()};
           rec.left();
-          moveWindow(term, *ws[cw], Vector{rec.x1(), rec.y1()}, si);
+          moveWindow(term, ws[cw], Vector{rec.x1(), rec.y1()}, si);
         }
         break;
 
         case Right:
         case '6':
         {
-          auto rec{ws[cw]->area()};
+          auto rec{ws[cw].area()};
           rec.right();
-          moveWindow(term, *ws[cw], Vector{rec.x1(), rec.y1()}, si);
+          moveWindow(term, ws[cw], Vector{rec.x1(), rec.y1()}, si);
         }
         break;
 
         case '7':
         {
-          auto rec{ws[cw]->area()};
+          auto rec{ws[cw].area()};
           rec.left();
           rec.up();
-          moveWindow(term, *ws[cw], Vector{rec.x1(), rec.y1()}, si);
+          moveWindow(term, ws[cw], Vector{rec.x1(), rec.y1()}, si);
         }
         break;
 
         case '1':
         {
-          auto rec{ws[cw]->area()};
+          auto rec{ws[cw].area()};
           rec.left();
           rec.down();
-          moveWindow(term, *ws[cw], Vector{rec.x1(), rec.y1()}, si);
+          moveWindow(term, ws[cw], Vector{rec.x1(), rec.y1()}, si);
         }
         break;
 
         case '9':
         {
-          auto rec{ws[cw]->area()};
+          auto rec{ws[cw].area()};
           rec.right();
           rec.up();
-          moveWindow(term, *ws[cw], Vector{rec.x1(), rec.y1()}, si);
+          moveWindow(term, ws[cw], Vector{rec.x1(), rec.y1()}, si);
         }
         break;
 
         case '3':
         {
-          auto rec{ws[cw]->area()};
+          auto rec{ws[cw].area()};
           rec.right();
           rec.down();
-          moveWindow(term, *ws[cw], Vector{rec.x1(), rec.y1()}, si);
+          moveWindow(term, ws[cw], Vector{rec.x1(), rec.y1()}, si);
         }
         break;
 
         case Home:
         case '5':
         {
-          moveWindow(term, *ws[cw], Vector{0, 0}, si);
+          moveWindow(term, ws[cw], Vector{0, 0}, si);
         }
         break;
 
         case 'q':
-        goto end;
+        goto end;  // NOLINT
 
         case jwezel::Unicode('w'):
-        ws[cw]->write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray2, bold, mix));
-        ws.push_back(std::make_unique<jwezel::Window>(&term, ws[cw]->area() + Vector{1, 1}));
+        ws[cw].write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray2, bold, mix));
+        ws.push_back(jwezel::Window(term, ws[cw].area() + Vector{1, 1}));
         cw = ws.size() - 1;
-        ws[cw]->box(Box{});
-        ws[cw]->write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray7, bold, mix));
+        ws[cw].box(Box{});
+        ws[cw].write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray7, bold, mix));
         break;
 
         case PageDown:
-        ws[cw]->write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray2, bold, mix));
+        ws[cw].write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray2, bold, mix));
         cw = (cw + 1) % ws.size();
-        ws[cw]->write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray7, bold, mix));
+        ws[cw].write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray7, bold, mix));
         break;
 
         case PageUp:
-        ws[cw]->write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray2, bold, mix));
+        ws[cw].write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray2, bold, mix));
         cw = (cw - 1);
         if (cw >= ws.size())
           cw = ws.size() - 1;
-        ws[cw]->write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray7, bold, mix));
+        ws[cw].write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray7, bold, mix));
         break;
 
         case jwezel::Delete:
@@ -184,23 +189,23 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
             }
           }
         }
-        ws[cw]->write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray7, bold, mix));
+        ws[cw].write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray7, bold, mix));
         break;
 
         case 'd':
-        ws[cw]->below(nullptr);
+        ws[cw].below(ws[std::min(cw - 1, 1U)]);
         break;
 
         case 'D':
-        ws[cw]->above(1);
+        ws[cw].above(1);
         break;
 
         case 'u':
-        ws[cw]->above(nullptr);
+        ws[cw].above(ws[std::min(cw + 1, 1U)]);
         break;
 
         case 'U':
-        ws[cw]->above(-1);
+        ws[cw].above(-1);
         break;
 
         default:
@@ -214,7 +219,7 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
       static vector<string> mouseState{
         "released", "pressed"
       };
-      ws[0]->write(
+      ws[0].write(
         Vector{1, 1},
         format(
           "Event: {:22s}\nColumn: {:3d}\nLine: {:3d}\nState: {}\n"
@@ -233,7 +238,7 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
       );
     } else if (event->vid() == jwezel::MouseMoveEvent::id()) {
       auto mbEvent{dynamic_cast<jwezel::MouseMoveEvent *>(event)};
-      ws[0]->write(
+      ws[0].write(
         Vector{1, 1},
         format(
           "Event: {:22s}\nColumn: {:3d}\nLine: {:3d}\nState: {}\n"

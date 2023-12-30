@@ -2,6 +2,7 @@
 #include "geometry.hh"
 #include "string.hh"
 #include "surface.hh"
+#include "term_interface.hh"
 #include "text.hh"
 #include "update.hh"
 #include "window.hh"
@@ -15,7 +16,6 @@
 #include <doctest/doctest.h>
 
 using
-  jwezel::Backdrop,
   jwezel::Char,
   jwezel::Dim,
   jwezel::DimHigh,
@@ -77,39 +77,42 @@ namespace jwezel {
   }
 }
 
-struct Device: jwezel::Device {
+struct TestDevice: jwezel::Device {
   void update(const Updates &updates) override {
     copy(updates.begin(), updates.end(), back_inserter(updates_));
   }
   Updates updates_;
 };
 
-struct Terminal: jwezel::TerminalInterface {
-  explicit Terminal(Device &device):
+namespace jwezel
+{
+struct TestTerminal: jwezel::TerminalInterface {
+  explicit TestTerminal(TestDevice &device):
   device_{device},
-  backdrop_{this},
-  screen_{&device, {&backdrop_}}
+  backdrop_{*this},
+  screen_{&device, {backdrop_.element()}}
   {}
-  ~Terminal() override = default;
-  Terminal(const Terminal &) = delete;
-  Terminal(Terminal &&) = delete;
-  auto operator=(const Terminal &) -> Terminal & = delete;
-  auto operator=(Terminal &&) -> Terminal & = delete;
-  void registerWindow(struct Window */*window*/) override {}
-  auto screen() -> Surface & override { return screen_;}
-  auto expand(const Vector &) -> bool override {return false;}
-  auto contract() -> bool override {return false;}
-  void moveWindow(Window &, const Rectangle &) override {}
+  ~TestTerminal() = default;
+  TestTerminal(const TestTerminal &) = delete;
+  TestTerminal(TestTerminal &&) = delete;
+  auto operator=(const TestTerminal &) -> TestTerminal & = delete;
+  auto operator=(TestTerminal &&) -> TestTerminal & = delete;
+  void registerWindow(jwezel::BaseWindow */*window*/) {}
+  auto screen() -> Surface & { return screen_;}
+  auto expand(const Vector &) -> bool {return false;}
+  auto contract() -> bool {return false;}
+  void moveWindow(jwezel::BaseWindow &/*window*/, const Rectangle &/*area*/) {}
 
-  Device device_;
+  TestDevice device_;
   Backdrop backdrop_;
   Surface screen_;
 };
+}
 
 // Test rtree: check whether all corners of all fragments can be found in rtree
 void TestRtree(const Surface &screen) {
   for (const auto *element: screen.zorder()) {
-    for (auto &f: element->fragments) {
+    for (auto &f: element->fragments_) {
       const auto &a{f.area};
       CHECK_EQ(screen.find(a.position()), &f);
       if (a.x2() > a.x1()) {
@@ -139,8 +142,8 @@ void TestRtree(const Surface &screen) {
 // NOLINTBEGIN(misc-use-anonymous-namespace)
 
 TEST_CASE("Surface") {
-  Device dev;
-  Terminal term{dev};
+  TestDevice dev;
+  jwezel::Terminal term{dev};
   Surface &scr{term.screen()};
   SUBCASE("Constructor") {
     CHECK_EQ(scr.zorder().size(), 1);
@@ -148,34 +151,34 @@ TEST_CASE("Surface") {
   }
   SUBCASE("AddWindow") {
     dev.updates_.clear();
-    Window win1{&term, Rectangle{1, 1, 9, 5}};
+    Window win1{term, Rectangle{1, 1, 9, 5}};
     SUBCASE("Window") {
       TestRtree(scr);
       auto expupdates{Updates{{Vector{1, 1}, Text("        \n        \n        \n        ")}}};
-      CHECK_EQ(&win1, scr.zorder()[1]);
+      CHECK_EQ(win1.element(), scr.zorder()[1]);
       CHECK_EQ(dev.updates_, expupdates);
       CHECK_EQ(scr.zorder().size(), 2);
       REQUIRE_EQ(
-        scr.zorder()[0]->fragments, vector<Fragment>{
+        scr.zorder()[0]->fragments_, vector<Fragment>{
           Fragment{Rectangle{0, 0, DimHigh, 1}, scr.zorder()[0]},
           Fragment{Rectangle{0, 1, 1, 5}, scr.zorder()[0]},
           Fragment{Rectangle{9, 1, DimHigh, 5}, scr.zorder()[0]},
           Fragment{Rectangle{0, 5, DimHigh, DimHigh}, scr.zorder()[0]}
         }
       );
-      CHECK_EQ(scr.zorder()[1]->fragments, vector<Fragment>{Fragment{Rectangle{1, 1, 9, 5},scr.zorder()[1]}});
+      CHECK_EQ(scr.zorder()[1]->fragments_, vector<Fragment>{Fragment{Rectangle{1, 1, 9, 5},scr.zorder()[1]}});
       CHECK_EQ(string(scr.zorder()[1]->text()), "        \n        \n        \n        \n");
     }
     SUBCASE("AddWindow below") {
       dev.updates_.clear();
-      Window win2{&term, Rectangle{2, 0, 8, 6}, '.'_C, &win1};
+      Window win2{term, Rectangle{2, 0, 8, 6}, '.'_C, win1};
       TestRtree(scr);
       // MESSAGE(win1.fragments[0]);
       // for (const auto &f: term.backdrop_.fragments) {
       //   MESSAGE(f);
       // }
       REQUIRE_EQ(
-        scr.zorder()[0]->fragments, vector<Fragment>{
+        scr.zorder()[0]->fragments_, vector<Fragment>{
           Fragment{Rectangle{0, 0, 2, 1}, scr.zorder()[0]},
           Fragment{Rectangle{8, 0, DimHigh, 1}, scr.zorder()[0]},
           Fragment{Rectangle{0, 1, 1, 5}, scr.zorder()[0]},
@@ -185,26 +188,26 @@ TEST_CASE("Surface") {
           Fragment{Rectangle{0, 6, DimHigh, DimHigh}, scr.zorder()[0]}
         }
       );
-      CHECK_EQ(scr.find(Vector{0, 0}), &term.backdrop_.fragments[0]);
-      CHECK_EQ(scr.find(Vector{1, 1}), &win1.fragments[0]);
-      CHECK_EQ(scr.find(Vector{8, 1}), &win1.fragments[0]);
-      CHECK_EQ(scr.find(Vector{2, 0}), &win2.fragments[0]);
-      CHECK_EQ(scr.find(Vector{2, 5}), &win2.fragments[1]);
+      CHECK_EQ(scr.find(Vector{0, 0}), &term.backdrop_.fragments()[0]);
+      CHECK_EQ(scr.find(Vector{1, 1}), &win1.fragments()[0]);
+      CHECK_EQ(scr.find(Vector{8, 1}), &win1.fragments()[0]);
+      CHECK_EQ(scr.find(Vector{2, 0}), &win2.fragments()[0]);
+      CHECK_EQ(scr.find(Vector{2, 5}), &win2.fragments()[1]);
       auto expupdates2{Updates{{Vector{2, 0}, Text("......")}, {Vector{2, 5}, Text("......")}}};
       CHECK_EQ(dev.updates_, expupdates2);
       CHECK_EQ(scr.zorder().size(), 3);
-      CHECK_EQ(scr.zorder()[1], &win2);
-      CHECK_EQ(scr.zorder()[2], &win1);
+      CHECK_EQ(scr.zorder()[1], win2.element());
+      CHECK_EQ(scr.zorder()[2], win1.element());
       CHECK_EQ(
-        scr.zorder()[1]->fragments,
+        scr.zorder()[1]->fragments_,
         vector<Fragment>{
           Fragment{Rectangle{2, 0, 8, 1}, scr.zorder()[1]}, Fragment{Rectangle{2, 5, 8, 6}, scr.zorder()[1]}
         }
       );
-      CHECK_EQ(scr.zorder()[2]->fragments, vector<Fragment>{Fragment{Rectangle{1, 1, 9, 5}, scr.zorder()[2]}});
+      CHECK_EQ(scr.zorder()[2]->fragments_, vector<Fragment>{Fragment{Rectangle{1, 1, 9, 5}, scr.zorder()[2]}});
       SUBCASE("ReshapeWindow") {
         dev.updates_.clear();
-        scr.reshapeElement(&win2, Rectangle{4, 0, 10, 6});
+        scr.reshapeElement(win2.element(), Rectangle{4, 0, 10, 6});
         TestRtree(scr);
         std::ranges::sort(dev.updates_);
         CHECK_EQ(
@@ -220,7 +223,7 @@ TEST_CASE("Surface") {
           }
         );
         CHECK_EQ(
-          scr.zorder()[1]->fragments,
+          scr.zorder()[1]->fragments_,
           vector<Fragment>{
             Fragment{Rectangle{4, 0, 10, 1}, scr.zorder()[1]},
             Fragment{Rectangle{9, 1, 10, 5}, scr.zorder()[1]},
@@ -260,7 +263,7 @@ TEST_CASE("Surface") {
     }
     SUBCASE("Delete window") {
       {
-        Window win2{&term, Rectangle{2, 0, 8, 6}, '.'_C, &win1};
+        Window win2{term, Rectangle{2, 0, 8, 6}, '.'_C, win1};
         TestRtree(scr);
         dev.updates_.clear();
       }
@@ -274,19 +277,19 @@ TEST_CASE("Surface") {
       std::ranges::sort(dev.updates_);
       CHECK_EQ(dev.updates_, expupdates2);
       CHECK_EQ(scr.zorder().size(), 2);
-      CHECK_EQ(scr.zorder()[1], &win1);
+      CHECK_EQ(scr.zorder()[1], win1.element());
       CHECK_EQ(
-        scr.zorder()[1]->fragments,
+        scr.zorder()[1]->fragments_,
         vector<Fragment>{
           Fragment{Rectangle{1, 1, 9, 5}, scr.zorder()[1]}
         }
       );
     }
     SUBCASE("Shift down") {
-      Window win2{&term, Rectangle{2, 0, 8, 6}, '.'_C};
+      Window win2{term, Rectangle{2, 0, 8, 6}, '.'_C};
       TestRtree(scr);
       dev.updates_.clear();
-      scr.above(&win2, &term.backdrop_);
+      scr.above(win2.element(), term.backdrop_.element());
       TestRtree(scr);
       auto expupdates2{
         Updates{
@@ -296,24 +299,24 @@ TEST_CASE("Surface") {
       std::ranges::sort(dev.updates_);
       CHECK_EQ(dev.updates_, expupdates2);
       CHECK_EQ(
-        scr.zorder()[1]->fragments,
+        scr.zorder()[1]->fragments_,
         vector<Fragment>{
           Fragment{Rectangle{2, 0, 8, 1}, scr.zorder()[1]},
           Fragment{Rectangle{2, 5, 8, 6}, scr.zorder()[1]}
         }
       );
       CHECK_EQ(
-        scr.zorder()[2]->fragments,
+        scr.zorder()[2]->fragments_,
         vector<Fragment>{
           Fragment{Rectangle{1, 1, 9, 5}, scr.zorder()[2]}
         }
       );
     }
     SUBCASE("Shift up") {
-      Window win2{&term, Rectangle{2, 0, 8, 6}, '.'_C};
+      Window win2{term, Rectangle{2, 0, 8, 6}, '.'_C};
       TestRtree(scr);
       dev.updates_.clear();
-      scr.below(&win1);
+      scr.below(win1.element());
       TestRtree(scr);
       auto expupdates2{
         Updates{
@@ -323,14 +326,14 @@ TEST_CASE("Surface") {
       std::ranges::sort(dev.updates_);
       CHECK_EQ(dev.updates_, expupdates2);
       CHECK_EQ(
-        scr.zorder()[1]->fragments,
+        scr.zorder()[1]->fragments_,
         vector<Fragment>{
           Fragment{Rectangle{2, 0, 8, 1}, scr.zorder()[1]},
           Fragment{Rectangle{2, 5, 8, 6}, scr.zorder()[1]}
         }
       );
       CHECK_EQ(
-        scr.zorder()[2]->fragments,
+        scr.zorder()[2]->fragments_,
         vector<Fragment>{
           Fragment{Rectangle{1, 1, 9, 5}, scr.zorder()[2]}
         }
