@@ -47,22 +47,22 @@ TEST_CASE("Terminal") {
     Window w1(&term, Rectangle{0, 0, 10, 4}, '1'_C);
     CHECK_EQ(string(term.display().size()), string(Vector{10, 4}));
     CHECK_EQ(string(term.desktop().text().size()), string(Vector{10, 4}));
-    CHECK_EQ(term.display().text_.repr(), Text("1111111111\n1111111111\n1111111111\n1111111111").repr());
+    CHECK_EQ(term.display().text().repr(), Text("1111111111\n1111111111\n1111111111\n1111111111").repr());
     SUBCASE("Delete window 2") {
       SUBCASE("Another window") {
         Window w2{&term, Rectangle{2, 2, 8, 6}, '2'_C};
         CHECK_EQ(string(term.display().size()), string(Vector{10, 6}));
         CHECK_EQ(string(term.desktop().text().size()), string(Vector{10, 6}));
-        CHECK_EQ(term.display().text_.repr(), Text("1111111111\n1111111111\n1122222211\n1122222211\n..222222..\n..222222..").repr());
+        CHECK_EQ(term.display().text().repr(), Text("1111111111\n1111111111\n1122222211\n1122222211\n..222222..\n..222222..").repr());
           SUBCASE("Move window 2") {
             w2.move(Rectangle{2, 2, 12, 7});
             CHECK_EQ(
-              term.display().text_.repr(),
+              term.display().text().repr(),
               Text("1111111111..\n1111111111..\n112222222222\n112222222222\n..2222222222\n..2222222222\n..2222222222").repr()
             );
           }
       }
-      CHECK_EQ(term.display().text_.repr(), Text("1111111111\n1111111111\n1111111111\n1111111111").repr()); // display contracted
+      CHECK_EQ(term.display().text().repr(), Text("1111111111\n1111111111\n1111111111\n1111111111").repr()); // display contracted
     }
   }
 }

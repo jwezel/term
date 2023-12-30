@@ -10,10 +10,11 @@ constexpr u8 EVENT_ID_SEED = xxh64::hash("EVENT_ID_SEED", sizeof "EVENT_ID_SEED"
 
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define CLASS_ID(NAME) \
-static u8 id() {return xxh64::hash(#NAME, sizeof #NAME, EVENT_ID_SEED);}; \
-virtual u8 vid() const {return id();} \
-static const char *classname() {return #NAME;} \
-virtual const char *vclassname() const {return classname();}
+public: \
+static auto id() -> u8 {return xxh64::hash(#NAME, sizeof #NAME, EVENT_ID_SEED);}; \
+virtual auto vid() const -> u8 {return id();} \
+static auto classname() -> const char * {return #NAME;} \
+virtual auto vclassname() const -> const char * {return classname();}
 
 struct Event
 {

@@ -41,24 +41,24 @@ TEST_CASE("Window") {
   Terminal term('.'_C, VectorMin, VectorMin, VectorMax, output->_fileno, input->_fileno);
   SUBCASE("Window") {
     auto w1 = Window(&term, Rectangle{0, 0, 10, 6}, Char{' ', jwezel::RgbWhite, jwezel::RgbBlue1});
-    auto t = Text("          \n          \n          \n          \n          \n          ", jwezel::RgbWhite, jwezel::RgbBlue1);
-    CHECK_EQ(term.display().text_, t);
+    auto tt = Text("          \n          \n          \n          \n          \n          ", jwezel::RgbWhite, jwezel::RgbBlue1);
+    CHECK_EQ(term.display().text(), tt);
     SUBCASE("Box") {
       w1.box();
-      t.withBox();
-      CHECK_EQ(term.display().text_, t);
+      tt.withBox();
+      CHECK_EQ(term.display().text(), tt);
       SUBCASE("Title") {
         w1.write(Vector{1, 0}, Text{"Title", jwezel::RgbRed, jwezel::RgbGray7, clear, mix});
-        t.patch(Text{"Title", jwezel::RgbRed, jwezel::RgbGray7, clear, mix}, Vector{1, 0});
-        CHECK_EQ(term.display().text_, t);
+        tt.patch(Text{"Title", jwezel::RgbRed, jwezel::RgbGray7, clear, mix}, Vector{1, 0});
+        CHECK_EQ(term.display().text(), tt);
         SUBCASE("Line") {
           w1.line(Line{Vector{0, 2}});
-          t.withLine(Line{Vector{0, 2}});
-          CHECK_EQ(term.display().text_, t);
+          tt.withLine(Line{Vector{0, 2}});
+          CHECK_EQ(term.display().text(), tt);
           SUBCASE("Fill") {
             w1.fill('.'_C, Rectangle{2, 3, 4, 4});
-            t.fill('.'_C, Rectangle{2, 3, 4, 4});
-            CHECK_EQ(term.display().text_, t);
+            tt.fill('.'_C, Rectangle{2, 3, 4, 4});
+            CHECK_EQ(term.display().text(), tt);
           }
         }
       }

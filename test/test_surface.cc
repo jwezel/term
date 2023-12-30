@@ -62,19 +62,19 @@ namespace doctest {
 } // namespace doctest
 
 namespace jwezel {
-  doctest::String toString(const Surface::Fragment &f) {
-    return doctest::String(string(f).c_str());
+  auto toString(const Surface::Fragment &f) -> doctest::String {
+    return {string(f).c_str()};
   }
-}
+} // namespace jwezel
 
 namespace jwezel {
-  doctest::String toString(const vector<Surface::Fragment> &f) {
+  auto toString(const vector<Surface::Fragment> &f) -> doctest::String {
     static auto delimiter{string(", ")};
     string lstr;
     std::ranges::copy(f | transform(str<Surface::Fragment>) | join_with(delimiter), back_inserter(lstr));
     return format("[{}]", lstr).c_str();
   }
-}
+} // namespace jwezel
 
 struct Device: jwezel::Device {
   void update(const Updates &updates) override {
@@ -96,9 +96,9 @@ struct Terminal: jwezel::TerminalInterface {
   auto operator=(Terminal &&) -> Terminal & = delete;
   void registerWindow(struct Window */*window*/) override {}
   auto screen() -> Surface & override { return screen_;}
-  auto expand(const Vector &) -> bool override {return false;}
+  auto expand(const Vector &/*size*/) -> bool override {return false;}
   auto contract() -> bool override {return false;}
-  void moveWindow(Window &, const Rectangle &) override {}
+  void moveWindow(Window &/*window*/, const Rectangle & /*area*/) override {}
 
   Device device_;
   Backdrop backdrop_;
@@ -107,8 +107,8 @@ struct Terminal: jwezel::TerminalInterface {
 
 // Test rtree: check whether all corners of all fragments can be found in rtree
 void TestRtree(const Surface &screen) {
-  for (const auto *element: screen.zorder) {
-    for (auto &f: element->fragments) {
+  for (const auto *element: screen.zorder()) {
+    for (const auto &f: element->fragments()) {
       const auto &a{f.area};
       CHECK_EQ(screen.find(a.position()), &f);
       if (a.x2() > a.x1()) {
@@ -142,7 +142,7 @@ TEST_CASE("Surface") {
   Terminal term{dev};
   Surface &scr{term.screen()};
   SUBCASE("Constructor") {
-    CHECK_EQ(scr.zorder.size(), 1);
+    CHECK_EQ(scr.zorder().size(), 1);
     TestRtree(scr);
   }
   SUBCASE("AddWindow") {
@@ -151,19 +151,19 @@ TEST_CASE("Surface") {
     SUBCASE("Window") {
       TestRtree(scr);
       auto expupdates{Updates{{Vector{1, 1}, Text("        \n        \n        \n        ")}}};
-      CHECK_EQ(&win1, scr.zorder[1]);
+      CHECK_EQ(&win1, scr.zorder()[1]);
       CHECK_EQ(dev.updates_, expupdates);
-      CHECK_EQ(scr.zorder.size(), 2);
+      CHECK_EQ(scr.zorder().size(), 2);
       REQUIRE_EQ(
-        scr.zorder[0]->fragments, vector<Surface::Fragment>{
-          Surface::Fragment{Rectangle{0, 0, DimHigh, 1}, scr.zorder[0]},
-          Surface::Fragment{Rectangle{0, 1, 1, 5}, scr.zorder[0]},
-          Surface::Fragment{Rectangle{9, 1, DimHigh, 5}, scr.zorder[0]},
-          Surface::Fragment{Rectangle{0, 5, DimHigh, DimHigh}, scr.zorder[0]}
+        scr.zorder()[0]->fragments(), vector<Surface::Fragment>{
+          Surface::Fragment{Rectangle{0, 0, DimHigh, 1}, scr.zorder()[0]},
+          Surface::Fragment{Rectangle{0, 1, 1, 5}, scr.zorder()[0]},
+          Surface::Fragment{Rectangle{9, 1, DimHigh, 5}, scr.zorder()[0]},
+          Surface::Fragment{Rectangle{0, 5, DimHigh, DimHigh}, scr.zorder()[0]}
         }
       );
-      CHECK_EQ(scr.zorder[1]->fragments, vector<Surface::Fragment>{Surface::Fragment{Rectangle{1, 1, 9, 5},scr.zorder[1]}});
-      CHECK_EQ(string(scr.zorder[1]->text()), "        \n        \n        \n        \n");
+      CHECK_EQ(scr.zorder()[1]->fragments(), vector<Surface::Fragment>{Surface::Fragment{Rectangle{1, 1, 9, 5},scr.zorder()[1]}});
+      CHECK_EQ(string(scr.zorder()[1]->text()), "        \n        \n        \n        \n");
     }
     SUBCASE("AddWindow below") {
       dev.updates_.clear();
@@ -174,33 +174,33 @@ TEST_CASE("Surface") {
       //   MESSAGE(f);
       // }
       REQUIRE_EQ(
-        scr.zorder[0]->fragments, vector<Surface::Fragment>{
-          Surface::Fragment{Rectangle{0, 0, 2, 1}, scr.zorder[0]},
-          Surface::Fragment{Rectangle{8, 0, DimHigh, 1}, scr.zorder[0]},
-          Surface::Fragment{Rectangle{0, 1, 1, 5}, scr.zorder[0]},
-          Surface::Fragment{Rectangle{9, 1, DimHigh, 5}, scr.zorder[0]},
-          Surface::Fragment{Rectangle{0, 5, 2, 6}, scr.zorder[0]},
-          Surface::Fragment{Rectangle{8, 5, DimHigh, 6}, scr.zorder[0]},
-          Surface::Fragment{Rectangle{0, 6, DimHigh, DimHigh}, scr.zorder[0]}
+        scr.zorder()[0]->fragments(), vector<Surface::Fragment>{
+          Surface::Fragment{Rectangle{0, 0, 2, 1}, scr.zorder()[0]},
+          Surface::Fragment{Rectangle{8, 0, DimHigh, 1}, scr.zorder()[0]},
+          Surface::Fragment{Rectangle{0, 1, 1, 5}, scr.zorder()[0]},
+          Surface::Fragment{Rectangle{9, 1, DimHigh, 5}, scr.zorder()[0]},
+          Surface::Fragment{Rectangle{0, 5, 2, 6}, scr.zorder()[0]},
+          Surface::Fragment{Rectangle{8, 5, DimHigh, 6}, scr.zorder()[0]},
+          Surface::Fragment{Rectangle{0, 6, DimHigh, DimHigh}, scr.zorder()[0]}
         }
       );
-      CHECK_EQ(scr.find(Vector{0, 0}), &term.backdrop_.fragments[0]);
-      CHECK_EQ(scr.find(Vector{1, 1}), &win1.fragments[0]);
-      CHECK_EQ(scr.find(Vector{8, 1}), &win1.fragments[0]);
-      CHECK_EQ(scr.find(Vector{2, 0}), &win2.fragments[0]);
-      CHECK_EQ(scr.find(Vector{2, 5}), &win2.fragments[1]);
+      CHECK_EQ(scr.find(Vector{0, 0}), &term.backdrop_.fragments()[0]);
+      CHECK_EQ(scr.find(Vector{1, 1}), &win1.fragments()[0]);
+      CHECK_EQ(scr.find(Vector{8, 1}), &win1.fragments()[0]);
+      CHECK_EQ(scr.find(Vector{2, 0}), &win2.fragments()[0]);
+      CHECK_EQ(scr.find(Vector{2, 5}), &win2.fragments()[1]);
       auto expupdates2{Updates{{Vector{2, 0}, Text("......")}, {Vector{2, 5}, Text("......")}}};
       CHECK_EQ(dev.updates_, expupdates2);
-      CHECK_EQ(scr.zorder.size(), 3);
-      CHECK_EQ(scr.zorder[1], &win2);
-      CHECK_EQ(scr.zorder[2], &win1);
+      CHECK_EQ(scr.zorder().size(), 3);
+      CHECK_EQ(scr.zorder()[1], &win2);
+      CHECK_EQ(scr.zorder()[2], &win1);
       CHECK_EQ(
-        scr.zorder[1]->fragments,
+        scr.zorder()[1]->fragments(),
         vector<Surface::Fragment>{
-          Surface::Fragment{Rectangle{2, 0, 8, 1}, scr.zorder[1]}, Surface::Fragment{Rectangle{2, 5, 8, 6}, scr.zorder[1]}
+          Surface::Fragment{Rectangle{2, 0, 8, 1}, scr.zorder()[1]}, Surface::Fragment{Rectangle{2, 5, 8, 6}, scr.zorder()[1]}
         }
       );
-      CHECK_EQ(scr.zorder[2]->fragments, vector<Surface::Fragment>{Surface::Fragment{Rectangle{1, 1, 9, 5}, scr.zorder[2]}});
+      CHECK_EQ(scr.zorder()[2]->fragments(), vector<Surface::Fragment>{Surface::Fragment{Rectangle{1, 1, 9, 5}, scr.zorder()[2]}});
       SUBCASE("ReshapeWindow") {
         dev.updates_.clear();
         scr.reshapeElement(&win2, Rectangle{4, 0, 10, 6});
@@ -219,11 +219,11 @@ TEST_CASE("Surface") {
           }
         );
         CHECK_EQ(
-          scr.zorder[1]->fragments,
+          scr.zorder()[1]->fragments(),
           vector<Surface::Fragment>{
-            Surface::Fragment{Rectangle{4, 0, 10, 1}, scr.zorder[1]},
-            Surface::Fragment{Rectangle{9, 1, 10, 5}, scr.zorder[1]},
-            Surface::Fragment{Rectangle{4, 5, 10, 6}, scr.zorder[1]}
+            Surface::Fragment{Rectangle{4, 0, 10, 1}, scr.zorder()[1]},
+            Surface::Fragment{Rectangle{9, 1, 10, 5}, scr.zorder()[1]},
+            Surface::Fragment{Rectangle{4, 5, 10, 6}, scr.zorder()[1]}
           }
         );
       }
@@ -272,12 +272,12 @@ TEST_CASE("Surface") {
       };
       std::ranges::sort(dev.updates_);
       CHECK_EQ(dev.updates_, expupdates2);
-      CHECK_EQ(scr.zorder.size(), 2);
-      CHECK_EQ(scr.zorder[1], &win1);
+      CHECK_EQ(scr.zorder().size(), 2);
+      CHECK_EQ(scr.zorder()[1], &win1);
       CHECK_EQ(
-        scr.zorder[1]->fragments,
+        scr.zorder()[1]->fragments(),
         vector<Surface::Fragment>{
-          Surface::Fragment{Rectangle{1, 1, 9, 5}, scr.zorder[1]}
+          Surface::Fragment{Rectangle{1, 1, 9, 5}, scr.zorder()[1]}
         }
       );
     }
@@ -295,16 +295,16 @@ TEST_CASE("Surface") {
       std::ranges::sort(dev.updates_);
       CHECK_EQ(dev.updates_, expupdates2);
       CHECK_EQ(
-        scr.zorder[1]->fragments,
+        scr.zorder()[1]->fragments(),
         vector<Surface::Fragment>{
-          Surface::Fragment{Rectangle{2, 0, 8, 1}, scr.zorder[1]},
-          Surface::Fragment{Rectangle{2, 5, 8, 6}, scr.zorder[1]}
+          Surface::Fragment{Rectangle{2, 0, 8, 1}, scr.zorder()[1]},
+          Surface::Fragment{Rectangle{2, 5, 8, 6}, scr.zorder()[1]}
         }
       );
       CHECK_EQ(
-        scr.zorder[2]->fragments,
+        scr.zorder()[2]->fragments(),
         vector<Surface::Fragment>{
-          Surface::Fragment{Rectangle{1, 1, 9, 5}, scr.zorder[2]}
+          Surface::Fragment{Rectangle{1, 1, 9, 5}, scr.zorder()[2]}
         }
       );
     }
@@ -322,16 +322,16 @@ TEST_CASE("Surface") {
       std::ranges::sort(dev.updates_);
       CHECK_EQ(dev.updates_, expupdates2);
       CHECK_EQ(
-        scr.zorder[1]->fragments,
+        scr.zorder()[1]->fragments(),
         vector<Surface::Fragment>{
-          Surface::Fragment{Rectangle{2, 0, 8, 1}, scr.zorder[1]},
-          Surface::Fragment{Rectangle{2, 5, 8, 6}, scr.zorder[1]}
+          Surface::Fragment{Rectangle{2, 0, 8, 1}, scr.zorder()[1]},
+          Surface::Fragment{Rectangle{2, 5, 8, 6}, scr.zorder()[1]}
         }
       );
       CHECK_EQ(
-        scr.zorder[2]->fragments,
+        scr.zorder()[2]->fragments(),
         vector<Surface::Fragment>{
-          Surface::Fragment{Rectangle{1, 1, 9, 5}, scr.zorder[2]}
+          Surface::Fragment{Rectangle{1, 1, 9, 5}, scr.zorder()[2]}
         }
       );
     }

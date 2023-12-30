@@ -330,8 +330,8 @@ auto loadKeyTranslations(const std::vector<pair<std::string, Unicode>> &translat
 //~Keyboard~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Keyboard::Keyboard(int device, const Vector &offset):
-keyPrefixes(loadKeyTranslations(keyTranslations)),
-fd(device),
+keyPrefixes_(loadKeyTranslations(keyTranslations)),
+fd_(device),
 displayOffset_(offset)
 {
   raw();
@@ -346,17 +346,17 @@ Keyboard::~Keyboard() {
 }
 
 void Keyboard::raw() {
-  if (bool(isatty(fd))) {
+  if (bool(isatty(fd_))) {
     termios old{};
-    if (!originalState) {
-      if (tcgetattr(fd, &old) != 0) {
+    if (!originalState_) {
+      if (tcgetattr(fd_, &old) != 0) {
         throw std::system_error(
           errno,
           std::system_category(),
-          format("Could not get terminal state for fd {}: {}", fd, strerror(errno) /*NOLINT*/)
+          format("Could not get terminal state for fd {}: {}", fd_, strerror(errno) /*NOLINT*/)
         );
       }
-      originalState.emplace(old);
+      originalState_.emplace(old);
     }
     termios new_{old};
     // NOLINTBEGIN(hicpp-signed-bitwise)
@@ -366,41 +366,41 @@ void Keyboard::raw() {
     new_.c_cflag = new_.c_cflag & ~(CSIZE | PARENB);
     new_.c_cflag = new_.c_cflag | CS8;
     // NOLINTEND(hicpp-signed-bitwise)
-    if (tcsetattr(fd, TCSANOW, &new_) != 0) {
+    if (tcsetattr(fd_, TCSANOW, &new_) != 0) {
       throw std::system_error(
-        errno, std::system_category(), format("Could not set terminal state for fd {}: {}", fd, std::strerror(errno)/*NOLINT*/)
+        errno, std::system_category(), format("Could not set terminal state for fd {}: {}", fd_, std::strerror(errno)/*NOLINT*/)
       );
     }
   }
 }
 
 void Keyboard::reset() {
-  if (originalState) {
-    if (tcsetattr(fd, TCSANOW, &originalState.value()) != 0) {
+  if (originalState_) {
+    if (tcsetattr(fd_, TCSANOW, &originalState_.value()) != 0) {
       throw std::system_error(
-        errno, std::system_category(), format("Could not set terminal state for fd {}: {}", fd, std::strerror(errno)/*NOLINT*/)
+        errno, std::system_category(), format("Could not set terminal state for fd {}: {}", fd_, std::strerror(errno)/*NOLINT*/)
       );
     }
   }
 }
 
-Unicode Keyboard::key() {
+auto Keyboard::key() -> Unicode {
   Unicode key{0};
-  if (!keyBuffer.empty()) {
-    key = keyBuffer.front();
-    keyBuffer.pop_front();
+  if (!keyBuffer_.empty()) {
+    key = keyBuffer_.front();
+    keyBuffer_.pop_front();
     return key;
   }
   char inputKey = 0;
-  auto *node{&keyPrefixes};
+  auto *node{&keyPrefixes_};
   // PrefixNode *previousNode;
   u32string inputBuffer;
   while (true) {
     ssize_t readLength = 0;
     steady_clock::duration readTime;
-    auto onSublevel{node != &keyPrefixes}; // If true expect more keys in quick succession
+    auto onSublevel{node != &keyPrefixes_}; // If true expect more keys in quick succession
     if (onSublevel) {
-      auto st{fcntl(fd, F_SETFL, fcntl(0, F_GETFL) | O_NONBLOCK)/*NOLINT*/};
+      auto st{fcntl(fd_, F_SETFL, fcntl(0, F_GETFL) | O_NONBLOCK)/*NOLINT*/};
       if (st != 0) {
         cerr << format("fcntl(F_SETFL, O_NONBLOCK) returned {}\n", st);
       }
@@ -409,10 +409,10 @@ Unicode Keyboard::key() {
     auto attempt{0};
     // Handle reattempts and simulated delays
     while (true) {
-      readLength = read(fd, &inputKey, 1);
+      readLength = read(fd_, &inputKey, 1);
       if (readLength < 0) {
         if (errno != EAGAIN) {
-          throw std::system_error(errno, std::system_category(), format("Could not get key: {}", fd, std::strerror(errno)/*NOLINT*/));
+          throw std::system_error(errno, std::system_category(), format("Could not get key: {}", fd_, std::strerror(errno)/*NOLINT*/));
         }
         // Wait twice for a key, then give up
         if (attempt++ > 1) {
@@ -428,7 +428,7 @@ Unicode Keyboard::key() {
     };
     readTime = steady_clock::now() - start;
     if (onSublevel) {
-      auto st{fcntl(fd, F_SETFL, fcntl(0, F_GETFL) & ~O_NONBLOCK)/*NOLINT*/};
+      auto st{fcntl(fd_, F_SETFL, fcntl(0, F_GETFL) & ~O_NONBLOCK)/*NOLINT*/};
       if (st != 0) {
         cerr << format("fcntl(F_SETFL, 0) returned {}\n", st);
       }
@@ -440,20 +440,20 @@ Unicode Keyboard::key() {
     }
     auto subnodeIt{node->nodes.find(inputKey)};
     if (onSublevel and readTime > 2ms or subnodeIt == node->nodes.end()) {
-      copy(inputBuffer.begin(), inputBuffer.end(), back_inserter(keyBuffer));
+      copy(inputBuffer.begin(), inputBuffer.end(), back_inserter(keyBuffer_));
       break;
     }
     node = subnodeIt->second.get();
     if (node->key != Key::None) {
-      keyBuffer.push_back(node->key);
+      keyBuffer_.push_back(node->key);
       break;
     }
   }
-  if (keyBuffer.empty()) {
+  if (keyBuffer_.empty()) {
     throw runtime_error("Key buffer is empty");
   }
-  key = keyBuffer.front();
-  keyBuffer.pop_front();
+  key = keyBuffer_.front();
+  keyBuffer_.pop_front();
   return key;
 }
 
@@ -468,7 +468,7 @@ auto Keyboard::mouseReport() -> tuple<MouseButton, MouseModifiers, u2, u2, Mouse
     if (key_ > MaxAscii) {
       throw range_error("Got character > 127");
     }
-    report += key_;
+    report += static_cast<string::value_type>(key_);
   } while (key_ != 'M' and key_ != 'm');
   smatch subMatch;
   if (regex_match(report, subMatch, reportPattern)) {
@@ -476,12 +476,12 @@ auto Keyboard::mouseReport() -> tuple<MouseButton, MouseModifiers, u2, u2, Mouse
     return {
       static_cast<MouseButton>((value1 & 3U) + 1U),
       MouseModifiers{
-        static_cast<u1>((value1 & 4U) >> 2),
-        static_cast<u1>((value1 & 16U) >> 4),
-        static_cast<u1>((value1 & 8U) >> 3),
-        static_cast<u1>((value1 & 32U) >> 5),
-        static_cast<u1>((value1 & 64U) >> 6),
-        static_cast<u1>((value1 & 128U) >> 7),
+        static_cast<u1>((value1 >> 2U) & 1U),
+        static_cast<u1>((value1 >> 4U) & 1U),
+        static_cast<u1>((value1 >> 3U) & 1U),
+        static_cast<u1>((value1 >> 5U) & 1U),
+        static_cast<u1>((value1 >> 6U) & 1U),
+        static_cast<u1>((value1 >> 7U) & 1U),
       },
       stoi(subMatch[2].str()) - 1 - displayOffset_.x(),
       u2(stoi(subMatch[3].str()) - 1 - displayOffset_.y()),

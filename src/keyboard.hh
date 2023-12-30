@@ -185,9 +185,11 @@ struct KeyEvent: public InputEvent {
   [[nodiscard]] explicit KeyEvent(Unicode key):
     key_(key) {}
 
-  [[nodiscard]] inline auto key() const {return key_;}
+  [[nodiscard]] inline auto key() const -> auto {return key_;}
 
+  private:
   Unicode key_;
+
   CLASS_ID(KeyEvent);
 };
 
@@ -210,11 +212,13 @@ struct MouseButtonEvent: MouseEvent {
 
   [[nodiscard]] inline auto action() const {return action_;}
 
+  private:
   MouseButton button_;
   MouseModifiers modifiers_;
   u2 column_;
   u2 line_;
   MouseAction action_;
+
   CLASS_ID(MouseButtonEvent);
 };
 
@@ -225,12 +229,22 @@ struct MouseMoveEvent: MouseEvent {
 
   [[nodiscard]] inline auto line() const {return line_;}
 
+  private:
   u2 column_;
   u2 line_;
+
   CLASS_ID(MouseMoveEvent);
 };
 
 struct Keyboard {
+
+  ///
+  /// Key prefix tree node
+  struct PrefixNode {
+    Unicode key = Key::None;
+    std::map<char, unique_ptr<PrefixNode>> nodes{};
+  };
+
   ///
   /// Constructor
   ///
@@ -261,7 +275,7 @@ struct Keyboard {
   /// Get key
   ///
   /// @return     key
-  auto key() -> Unicode;
+  [[nodiscard]] auto key() -> Unicode;
 
   ///
   /// Mouse report
@@ -269,31 +283,22 @@ struct Keyboard {
   /// @return     Terminal mouse event data
   auto mouseReport() -> tuple<MouseButton, MouseModifiers, u2, u2, MouseAction>;
 
+  [[nodiscard]] auto keyPrefixes() const -> const PrefixNode & {return keyPrefixes_;}
   ///
   /// Get input event
   ///
   /// @return     The input event.
-  auto event() -> InputEvent *;
+  [[nodiscard]] auto event() -> InputEvent *;
 
   inline void displayOffset(const Vector &offset) {
     displayOffset_ = offset;
   }
 
-  ///
-  /// Key prefix tree node
-  struct PrefixNode {
-    Unicode key = Key::None;
-    std::map<char, unique_ptr<PrefixNode>> nodes{};
-  };
-
-  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
-  std::deque<Unicode> keyBuffer; //< Key buffer
-  PrefixNode keyPrefixes; //< Key prefix tree
-  int fd; //< Terminal file descriptor
-  std::optional<termios> originalState; //< Original terminal state
-  // NOLINTEND(misc-non-private-member-variables-in-classes)
-
   private:
+  std::deque<Unicode> keyBuffer_; //< Key buffer
+  PrefixNode keyPrefixes_; //< Key prefix tree
+  int fd_; //< Terminal file descriptor
+  std::optional<termios> originalState_; //< Original terminal state
   Vector displayOffset_;
 };
 

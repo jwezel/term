@@ -64,9 +64,9 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
   ws[cw]->write(Vector{1, 0}, Text(format("Window {}", ws.size()), RgbRed, RgbGray7, bold, mix));
   term.desktop().write(Vector{0, 0}, Text("Desktop", RgbWhite, RgbNone, {}, mix));
   while (true) {
-    auto event{term.event()};
+    auto *event{term.event()};
     if (event->vid() == jwezel::KeyEvent::id()) {
-      auto kbEvent{dynamic_cast<jwezel::KeyEvent *>(event)};
+      auto *kbEvent{dynamic_cast<jwezel::KeyEvent *>(event)};
       switch (kbEvent->key()) {
 
         case Up:
@@ -168,8 +168,9 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
         case PageUp:
         ws[cw]->write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray2, bold, mix));
         cw = (cw - 1);
-        if (cw >= ws.size())
+        if (cw >= ws.size()) {
           cw = ws.size() - 1;
+        }
         ws[cw]->write(Vector{1, 0}, Text(format("Window {}", cw + 1), RgbRed, RgbGray7, bold, mix));
         break;
 
@@ -177,7 +178,7 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
         ws.erase(ws.begin() + cw);
         if (cw >= ws.size()) {
           if (cw-- == 0) {
-            if (ws.size()) {
+            if (!ws.empty()) {
               ++cw;
             } else {
               goto end;
@@ -207,7 +208,7 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
         break;
       }
     } else if (event->vid() == jwezel::MouseButtonEvent::id()) {
-      auto mbEvent{dynamic_cast<jwezel::MouseButtonEvent *>(event)};
+      auto *mbEvent{dynamic_cast<jwezel::MouseButtonEvent *>(event)};
       static vector<string> mouseEvent{
         "Nothing", "Mouse button 1 clicked", "Mouse Button 2 clicked", "Mouse button 3 clicked", "Mouse moved"
       };
@@ -232,7 +233,7 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
         )
       );
     } else if (event->vid() == jwezel::MouseMoveEvent::id()) {
-      auto mbEvent{dynamic_cast<jwezel::MouseMoveEvent *>(event)};
+      auto *mbEvent{dynamic_cast<jwezel::MouseMoveEvent *>(event)};
       ws[0]->write(
         Vector{1, 1},
         format(

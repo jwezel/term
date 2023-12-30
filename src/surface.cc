@@ -28,7 +28,7 @@ namespace
 /// @param      fragments1  The fragments 1
 /// @param[in]  fragments2  The fragments 2
 void split(const Rectangle & area, vector<Surface::Fragment> &fragments1, const vector<Surface::Fragment> &fragments2) {
-  auto element{fragments1[0].element};
+  auto *element{fragments1[0].element};
   for (const auto &fragment2: fragments2) {
     if (area.intersects(fragment2.area)) {
       vector<Surface::Fragment> fragments;
@@ -45,7 +45,7 @@ void split(const Rectangle & area, vector<Surface::Fragment> &fragments1, const 
 }
 
 void cover(Surface::Element &element1, const Surface::Element &element2) {
-  split(element1.area(), element1.fragments, element2.fragments);
+  split(element1.area(), element1.fragments(), element2.fragments());
 }
 
 } // namespace
@@ -75,7 +75,7 @@ surface_{surface}
 
 void Surface::Element::update(const vector<Rectangle> &areas) {
   vector<Fragment> updates;
-  for (const auto &fragment: fragments) {
+  for (const auto &fragment: fragments_) {
     for (const auto &area_: areas) {
       const auto update_{fragment.area & area_ + area().position()};
       if (update_) {
@@ -94,28 +94,28 @@ Surface::Fragment::operator string() const {
 Surface::Surface(Device *device, initializer_list<Element *> initializer):
 device_{device}
 {
-  for (auto e: initializer) {
+  for (auto *e: initializer) {
     addElement(e);
   }
 }
 
 void Surface::removeRtreeFragments(Surface::Element &element) {
-  for (auto &fragment: element.fragments) {
+  for (auto &fragment: element.fragments()) {
     rtree.remove(std::make_pair(fragment.area, &fragment));
   }
 }
 
 void Surface::insertRtreeFragments(Surface::Element &element) {
-  for (auto &fragment: element.fragments) {
+  for (auto &fragment: element.fragments()) {
     rtree.insert(std::make_pair(fragment.area, &fragment));
   }
 }
 
 void Surface::cover(int pos) {
-  auto element{zorder[pos]};
-  element->fragments = {Surface::Fragment{element->area(), element}};
-  for (unsigned j = pos + 1; j < zorder.size(); ++j) {
-    jwezel::cover(*element, *zorder[j]);
+  auto *element{zorder_[pos]};
+  element->fragments_ = {Surface::Fragment{element->area(), element}};
+  for (unsigned j = pos + 1; j < zorder_.size(); ++j) {
+    jwezel::cover(*element, *zorder_[j]);
   }
 }
 
@@ -123,15 +123,15 @@ void Surface::addElement(Surface::Element *element, Surface::Element *below) {
   // Add element to surface
   const auto insertPos =
     below?
-      std::find(zorder.begin(), zorder.end(), below)
+      std::find(zorder_.begin(), zorder_.end(), below)
     :
-      zorder.end();
-  const auto ze = std::distance(zorder.begin(), zorder.insert(insertPos, element));
+      zorder_.end();
+  const auto ze = std::distance(zorder_.begin(), zorder_.insert(insertPos, element));
   // Create own fragments from overlaying fragments when inserting it below the top
   cover(ze);
   // Create fragments of all elements overlayed by this
   for (auto z = ze - 1; z >= 0; --z) {
-    auto * const elementBelow = zorder[z];
+    auto * const elementBelow = zorder_[z];
     if (elementBelow->area().intersects(element->area())) {
       removeRtreeFragments(*elementBelow);
       jwezel::cover(*elementBelow, *element);
@@ -141,37 +141,37 @@ void Surface::addElement(Surface::Element *element, Surface::Element *below) {
   // TODO(j): Find a better way to test for the backdrop. Creating a device update
   // for the backdrop is not necessary and creates problems
   if (ze) {
-    device_->update(SurfaceUpdates(element->fragments));
+    device_->update(SurfaceUpdates(element->fragments_));
   }
   insertRtreeFragments(*element);
 }
 
-int Surface::position(Element *element, int default_) {
+auto Surface::position(Element *element, int default_) -> int {
   if (!element) {
     if (default_ == -1) {
-      return zorder.size();
+      return zorder_.size();
     }
     return default_;
   }
-  const auto zit{std::find(zorder.begin(), zorder.end(), element)};
-  if (zit == zorder.end()) {
+  const auto zit{std::find(zorder_.begin(), zorder_.end(), element)};
+  if (zit == zorder_.end()) {
     throw domain_error(format("Element {} not found in zorder\n", static_cast<const void*>(element)));
   }
-  return std::distance(zorder.begin(), zit);
+  return std::distance(zorder_.begin(), zit);
 }
 
 void Surface::uncover(int begin, int end) {
   vector<Fragment> updates;
-  auto element{zorder[begin]};
+  auto *element{zorder_[begin]};
   for (auto z1 = begin - 1; z1 >= end; --z1) {
-    if (zorder[z1]->area().intersects(element->area())) {
-      Element * const zelement = zorder[z1];
+    if (zorder_[z1]->area().intersects(element->area())) {
+      Element * const zelement = zorder_[z1];
       removeRtreeFragments(*zelement);
       cover(z1);
       insertRtreeFragments(*zelement);
       // Add surface updates for these fragments
       std::ranges::copy(
-        zelement->fragments |
+        zelement->fragments_ |
         transform([element](const Surface::Fragment &f) {return f.area & element->area();}) |
         filter([](const std::optional<Rectangle> &r) {return r.has_value();}) |
         transform([zelement](const std::optional<Rectangle> &r){return Surface::Fragment{r.value(), zelement};}),
@@ -189,17 +189,17 @@ void Surface::deleteElement(Element *element, Element *destination) {
   const auto zb{position(destination, 0)};
   // Remove element from surface
   removeRtreeFragments(*element);
-  zorder.erase(zorder.begin() + ze);
+  zorder_.erase(zorder_.begin() + ze);
   // Recreate fragments covered by removed element
   for (auto z1 = ze - 1; z1 >= zb; --z1) {
-    Element * const zelement = zorder[z1];
+    Element * const zelement = zorder_[z1];
     if (zelement->area().intersects(element->area())) {
       removeRtreeFragments(*zelement);
       cover(z1);
       insertRtreeFragments(*zelement);
       // Add surface updates for these fragments
       std::ranges::copy(
-        zelement->fragments |
+        zelement->fragments_ |
         transform([element](const Surface::Fragment &f) {return f.area & element->area();}) |
         filter([](const std::optional<Rectangle> &r) {return r.has_value();}) |
         transform([zelement](const std::optional<Rectangle> &r){return Surface::Fragment{r.value(), zelement};}),
@@ -213,11 +213,11 @@ void Surface::deleteElement(Element *element, Element *destination) {
 void Surface::reshapeElement(Element *element, const Rectangle &area) { //NOLINT(readability-function-cognitive-complexity)
   vector<Fragment> updates;
   if (element->area() != area) {
-    const auto zpos = std::find(zorder.begin(), zorder.end(), element);
-    if (zpos == zorder.end()) {
+    const auto zpos = std::find(zorder_.begin(), zorder_.end(), element);
+    if (zpos == zorder_.end()) {
       throw range_error(format("Element {} not found", static_cast<void*>(element)));
     }
-    const auto ze = std::distance(zorder.begin(), zpos);
+    const auto ze = std::distance(zorder_.begin(), zpos);
     if (ze == 0) {
       throw logic_error("Lowest element must be the 'backdrop', which must not be moved");
     }
@@ -227,14 +227,14 @@ void Surface::reshapeElement(Element *element, const Rectangle &area) { //NOLINT
     element->moveEvent(area);
     // Recreate fragments
     for (auto j = ze; j >= 0; --j) {
-      auto * const element_ = zorder[j];
+      auto * const element_ = zorder_[j];
       if (element_->area().intersects(searchArea)) {
         removeRtreeFragments(*element_);
         // Create fragments from elements on top of it
         cover(j);
         insertRtreeFragments(*element_);
         // Surface update fragments
-        for (const auto &fragment: element_->fragments) {
+        for (const auto &fragment: element_->fragments_) {
           for (const auto &damageArea: damageAreas) {
             auto const intersection = fragment.area & damageArea;
             if (intersection) {
@@ -252,22 +252,22 @@ void Surface::reorder(int source, int destination) {
   vector<Fragment> updates;
   if (destination < source) {
     // Move down
-    auto element{zorder[source]};
-    std::shift_right(zorder.begin() + destination, zorder.begin() + source + 1, 1);
-    zorder[destination] = element;
-    auto const searchArea = zorder[destination]->area();
+    auto *element{zorder_[source]};
+    std::shift_right(zorder_.begin() + destination, zorder_.begin() + source + 1, 1);
+    zorder_[destination] = element;
+    auto const searchArea = zorder_[destination]->area();
     // Recreate fragments
     for (auto j = source; j >= destination; --j) {
-      auto * const element_ = zorder[j];
+      auto * const element_ = zorder_[j];
       auto elementIntersection{element_->area() & searchArea};
       if (elementIntersection) {
         // Create fragments from elements on top of it
         removeRtreeFragments(*element_);
         cover(j);
         insertRtreeFragments(*element_);
-        if (element_ != zorder[destination]) {
+        if (element_ != zorder_[destination]) {
           // Surface update fragments
-          for (const auto &fragment: element_->fragments) {
+          for (const auto &fragment: element_->fragments_) {
             auto const intersection = fragment.area & elementIntersection.value();
             if (intersection) {
               updates.emplace_back(intersection.value(), element_);
@@ -278,22 +278,22 @@ void Surface::reorder(int source, int destination) {
     }
   } else {
     // Move up
-    auto element{zorder[source]};
-    std::shift_left(zorder.begin() + source, zorder.begin() + destination--, 1);
-    zorder[destination] = element;
-    auto oldFragments = element->fragments;
-    auto const searchArea = zorder[destination]->area();
+    auto *element{zorder_[source]};
+    std::shift_left(zorder_.begin() + source, zorder_.begin() + destination--, 1);
+    zorder_[destination] = element;
+    auto oldFragments = element->fragments_;
+    auto const searchArea = zorder_[destination]->area();
     for (auto j = destination; j >= source; --j) {
-      auto * const element_ = zorder[j];
+      auto * const element_ = zorder_[j];
       auto elementIntersection{element_->area() & searchArea};
       if (elementIntersection) {
         // Create fragments from elements on top of it
         removeRtreeFragments(*element_);
         cover(j);
         insertRtreeFragments(*element_);
-        if (element_ != zorder[destination]) {
+        if (element_ != zorder_[destination]) {
           // Surface update fragments
-          for (const auto &fragment: element_->fragments) {
+          for (const auto &fragment: element_->fragments_) {
             auto const intersection = fragment.area & elementIntersection.value();
             if (intersection) {
               updates.emplace_back(intersection.value(), element_);
@@ -303,7 +303,7 @@ void Surface::reorder(int source, int destination) {
       }
     }
     // Surface updates
-    updates = element->fragments;
+    updates = element->fragments_;
     split(element->area(), updates, oldFragments);
   }
   device_->update(SurfaceUpdates(updates));
@@ -324,7 +324,7 @@ void Surface::below(Surface::Element * element, Surface::Element * destination) 
 auto Surface::minSize(const Element *exclude) const -> Vector {
   Vector result{0, 0};
   bool consider{false};
-  for (auto *const element: zorder) {
+  for (auto *const element: zorder_) {
     if (consider) {
       result = max(result, element->area().position2());
     }

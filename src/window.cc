@@ -10,7 +10,7 @@ namespace jwezel {
 
 using std::format;
 
-using std::cerr, std::endl;
+using std::cerr;
 
 BaseWindow::BaseWindow(TerminalInterface *terminal, const Rectangle &area, const Char &background):
 Surface::Element(&terminal->screen(), area),
@@ -51,10 +51,10 @@ BaseWindow{terminal, area, background}
 
 Window::~Window() {
   try {
-    surface_->deleteElement(this);
+    surface()->deleteElement(this);
     terminal()->contract();
   } catch (std::exception & error) {
-    cerr << error.what() << endl;
+    cerr << error.what() << '\n';
   }
 }
 
@@ -89,32 +89,32 @@ auto Window::box(const Box &box) -> Window & {
 
 void Window::move(const Rectangle &area) {
   terminal()->moveWindow(*this, area);
-  surface_->reshapeElement(this, area);
+  surface()->reshapeElement(this, area);
 }
 
-bool Window::moveEvent(const Rectangle &area) {
+auto Window::moveEvent(const Rectangle &area) -> bool {
   position(area);
   text_.resize(area.size(), background());
   return true;
 }
 
-bool Window::above(Window *window) {
-  surface_->above(this, window? window: surface_->zorder[surface_->position(this) + 1]);
+auto Window::above(Window *window) -> bool {
+  surface()->above(this, window? window: surface()->zorder()[surface()->position(this) + 1]);
   return true;
 }
 
-bool Window::below(Window *window) {
-  surface_->below(this, window? window: surface_->zorder[surface_->position(this) - 1]);
+auto Window::below(Window *window) -> bool {
+  surface()->below(this, window? window: surface()->zorder()[surface()->position(this) - 1]);
   return true;
 }
 
-bool Window::above(int position) {
-  surface_->above(this, surface_->zorder[position < 0? position + surface_->zorder.size(): position]);
+auto Window::above(int position) -> bool {
+  surface()->above(this, surface()->zorder()[position < 0? position + surface()->zorder().size(): position]);
   return true;
 }
 
-bool Window::below(int position) {
-  surface_->below(this, surface_->zorder[position < 0? position + surface_->zorder.size(): position]);
+auto Window::below(int position) -> bool {
+  surface()->below(this, surface()->zorder()[position < 0? position + surface()->zorder().size(): position]);
   return true;
 }
 

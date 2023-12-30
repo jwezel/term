@@ -228,7 +228,7 @@ void Display::resize(const Vector &size) {
   text_.resize(min(maxSize_, size), Null);
 }
 
-void Display::mouseMode(MouseMode mode) {
+void Display::mouseMode(MouseMode mode) const {
   static const array<string, 5> sequence{
     "\x1b[?9l\x1b[?1000l\x1b[?1002l\x1b[?1003l",
     "\x1b[?9h\x1b[?1006h",
@@ -236,7 +236,7 @@ void Display::mouseMode(MouseMode mode) {
     "\x1b[?1002h\x1b[?1006h",
     "\x1b[?1003h\x1b[?1006h"
   };
-  write(sequence[static_cast<int>(mode)]);
+  write(sequence[static_cast<int>(mode)]); // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
 }
 
 } // namespace jwezel

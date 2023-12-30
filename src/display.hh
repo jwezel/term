@@ -128,11 +128,13 @@ struct Display: Device {
   /// Get "physical" terminal size
   auto terminalSize() -> Vector;
 
-  void mouseMode(MouseMode mode);
+  void mouseMode(MouseMode mode) const;
 
   [[nodiscard]] auto maxSize() const {return maxSize_;}
 
-  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
+  [[nodiscard]] auto text() const {return text_;}
+
+  private:
   Keyboard &keyboard_;                //< Keyboard
   int output_;                        //< Output file descriptor
   Vector cursor_;                     //< Current cursor position
@@ -143,7 +145,6 @@ struct Display: Device {
   Vector position_;                   //< Display position
   Vector maxSize_;                    //< Maximum display size
   Text text_;                         //< Display text
-  // NOLINTEND(misc-non-private-member-variables-in-classes)
 };
 
 } // namespace jwezel

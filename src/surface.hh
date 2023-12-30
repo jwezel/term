@@ -5,12 +5,12 @@
 #include "text.hh"
 #include "update.hh"
 
-#include <initializer_list>
-#include <boost/geometry/geometries/point.hpp>
 #include <boost/geometry/geometries/box.hpp>
-#include <boost/geometry/index/rtree.hpp>
-#include <boost/geometry/geometries/register/point.hpp>
+#include <boost/geometry/geometries/point.hpp>
 #include <boost/geometry/geometries/register/box.hpp>
+#include <boost/geometry/geometries/register/point.hpp>
+#include <boost/geometry/index/rtree.hpp>
+#include <initializer_list>
 
 BOOST_GEOMETRY_REGISTER_POINT_2D(jwezel::Vector, jwezel::Dim, cs::cartesian, x(), y());
 BOOST_GEOMETRY_REGISTER_BOX_2D_4VALUES(jwezel::Rectangle, jwezel::Vector, x1(), y1(), x2(), y2());
@@ -31,7 +31,7 @@ struct Surface {
 
     explicit operator string() const;
 
-    bool operator ==(const Surface::Fragment &other) const = default;
+    auto operator ==(const Surface::Fragment &other) const -> bool = default;
 
     // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
     Rectangle area;
@@ -72,12 +72,20 @@ struct Surface {
     /// Move element
     ///
     /// @param[in]  area  The area
-    virtual bool moveEvent(const Rectangle &area) = 0;
+    virtual auto moveEvent(const Rectangle &area) -> bool = 0;
 
     virtual void update(const vector<Rectangle> &areas);
 
-    vector<Fragment> fragments;
+    [[nodiscard]] auto fragments() -> auto & {return fragments_;}
+
+    [[nodiscard]] auto fragments() const -> const auto & {return fragments_;}
+
+    [[nodiscard]] auto surface() const -> auto *{return surface_;}
+
+    private:
+    vector<Fragment> fragments_;
     Surface *surface_{0};
+    friend struct Surface;
   };
 
   Surface() = default;
@@ -106,13 +114,11 @@ struct Surface {
   /// @return     Minimum size
   auto minSize(const Element *exclude=0) const -> Vector;
 
-  auto find(const Vector &position) const -> Fragment *;
+  [[nodiscard]] auto find(const Vector &position) const -> Fragment *;
 
-  int position(Element *element, int default_=-1);
+  auto position(Element *element, int default_=-1) -> int;
 
-  // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
-  vector<Element *> zorder;
-  // NOLINTEND(misc-non-private-member-variables-in-classes)
+  [[nodiscard]] auto zorder() const -> const auto & {return zorder_;}
   private:
 
   void reorder(int source, int destination);
@@ -121,8 +127,9 @@ struct Surface {
 
   void uncover(int begin, int end);
 
-  typedef std::pair<Rectangle, Surface::Fragment *> RtreeEntry;
+  using RtreeEntry = std::pair<Rectangle, Surface::Fragment *>;
 
+  vector<Element *> zorder_;
   Device *device_{};
   boost::geometry::index::rtree<RtreeEntry, boost::geometry::index::quadratic<16>> rtree;
 };

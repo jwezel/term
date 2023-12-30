@@ -36,9 +36,9 @@ struct BaseWindow: Surface::Element {
 
   void position(const Rectangle &area);
 
-  virtual inline bool moveEvent(const Rectangle &) override {return true;}
+  inline auto moveEvent(const Rectangle &/*area*/) -> bool override {return true;}
 
-  virtual inline bool deleteEvent() {return true;}
+  virtual inline auto deleteEvent() -> bool {return true;}
 
   [[nodiscard]] inline auto background() const {return background_;}
 
@@ -173,15 +173,15 @@ struct Window: public BaseWindow {
   /// @param[in]  area  The area
   void move(const Rectangle &area);
 
-  bool moveEvent(const Rectangle &) override;
+  auto moveEvent(const Rectangle &/*area*/) -> bool override;
 
-  bool above(Window *window=0);
+  auto above(Window *window=0) -> bool;
 
-  bool below(Window *window=0);
+  auto below(Window *window=0) -> bool;
 
-  bool above(int position=0);
+  auto above(int position=0) -> bool;
 
-  bool below(int position=-1);
+  auto below(int position=-1) -> bool;
 
   ///
   /// Get window area

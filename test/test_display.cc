@@ -34,6 +34,7 @@ using
 // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
 // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
 // NOLINTBEGIN(readability-magic-numbers)
+// NOLINTBEGIN(misc-use-anonymous-namespace)
 
 static const auto BufferSize{2048};
 
@@ -96,7 +97,7 @@ TEST_CASE("Display") {
       disp.resize(Vector{10, 4});
       disp.update(Vector{0, 0}, Text("::::::::::\n::::::::::\n::::::::::\n::::::::::"));
       disp.update(Vector{1, 1}, Text("++++++++\n++++++++"));
-      CHECK_EQ(disp.text_.repr(), Text("::::::::::\n:++++++++:\n:++++++++:\n::::::::::").repr());
+      CHECK_EQ(disp.text().repr(), Text("::::::::::\n:++++++++:\n:++++++++:\n::::::::::").repr());
     }
     SUBCASE("Resize") {
       disp.resize(Vector{10, 6});
@@ -126,6 +127,8 @@ TEST_CASE("Optional tests" * doctest::skip(true)) {
   }
 }
 
+// NOLINTBEGIN(hicpp-avoid-c-arrays)
+// NOLINTBEGIN(misc-use-anonymous-namespace)
 // NOLINTEND(readability-magic-numbers)
 // NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
 // NOLINTEND(cppcoreguidelines-pro-bounds-array-to-pointer-decay)

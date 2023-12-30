@@ -5,17 +5,18 @@ Checks: >
   -fuchsia-*,
   -altera-*,
   -bugprone-easily-swappable-parameters,
-  -readability-isolate-declaration,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-owning-memory,
   -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -google-default-arguments,
   -google-readability-casting,
   -google-runtime-int,
   -google-runtime-operator,
-  -google-default-arguments,
-  -modernize-use-nullptr,
+  -hicpp-signed-bitwise,
   -hicpp-use-nullptr,
-  -cppcoreguidelines-owning-memory,
-  -cppcoreguidelines-avoid-do-while,
-  -readability-function-cognitive-complexity
+  -modernize-use-nullptr,
+  -readability-function-cognitive-complexity,
+  -readability-isolate-declaration
 CheckOptions:
   readability-identifier-length.MinimumVariableNameLength: 2
   readability-identifier-length.IgnoredVariableNames: '_.*'

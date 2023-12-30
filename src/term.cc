@@ -49,7 +49,7 @@ auto Terminal::event() -> Event * {
 
 void Terminal::run() {
   while (running_) {
-    keyboard_.event();
+    (void)keyboard_.event();
   }
 }
 
@@ -57,7 +57,7 @@ auto Terminal::expand(const Vector &size) -> bool {
   if (!expand_) {
     return false;
   }
-  const auto size_ = max(min(display_.maxSize_, size), display_.size());
+  const auto size_ = max(min(display_.maxSize(), size), display_.size());
   if (size_ != display_.size()) {
     display_.resize(size_);
     screen_.reshapeElement(&desktop_, Rectangle{Vector{0, 0}, size_});

@@ -4,6 +4,8 @@
 
 namespace jwezel {
 
+///
+/// Interface for a device
 struct Device {
 
   Device() = default;
@@ -12,12 +14,27 @@ struct Device {
 
   Device(Device &&) = delete;
 
-  auto operator=(const Device &) -> Device & = default;
-
   auto operator=(Device &&) -> Device & = delete;
 
+  ///
+  /// Assignment operator
+  ///
+  /// @param[in]  source  The source
+  ///
+  /// @return     The result of the assignment
+  auto operator=(const Device &source) -> Device & = default;
+
+
+  ///
+  /// Destroy the device
   virtual ~Device() = default;
 
+  ///
+  /// Updates the given updates.
+  ///
+  /// Write the updates to the device
+  ///
+  /// @param[in]  updates  The updates
   virtual void update(const jwezel::Updates &updates) = 0;
 };
 
