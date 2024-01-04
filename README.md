@@ -4,7 +4,7 @@ Term - Terminal window and user interface library for C++
 Term is (yet another) library for creating windowed user interfaces on terminals.
 
 [![License](https://img.shields.io/badge/License-Apache-lightgray.svg?style=plastic)](https://www.apache.org/licenses/LICENSE-2.0.txt)
-
+[![ci_meson](https://github.com/jwezel/term/actions/workflows/ci-meson.yml/badge.svg)](https://github.com/jwezel/term/actions/workflows/ci-meson.yml)
 
 Table of contents
 -----------------
