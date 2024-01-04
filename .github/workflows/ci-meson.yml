@@ -2,31 +2,44 @@ name: ci_meson
 
 on:
   push:
-    paths:
-      - "**.c"
-      - "**.h"
+    branches: [ "master" ]
   pull_request:
-    paths:
-      - "**.c"
-      - "**.h"
+    branches: [ "master" ]
 
 jobs:
 
   linux:
-    runs-on: ubuntu-latest
+    runs-on:
+      - ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
-    - uses: actions/setup-python@v1
+    - name: Cache Conan packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.conan2
+        key: ${{ runner.os }}-conan2-${{ hashFiles('**/conanfile.txt') }}
+    - uses: actions/checkout@v4
+    - name: Install GCC
+      uses: egor-tensin/setup-gcc@v1.3
+      with:
+        version: 13
+        platform: x64
+    - uses: actions/setup-python@v5
       with:
         python-version: '3.x'
-    - run: pip install conan meson ninja
-    - run: conan install packages
+        cache: 'pip'
+    - run: git submodule update --init --recursive
+    - run: pip install -r requirements.txt
+    - run: conan profile detect || true
+    - run: conan install packages --build=missing
     - run: meson setup build
       env:
-        CC: gcc
-    #- run: meson test -C builddir/ -v
-    - uses: actions/upload-artifact@v1
+        CC: gcc-13
+        CXX: g++-13
+        PKG_CONFIG_PATH: packages
+    - run: meson compile -C build
+    - run: meson test -C build
+    - uses: actions/upload-artifact@v4
       if: failure()
       with:
         name: Linux_Meson_Testlog
-        path: builddir/meson-logs/testlog.txt
+        path: build/meson-logs/testlog.txt
