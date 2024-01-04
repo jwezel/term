@@ -23,7 +23,7 @@ using std::nullopt;
 ///     - Display
 ///     - Keyboard
 ///   - Control display size
-struct Terminal: TerminalInterface {
+struct Terminal: Surface, TerminalInterface {
   ///
   /// Constructor
   ///
@@ -46,6 +46,10 @@ struct Terminal: TerminalInterface {
     bool contract=true
   );
 
+  void addElement(Surface::Element *element, Surface::Element * below) override;
+
+  void deleteElement(Element *element, Element *destination) override;
+
   ///
   /// Create window
   ///
@@ -54,7 +58,7 @@ struct Terminal: TerminalInterface {
   /// @param[in]  below       The below
   ///
   /// @return     new window
-  void registerWindow(Window *window) override;
+  void focus(Window *window) override;
 
   ///
   /// Move window
@@ -73,13 +77,13 @@ struct Terminal: TerminalInterface {
   /// Run loop
   void run();
 
-  auto screen() -> Surface & override {return screen_;}
-
   auto display() -> Display & {return display_;}
 
   auto desktop() -> Window & {return desktop_;}
 
   auto keyboard() -> Keyboard & {return keyboard_;}
+
+  auto surface() -> Surface * override {return this;}
 
   ///
   /// Possibly expand display and screen
@@ -94,15 +98,14 @@ struct Terminal: TerminalInterface {
   auto contract() -> bool override;
 
   private:
+  bool expand_;
+  bool contract_;
   Keyboard keyboard_;
   Display display_;
   Backdrop backdrop_;
-  Surface screen_;
   Window desktop_;
   Window *focusWindow_;
   Vector minimumSize_;
-  bool expand_;
-  bool contract_;
   bool running_;
 };
 

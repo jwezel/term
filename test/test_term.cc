@@ -6,15 +6,15 @@
 #include "text.hh"
 
 using
-  jwezel::Vector,
-  jwezel::VectorMin,
-  jwezel::VectorMax,
+  jwezel::operator""_C,
   jwezel::Rectangle,
+  jwezel::string,
   jwezel::Terminal,
   jwezel::Text,
-  jwezel::string,
-  jwezel::Window,
-  jwezel::operator""_C;
+  jwezel::Vector,
+  jwezel::VectorMax,
+  jwezel::VectorMin,
+  jwezel::Window;
 
 namespace doctest {
     template<> struct StringMaker<Vector> {

@@ -1,9 +1,11 @@
 #include "geometry.hh"
 #include "surface.hh"
+#include "text.hh"
 #include "update.hh"
 
 #include <algorithm>
 #include <format>
+#include <iostream>
 #include <iterator>
 #include <ranges>
 #include <stdexcept>
@@ -60,8 +62,7 @@ auto SurfaceUpdates(const Range &fragments) -> Updates {
       Update{
         Vector(fragment.area.x1(), fragment.area.y1()),
         fragment.element->text(
-          area -
-          fragment.element->area().position()
+          area - fragment.element->area().position()
         )
       }
     );
@@ -69,9 +70,11 @@ auto SurfaceUpdates(const Range &fragments) -> Updates {
   return result;
 }
 
-Surface::Element::Element(Surface *surface, const Rectangle &/*area*/):
+Surface::Element::Element(Surface *surface):
 surface_{surface}
 {}
+
+Surface::Element::~Element() = default;
 
 void Surface::Element::update(const vector<Rectangle> &areas) {
   vector<Fragment> updates;
@@ -83,8 +86,22 @@ void Surface::Element::update(const vector<Rectangle> &areas) {
       }
     }
   }
-  surface_->device_->update(SurfaceUpdates(updates));
+  surface_->update(updates);
+}
 
+void Surface::Element::update(const Rectangle &area_) {
+  vector<Fragment> updates;
+  for (const auto &fragment: fragments_) {
+    const auto update_{fragment.area & area_ + area().position()};
+    if (update_) {
+      updates.emplace_back(update_.value(), this);
+    }
+  }
+  surface_->update(updates);
+}
+
+void Surface::Element::move(const Rectangle &area) {
+  surface()->reshapeElement(this, area);
 }
 
 Surface::Fragment::operator string() const {
@@ -94,9 +111,13 @@ Surface::Fragment::operator string() const {
 Surface::Surface(Device *device, initializer_list<Element *> initializer):
 device_{device}
 {
-  for (auto *e: initializer) {
-    addElement(e);
+  for (auto *element: initializer) {
+    addElement(element);
   }
+}
+
+void Surface::update(const vector<Fragment> &updates) {
+  device_->update(SurfaceUpdates(updates));
 }
 
 void Surface::removeRtreeFragments(Surface::Element &element) {
@@ -111,7 +132,7 @@ void Surface::insertRtreeFragments(Surface::Element &element) {
   }
 }
 
-void Surface::cover(int pos) {
+void Surface::cover(long pos) {
   auto *element{zorder_[pos]};
   element->fragments_ = {Surface::Fragment{element->area(), element}};
   for (unsigned j = pos + 1; j < zorder_.size(); ++j) {
@@ -126,7 +147,7 @@ void Surface::addElement(Surface::Element *element, Surface::Element *below) {
       std::find(zorder_.begin(), zorder_.end(), below)
     :
       zorder_.end();
-  const auto ze = std::distance(zorder_.begin(), zorder_.insert(insertPos, element));
+  const auto ze{std::distance(zorder_.begin(), zorder_.insert(insertPos, element))};
   // Create own fragments from overlaying fragments when inserting it below the top
   cover(ze);
   // Create fragments of all elements overlayed by this
@@ -141,7 +162,7 @@ void Surface::addElement(Surface::Element *element, Surface::Element *below) {
   // TODO(j): Find a better way to test for the backdrop. Creating a device update
   // for the backdrop is not necessary and creates problems
   if (ze) {
-    device_->update(SurfaceUpdates(element->fragments_));
+    update(element->fragments_);
   }
   insertRtreeFragments(*element);
 }
@@ -149,7 +170,7 @@ void Surface::addElement(Surface::Element *element, Surface::Element *below) {
 auto Surface::position(Element *element, int default_) -> int {
   if (!element) {
     if (default_ == -1) {
-      return zorder_.size();
+      return zorder_.size(); // NOLINT
     }
     return default_;
   }
@@ -157,29 +178,7 @@ auto Surface::position(Element *element, int default_) -> int {
   if (zit == zorder_.end()) {
     throw domain_error(format("Element {} not found in zorder\n", static_cast<const void*>(element)));
   }
-  return std::distance(zorder_.begin(), zit);
-}
-
-void Surface::uncover(int begin, int end) {
-  vector<Fragment> updates;
-  auto *element{zorder_[begin]};
-  for (auto z1 = begin - 1; z1 >= end; --z1) {
-    if (zorder_[z1]->area().intersects(element->area())) {
-      Element * const zelement = zorder_[z1];
-      removeRtreeFragments(*zelement);
-      cover(z1);
-      insertRtreeFragments(*zelement);
-      // Add surface updates for these fragments
-      std::ranges::copy(
-        zelement->fragments_ |
-        transform([element](const Surface::Fragment &f) {return f.area & element->area();}) |
-        filter([](const std::optional<Rectangle> &r) {return r.has_value();}) |
-        transform([zelement](const std::optional<Rectangle> &r){return Surface::Fragment{r.value(), zelement};}),
-        std::back_inserter(updates)
-      );
-    }
-  }
-  device_->update(SurfaceUpdates(updates));
+  return std::distance(zorder_.begin(), zit); // NOLINT
 }
 
 void Surface::deleteElement(Element *element, Element *destination) {
@@ -207,7 +206,7 @@ void Surface::deleteElement(Element *element, Element *destination) {
       );
     }
   }
-  device_->update(SurfaceUpdates(updates));
+  update(updates);
 }
 
 void Surface::reshapeElement(Element *element, const Rectangle &area) { //NOLINT(readability-function-cognitive-complexity)
@@ -245,7 +244,7 @@ void Surface::reshapeElement(Element *element, const Rectangle &area) { //NOLINT
       }
     }
   }
-  device_->update(SurfaceUpdates(updates));
+  update(updates);
 }
 
 void Surface::reorder(int source, int destination) {
@@ -306,7 +305,7 @@ void Surface::reorder(int source, int destination) {
     updates = element->fragments_;
     split(element->area(), updates, oldFragments);
   }
-  device_->update(SurfaceUpdates(updates));
+  update(updates);
 }
 
 void Surface::above(Surface::Element * element, Surface::Element * destination) {
@@ -348,6 +347,92 @@ auto Surface::find(const Vector &position) const -> Fragment * {
     default:
     throw std::logic_error(format("Found {} results. Expected only one", result.size()));
   }
+}
+
+//~TextElement~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+TextElement::TextElement(Surface *surface, const Rectangle &area, const Char &background, TextElement *below):
+Element{surface},
+position_(area.position()),
+background_(background),
+text_{background, area.size()}
+{
+  surface->addElement(this, below);
+}
+
+TextElement::~TextElement() {
+  try {
+    surface()->deleteElement(this);
+  } catch (std::exception & error) {
+    std::cerr << error.what() << '\n';
+  }
+}
+
+TextElement::operator string() const {
+  return format("TextElement(id={}, area={})", long(this), string(area()));
+}
+
+auto TextElement::write(const Vector &position, const string_view &str) -> TextElement & {
+  return write(position, Text(str, RgbNone, RgbNone, {}, AttributeMode::mix));
+}
+
+auto TextElement::write(const Vector &position, const Text &txt_) -> TextElement & {
+  text_.patch(txt_, position);
+  update({Rectangle{position, position + txt_.size()}});
+  return *this;
+}
+
+auto TextElement::fill(const Char &fillChar, const Rectangle &area) -> TextElement & {
+  update({text_.fill(fillChar, area)});
+  return *this;
+}
+
+auto TextElement::line(const Line &line, u1 strength, u1 dash, bool roundedCorners) -> TextElement & {
+  update({text_.line(line, strength, dash, roundedCorners)});
+  return *this;
+}
+
+auto TextElement::box(const Box &box) -> TextElement & {
+  update(text_.box(box));
+  return *this;
+}
+
+auto TextElement::moveEvent(const Rectangle &area) -> bool {
+  position(area.position());
+  text_.resize(area.size(), background());
+  return true;
+}
+
+auto TextElement::above(TextElement *element) -> bool {
+  surface()->above(this, element? element: surface()->zorder()[surface()->position(this) + 1]);
+  return true;
+}
+
+auto TextElement::below(TextElement *element) -> bool {
+  surface()->below(this, element? element: surface()->zorder()[surface()->position(this) - 1]);
+  return true;
+}
+
+auto TextElement::above(int position) -> bool {
+  surface()->above(this, surface()->zorder()[position < 0? position + surface()->zorder().size(): position]);
+  return true;
+}
+
+auto TextElement::below(int position) -> bool {
+  surface()->below(this, surface()->zorder()[position < 0? position + surface()->zorder().size(): position]);
+  return true;
+}
+
+void TextElement::position(const Vector &position) {
+  position_ = position;
+}
+
+auto TextElement::area() const -> Rectangle {
+  return Rectangle{position(), position() + text_.size()};
+}
+
+auto TextElement::text(const Rectangle &area) const -> Text {
+  return text_[area];
 }
 
 } // namespace jwezel

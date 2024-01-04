@@ -3,7 +3,6 @@
 #include "device.hh"
 #include "geometry.hh"
 #include "text.hh"
-#include "update.hh"
 
 #include <boost/geometry/geometries/box.hpp>
 #include <boost/geometry/geometries/point.hpp>
@@ -12,13 +11,17 @@
 #include <boost/geometry/index/rtree.hpp>
 #include <initializer_list>
 
+// NOLINTBEGIN
 BOOST_GEOMETRY_REGISTER_POINT_2D(jwezel::Vector, jwezel::Dim, cs::cartesian, x(), y());
 BOOST_GEOMETRY_REGISTER_BOX_2D_4VALUES(jwezel::Rectangle, jwezel::Vector, x1(), y1(), x2(), y2());
+// NOLINTEND
+
+const auto maxRtreeElements = 16;
+const auto minRtreeElements = 4;
 
 namespace jwezel {
 
-
-using std::initializer_list;
+using std::initializer_list, std::pair;
 
 struct Surface {
   struct Element;
@@ -33,18 +36,24 @@ struct Surface {
 
     auto operator ==(const Surface::Fragment &other) const -> bool = default;
 
-    // NOLINTBEGIN(misc-non-private-member-variables-in-classes)
+    // xNOLINTBEGIN(misc-non-private-member-variables-in-classes)
     Rectangle area;
     struct Element *element{};
-    // NOLINTEND(misc-non-private-member-variables-in-classes)
+    // xNOLINTEND(misc-non-private-member-variables-in-classes)
   };
 
+  ///
+  /// Abstract Element
+  ///
+  /// The following method are to be overridden:
+  ///
+  /// - area
   struct Element {
-    explicit Element(Surface *surface, const Rectangle &area);
+    explicit Element(Surface *surface);
 
-    Element() = delete;
+    Element() = default;
 
-    virtual ~Element() = default;
+    virtual ~Element();
 
     Element(const Element &) = default;
 
@@ -52,7 +61,7 @@ struct Surface {
 
     auto operator=(const Element &) -> Element & = default;
 
-    auto operator=(Element &&) -> Element & = delete;
+    auto operator=(Element &&) -> Element & = default;
 
     ///
     /// Get text rectangle
@@ -68,13 +77,17 @@ struct Surface {
     /// @return     The area of the element
     [[nodiscard]] virtual auto area() const -> Rectangle = 0;
 
+    virtual void move(const Rectangle &area);
+
     ///
     /// Move element
     ///
     /// @param[in]  area  The area
-    virtual auto moveEvent(const Rectangle &area) -> bool = 0;
+    virtual auto moveEvent(const Rectangle &/*area*/) -> bool {return false;}
 
     virtual void update(const vector<Rectangle> &areas);
+
+    virtual void update(const Rectangle &area_);
 
     [[nodiscard]] auto fragments() -> auto & {return fragments_;}
 
@@ -88,19 +101,21 @@ struct Surface {
     friend struct Surface;
   };
 
+  explicit Surface(Device *device, initializer_list<Element *> ={});
+
   Surface() = default;
+
+  void update(const vector<Fragment> &updates);
 
   void removeRtreeFragments(Surface::Element &element);
 
   void insertRtreeFragments(Surface::Element &element);
 
-  explicit Surface(Device *device, initializer_list<Element *> ={});
+  virtual void addElement(Element * element, Element *below=0);
 
-  void addElement(Element * element, Element *below=0);
+  virtual void deleteElement(Element *element, Element *destination=0);
 
-  void deleteElement(Element *element, Element *destination=0);
-
-  void reshapeElement(Element *element, const Rectangle &area);
+  virtual void reshapeElement(Element *element, const Rectangle &area);
 
   void above(Surface::Element * element, Surface::Element * destination=0);
 
@@ -118,23 +133,120 @@ struct Surface {
 
   auto position(Element *element, int default_=-1) -> int;
 
-  [[nodiscard]] auto zorder() const -> const auto & {return zorder_;}
-  private:
+  [[nodiscard]] inline auto zorder() const -> const auto & {return zorder_;}
 
+  private:
   void reorder(int source, int destination);
 
-  void cover(int pos);
+  void cover(long pos);
 
-  void uncover(int begin, int end);
-
-  using RtreeEntry = std::pair<Rectangle, Surface::Fragment *>;
+  using RtreeEntry = pair<Rectangle, Fragment *>;
 
   vector<Element *> zorder_;
   Device *device_{};
-  boost::geometry::index::rtree<RtreeEntry, boost::geometry::index::quadratic<16>> rtree;
+  boost::geometry::index::rtree<RtreeEntry, boost::geometry::index::quadratic<maxRtreeElements, minRtreeElements>> rtree;
 };
 
-template<class Range>
-auto SurfaceUpdates(const Range &fragments) -> Updates;
+struct TextElement: Surface::Element {
+  ///
+  /// Constructor
+  ///
+  /// @param[in]  id    The identifier
+  /// @param[in]  area  The area
+  ///
+  explicit TextElement(Surface *surface, const Rectangle &area, const Char &background=Space, TextElement *below=0);
+
+  TextElement() = default;
+
+  TextElement(const TextElement &) = default;
+
+  TextElement(TextElement &&) = default;
+
+  auto operator=(const TextElement &) -> TextElement & = default;
+
+  auto operator=(TextElement &&) -> TextElement & = delete;
+
+  ///
+  /// Destroy TextElement
+  ~TextElement() override;
+
+  /// String representation of TextElement
+  explicit operator string() const;
+
+  ///
+  /// Write string to element
+  ///
+  /// @param[in]  position  The position
+  /// @param[in]  str       The text
+  auto write(const Vector &position, const string_view &str) -> TextElement &;
+
+  ///
+  /// Write text to text element
+  ///
+  /// @param[in]  position  The position
+  /// @param[in]  text      The text
+  auto write(const Vector &position, const Text &txt_) -> TextElement &;
+
+  ///
+  /// Fill text element with Char
+  ///
+  /// @param[in]  fillChar  The fill character
+  /// @param[in]  area      The area
+  auto fill(const Char &fillChar=Space, const Rectangle &area=RectangleMax) -> TextElement &;
+
+  ///
+  /// Draw line
+  ///
+  /// @param[in]  line            Line
+  /// @param[in]  strength        Line strength
+  /// @param[in]  dash            Dash mode
+  /// @param[in]  roundedCorners  Whether to round corners
+  ///
+  /// @return     Rectangle
+  auto line(const Line &line, u1 strength=1, u1 dash=0, bool roundedCorners=false) -> TextElement &;
+
+  ///
+  /// Draw box
+  ///
+  /// @param[in]  box   The box
+  ///
+  /// @return     vector of rectangles
+  auto box(const Box &box = Box{}) -> TextElement &;
+
+  auto moveEvent(const Rectangle &/*area*/) -> bool override;
+
+  auto above(TextElement *element=0) -> bool;
+
+  auto below(TextElement *element=0) -> bool;
+
+  auto above(int position=0) -> bool;
+
+  auto below(int position=-1) -> bool;
+
+  [[nodiscard]] inline auto position() const {return position_;}
+
+  void position(const Vector &position);
+
+  [[nodiscard]] inline auto background() const {return background_;}
+
+  ///
+  /// Get text element area
+  ///
+  /// @return     TextElement area
+  [[nodiscard]] auto area() const -> Rectangle override;
+
+  ///
+  /// Get area of text element text
+  ///
+  /// @param[in]  area  The area
+  ///
+  /// @return     text
+  [[nodiscard]] auto text(const Rectangle &area = RectangleMax) const -> Text override;
+
+  private:
+  Vector position_;
+  Char background_;
+  Text text_;
+};
 
 } //namespace jwezel

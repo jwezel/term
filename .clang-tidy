@@ -16,6 +16,7 @@ Checks: >
   -hicpp-use-nullptr,
   -modernize-use-nullptr,
   -readability-function-cognitive-complexity,
+  -readability-implicit-bool-conversion,
   -readability-isolate-declaration
 CheckOptions:
   readability-identifier-length.MinimumVariableNameLength: 2

@@ -451,21 +451,21 @@ Text::Text(const string_view &str_, const Rgb &fg, const Rgb &bg, const Attribut
 }
 
 Text::Text(Char c, const Vector &size, const AttributeMode &mixDefault):
-data(
-  vector<String>(
-    max(size.y(), Dim(1)),
-    String(
-      max(size.x(), Dim(1)),
-      Char(
+data{
+  vector<String>{
+    static_cast<size_t>(max(size.y(), Dim(1))),
+    String{
+      static_cast<size_t>(max(size.x(), Dim(1))),
+      Char{
         c.rune,
         c.attributes.fg,
         c.attributes.bg,
         c.attributes.attr,
         mixDefault == AttributeMode::default_? c.attributes.mix: mixDefault
-      )
-    )
-  )
-)
+      }
+    }
+  }
+}
 {}
 
 auto Text::height() const -> Dim {

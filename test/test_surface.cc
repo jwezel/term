@@ -76,6 +76,8 @@ namespace jwezel {
   }
 } // namespace jwezel
 
+// NOLINTBEGIN(misc-non-private-member-variables-in-classes)
+
 struct Device: jwezel::Device {
   void update(const Updates &updates) override {
     copy(updates.begin(), updates.end(), back_inserter(updates_));
@@ -83,42 +85,41 @@ struct Device: jwezel::Device {
   Updates updates_;
 };
 
-struct Terminal: jwezel::TerminalInterface {
+struct Terminal: Surface, jwezel::TerminalInterface {
   explicit Terminal(Device &device):
+  Surface{&device},
   device_{device},
-  backdrop_{this},
-  screen_{&device, {&backdrop_}}
+  backdrop_{this}
   {}
   ~Terminal() override = default;
   Terminal(const Terminal &) = delete;
   Terminal(Terminal &&) = delete;
   auto operator=(const Terminal &) -> Terminal & = delete;
   auto operator=(Terminal &&) -> Terminal & = delete;
-  void registerWindow(struct Window */*window*/) override {}
-  auto screen() -> Surface & override { return screen_;}
+  void focus(struct Window */*window*/) override {}
+  auto surface() -> Surface * override { return this;}
   auto expand(const Vector &/*size*/) -> bool override {return false;}
   auto contract() -> bool override {return false;}
   void moveWindow(Window &/*window*/, const Rectangle & /*area*/) override {}
 
   Device device_;
   Backdrop backdrop_;
-  Surface screen_;
 };
 
 // Test rtree: check whether all corners of all fragments can be found in rtree
 void TestRtree(const Surface &screen) {
   for (const auto *element: screen.zorder()) {
-    for (const auto &f: element->fragments()) {
-      const auto &a{f.area};
-      CHECK_EQ(screen.find(a.position()), &f);
-      if (a.x2() > a.x1()) {
-        CHECK_EQ(screen.find(Vector{Dim(a.x2() - 1), a.y1()}), &f);
-        if (a.y2() > a.y1()) {
-          CHECK_EQ(screen.find(Vector{Dim(a.x2() - 1), Dim(a.y2() - 1)}), &f);
+    for (const auto &fr: element->fragments()) {
+      const auto &fa{fr.area};
+      CHECK_EQ(screen.find(fa.position()), &fr);
+      if (fa.x2() > fa.x1()) {
+        CHECK_EQ(screen.find(Vector{Dim(fa.x2() - 1), fa.y1()}), &fr);
+        if (fa.y2() > fa.y1()) {
+          CHECK_EQ(screen.find(Vector{Dim(fa.x2() - 1), Dim(fa.y2() - 1)}), &fr);
         }
       } else {
-        if (a.y2() > a.y1()) {
-          CHECK_EQ(screen.find(Vector{a.x1(), Dim(a.y2() - 1)}), &f);
+        if (fa.y2() > fa.y1()) {
+          CHECK_EQ(screen.find(Vector{fa.x1(), Dim(fa.y2() - 1)}), &fr);
         }
       }
     }
@@ -140,7 +141,7 @@ void TestRtree(const Surface &screen) {
 TEST_CASE("Surface") {
   Device dev;
   Terminal term{dev};
-  Surface &scr{term.screen()};
+  Surface &scr{*term.surface()};
   SUBCASE("Constructor") {
     CHECK_EQ(scr.zorder().size(), 1);
     TestRtree(scr);
@@ -349,3 +350,5 @@ TEST_CASE("Surface") {
 // NOLINTEND(hicpp-no-assembler)
 // NOLINTEND(readability-function-cognitive-complexity)
 // NOLINTEND(cppcoreguidelines-avoid-non-const-global-variables)
+
+// NOLINTEND(misc-non-private-member-variables-in-classes)

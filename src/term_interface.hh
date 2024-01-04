@@ -1,5 +1,6 @@
 #pragma once
 
+#include "geometry.hh"
 #include "surface.hh"
 
 namespace jwezel
@@ -8,9 +9,9 @@ namespace jwezel
 struct TerminalInterface {
   virtual ~TerminalInterface() = default;
 
-  virtual void registerWindow(struct Window *window) = 0;
+  [[nodiscard]] virtual auto surface() -> Surface * = 0;
 
-  virtual auto screen() -> Surface & = 0;
+  virtual void focus(struct Window *window) = 0;
 
   ///
   /// Possibly expand display and screen
@@ -28,4 +29,4 @@ struct TerminalInterface {
 
 };
 
-}
+}  // namespace jwezel

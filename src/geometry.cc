@@ -5,8 +5,8 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <optional>
 #include <format>
+#include <optional>
 
 namespace jwezel {
 
