@@ -1,10 +1,11 @@
+#include <term/geometry.hh>
+#include <util/string.hh>
+
 #include <algorithm>
 #include <sstream>
 #include <vector>
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
-#include <geometry.hh>
-#include <string.hh>
 
 using
   jwezel::Vector,

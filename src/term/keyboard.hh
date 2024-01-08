@@ -1,15 +1,15 @@
 #pragma once
 
+#include <util/basic.hh>
+#include <term/event.hh>
+#include <term/geometry.hh>
+#include <term/text.hh>
+
 #include <deque>
 #include <map>
 #include <memory>
 #include <optional>
 #include <termios.h>
-
-#include "basic.hh"
-#include "event.hh"
-#include "geometry.hh"
-#include "text.hh"
 
 namespace jwezel {
 

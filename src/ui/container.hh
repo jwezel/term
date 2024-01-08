@@ -1,23 +1,25 @@
 #pragma once
 
-#include "ui/element.hh"
+#include "element.hh"
 
-#include <memory>
-#include <unordered_map>
+#include <unordered_set>
 
 namespace jwezel::ui {
 
-using std::unordered_map, std::unique_ptr;
+using std::unordered_set;
 
-struct Container: virtual ui::Element {
+struct Container: ui::Element {
+
+  explicit Container(Container *parent=0);
 
   auto add(Element *child) -> Container & {
-    children_.emplace(child, unique_ptr<Element>(child));
+    children_.insert(child);
     return *this;
   }
-  auto children() -> unordered_map<Element *, unique_ptr<Element>> & {return children_;}
+
+  auto children() const -> const unordered_set<Element *> & {return children_;}
 
   private:
-  unordered_map<Element *, unique_ptr<Element>> children_;
+  unordered_set<Element *> children_;
 };
 } // namespace jwezel::ui

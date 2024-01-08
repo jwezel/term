@@ -1,11 +1,11 @@
 
-#include "device.hh"
-#include "geometry.hh"
-#include "string.hh"
-#include "surface.hh"
-#include "text.hh"
-#include "update.hh"
-#include "window.hh"
+#include <term/device.hh>
+#include <term/geometry.hh>
+#include <util/string.hh>
+#include <term/surface.hh>
+#include <term/text.hh>
+#include <term/update.hh>
+#include <term/window.hh>
 
 #include <algorithm>
 #include <format>

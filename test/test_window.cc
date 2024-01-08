@@ -1,7 +1,7 @@
-#include "geometry.hh"
-#include "term.hh"
-#include "text.hh"
-#include "window.hh"
+#include <term/geometry.hh>
+#include <term/term.hh>
+#include <term/text.hh>
+#include <term/window.hh>
 
 #include <cstdio>
 #include <doctest/doctest.h>

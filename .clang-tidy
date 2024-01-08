@@ -15,6 +15,7 @@ Checks: >
   -hicpp-signed-bitwise,
   -hicpp-use-nullptr,
   -modernize-use-nullptr,
+  -modernize-pass-by-value,
   -readability-function-cognitive-complexity,
   -readability-implicit-bool-conversion,
   -readability-isolate-declaration

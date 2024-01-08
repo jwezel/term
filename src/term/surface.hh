@@ -1,8 +1,8 @@
 #pragma once
 
-#include "device.hh"
-#include "geometry.hh"
-#include "text.hh"
+#include <term/device.hh>
+#include <term/geometry.hh>
+#include <term/text.hh>
 
 #include <boost/geometry/geometries/box.hpp>
 #include <boost/geometry/geometries/point.hpp>
@@ -111,15 +111,15 @@ struct Surface {
 
   void insertRtreeFragments(Surface::Element &element);
 
-  virtual void addElement(Element * element, Element *below=0);
+  virtual void addElement(Element *element, Element *below=0);
 
   virtual void deleteElement(Element *element, Element *destination=0);
 
   virtual void reshapeElement(Element *element, const Rectangle &area);
 
-  void above(Surface::Element * element, Surface::Element * destination=0);
+  void above(Surface::Element *element, Surface::Element *destination=0);
 
-  void below(Surface::Element * element, Surface::Element * destination=0);
+  void below(Surface::Element *element, Surface::Element *destination=0);
 
   ///
   /// Get minimum size to accomodate all elements
@@ -131,7 +131,7 @@ struct Surface {
 
   [[nodiscard]] auto find(const Vector &position) const -> Fragment *;
 
-  auto position(Element *element, int default_=-1) -> int;
+  [[nodiscard]] auto position(Element *element, int default_=-1) -> int;
 
   [[nodiscard]] inline auto zorder() const -> const auto & {return zorder_;}
 
@@ -164,7 +164,7 @@ struct TextElement: Surface::Element {
 
   auto operator=(const TextElement &) -> TextElement & = default;
 
-  auto operator=(TextElement &&) -> TextElement & = delete;
+  auto operator=(TextElement &&) -> TextElement & = default;
 
   ///
   /// Destroy TextElement

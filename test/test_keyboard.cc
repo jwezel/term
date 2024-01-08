@@ -1,4 +1,4 @@
-#include "keyboard.hh"
+#include <term/keyboard.hh>
 
 #include <cstdio>
 #include <doctest/doctest.h>

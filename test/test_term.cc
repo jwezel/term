@@ -1,9 +1,9 @@
+#include <term/geometry.hh>
+#include <term/term.hh>
+#include <term/text.hh>
+
 #include <cstdio>
 #include <doctest/doctest.h>
-
-#include "geometry.hh"
-#include "term.hh"
-#include "text.hh"
 
 using
   jwezel::operator""_C,

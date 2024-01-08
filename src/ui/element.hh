@@ -1,6 +1,13 @@
 #pragma once
 
+#include <term/surface.hh>
+
+#include "taitank_node.h"
+
 namespace jwezel::ui {
+
+using
+  taitank::TaitankNodeRef;
 
 struct Element
 {
@@ -9,26 +16,25 @@ struct Element
   /// Create Element
   ///
   /// @param      parent  The parent
-  explicit Element(Element *parent=0);
+  explicit Element(struct Container *parent=0);
 
-  Element(const Element &) = default;
+  Element(const Element &) = delete;
 
   Element(Element &&) = delete;
 
-  auto operator=(const Element &) -> Element & = default;
+  auto operator=(const Element &) -> Element & = delete;
 
   auto operator=(Element &&) -> Element & = delete;
 
   virtual ~Element() = default;
 
-  [[nodiscard]] inline virtual auto window() /*NOLINT(misc-no-recursion)*/ -> Element * {
-    return parent_ ? parent_->window() : 0;
-  }
+  [[nodiscard]] virtual auto window() /*NOLINT(misc-no-recursion)*/-> struct Window *;
 
   auto parent() {return parent_;}
 
   private:
-  struct Element *parent_;
+  struct Container *parent_;
+  TaitankNodeRef node_;
 };
 
 } // namespace jwezel::ui

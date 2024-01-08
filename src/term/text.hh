@@ -8,8 +8,8 @@
 
 #pragma once
 
-#include "basic.hh"
-#include "geometry.hh"
+#include <term/geometry.hh>
+#include <util/basic.hh>
 
 #include <array>
 #include <string>

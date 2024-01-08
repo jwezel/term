@@ -1,8 +1,8 @@
 #pragma once
 
-#include <xxh64.hpp>
+#include <util/xxh64.hpp>
 
-#include "basic.hh"
+#include <util/basic.hh>
 
 namespace jwezel {
 

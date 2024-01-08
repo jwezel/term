@@ -1,11 +1,11 @@
 // Text
 
-#include <cassert>
-#include <geometry.hh>
-#include <string.hh>
-#include <text.hh>
+#include "geometry.hh"
+#include "text.hh"
+#include <util/string.hh>
 
 #include <algorithm>
+#include <cassert>
 #include <cfloat>
 #include <cmath>
 #include <cstddef>

@@ -1,8 +1,8 @@
-#include "display.hh"
-#include "geometry.hh"
-#include "keyboard.hh"
-#include "string.hh"
-#include "text.hh"
+#include <term/display.hh>
+#include <term/geometry.hh>
+#include <term/keyboard.hh>
+#include <util/string.hh>
+#include <term/text.hh>
 
 #include <cstdio>
 #include <cstring>

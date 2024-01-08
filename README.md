@@ -41,6 +41,7 @@ Features
 
 - Overlapping windows
 - Rich color and attribute support
+- Box and line drawing with automatic interpolation
 - Mouse support
 - Auto-expanding and auto-contracting desktop
 - Flex-based layout engine

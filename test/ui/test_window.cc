@@ -1,9 +1,11 @@
-#include "geometry.hh"
-#include "term.hh"
-#include "text.hh"
-#include "ui/ui.hh"
-#include "ui/window.hh"
-#include "window.hh"
+#include "term/update.hh"
+#include <ui/ui.hh>
+#include <ui/window.hh>
+
+#include <term/geometry.hh>
+#include <term/term.hh>
+#include <term/text.hh>
+#include <term/window.hh>
 
 #include <cstdio>
 #include <doctest/doctest.h>
@@ -32,8 +34,9 @@ using
 // NOLINTBEGIN(cppcoreguidelines-pro-bounds-array-to-pointer-decay)
 // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
 // NOLINTBEGIN(readability-magic-numbers)
+// NOLINTBEGIN(misc-use-anonymous-namespace)
 
-TEST_CASE("Window") {
+TEST_CASE("UI Window") {
   auto *output{tmpfile()};
   auto *input{tmpfile()};
   (void)fputs("\x1b[1;1R", input);
@@ -41,13 +44,16 @@ TEST_CASE("Window") {
   (void)fputs("\x1b[10;20R", input);
   (void)fseek(input, 0, SEEK_SET);
   Terminal term('.'_C, VectorMin, VectorMin, VectorMax, output->_fileno, input->_fileno);
-  jwezel::ui::Ui ui_(term);
+  jwezel::ui::Ui ui_(&term);
 
   SUBCASE("Window") {
-    auto w1 = jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 10, 6});
+    auto w1 = jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 10, 6}, Text{"Title"});
+    CHECK_EQ(w1.text(Rectangle{1, 0, 6, 1}), Text{"Title"});
+    CHECK_EQ(term.display().text(), w1.text());
   }
 }
 
+// NOLINTEND(misc-use-anonymous-namespace)
 // NOLINTEND(readability-magic-numbers)
 // NOLINTEND(cppcoreguidelines-avoid-magic-numbers)
 // NOLINTEND(cppcoreguidelines-pro-bounds-array-to-pointer-decay)

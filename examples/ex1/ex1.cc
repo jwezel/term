@@ -1,10 +1,10 @@
-#include "basic.hh"
-#include "display.hh"
-#include "event.hh"
-#include "geometry.hh"
-#include "keyboard.hh"
-#include "term.hh"
-#include "text.hh"
+#include <util/basic.hh>
+#include <term/display.hh>
+#include <term/event.hh>
+#include <term/geometry.hh>
+#include <term/keyboard.hh>
+#include <term/term.hh>
+#include <term/text.hh>
 
 #include <format>
 #include <memory>

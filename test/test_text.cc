@@ -1,5 +1,5 @@
-#include "text.hh"
-#include "geometry.hh"
+#include <term/geometry.hh>
+#include <term/text.hh>
 
 #include <doctest/doctest.h>
 

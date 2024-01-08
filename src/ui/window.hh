@@ -1,19 +1,27 @@
 #pragma once
 
-#include "geometry.hh"
-#include "surface.hh"
-#include "term.hh"
-#include "ui/container.hh"
-#include "ui/visible_element.hh"
+#include "container.hh"
+#include "element.hh"
+#include "frame_style.hh"
+
+#include <term/geometry.hh>
+#include <term/surface.hh>
+#include <term/update.hh>
+#include <term/window.hh>
 
 namespace jwezel::ui {
 
-struct Window: Container, VisibleElement, Surface {
-  explicit Window(struct Ui &ui, const Char &background = Space, const Rectangle &area = RectangleDefault);
+struct Window: jwezel::Window, Container {
+  explicit Window(
+    struct Ui &ui,
+    const Char &background = Space,
+    const Rectangle &area = RectangleDefault,
+    const Text& title={}
+  );
 
-  Window(const Window &) = default;
+  Window(const Window &) = delete;
 
-  Window(Window &&) = default;
+  Window(Window &&)  noexcept = delete;
 
   auto operator=(const Window &) -> Window & = delete;
 
@@ -21,20 +29,21 @@ struct Window: Container, VisibleElement, Surface {
 
   ~Window() override = default;
 
-  [[nodiscard]] auto area() const -> Rectangle;
-
-  void area(const Rectangle &area);
-
-  auto size() const -> Vector;
-
-  auto width() const -> Dim;
-
-  auto height() const -> Dim;
-
-  [[nodiscard]] inline auto window() -> ui::Element * override {return this;}
+  [[nodiscard]] inline auto window() -> Window * override {return this;}
 
   private:
-  jwezel::Window window_;
+  struct Device: jwezel::Device {
+    explicit Device(Window *window);
+    void update(const jwezel::Updates &updates) override;
+
+    private:
+    Window *window_;
+  };
+
+  std::unique_ptr<FrameStyle> style_;
+  Device device_;
+  Surface surface_;
+  Text title_;
 };
 
 } // namespace jwezel::ui
