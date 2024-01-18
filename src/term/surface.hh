@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <term/device.hh>
 #include <term/geometry.hh>
 #include <term/text.hh>
@@ -104,6 +105,8 @@ struct Surface {
   explicit Surface(Device *device, initializer_list<Element *> ={});
 
   Surface() = default;
+
+  virtual ~Surface() = default;
 
   void update(const vector<Fragment> &updates);
 

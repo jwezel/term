@@ -87,8 +87,7 @@ taitank_lib = library(
 
 lib_dep = [
   dependency('utfcpp'),
-  dependency('rxcpp'),
-  dependency('tl-optional'),
+  # dependency('tl-optional'),
   dependency('boost'),
 ]
 

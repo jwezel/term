@@ -26,7 +26,7 @@ struct Element
 
   auto operator=(Element &&) -> Element & = delete;
 
-  virtual ~Element() = default;
+  virtual ~Element();
 
   [[nodiscard]] virtual auto window() /*NOLINT(misc-no-recursion)*/-> struct Window *;
 

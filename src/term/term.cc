@@ -45,14 +45,14 @@ void Terminal::deleteElement(Element *element, Element *destination) {
   contract();
 }
 
-void Terminal::focus(Window *window) {
-  focusWindow_ = window;
-}
-
 void Terminal::moveWindow(Window &window, const Rectangle &area) {
   expand(Vector{area.x2(), area.y2()});
   reshapeElement(&window, area);
   contract();
+}
+
+void Terminal::focus(Window *window) {
+  focusWindow_ = window;
 }
 
 auto Terminal::event() -> Event * {

@@ -13,6 +13,10 @@ node_{taitank::NodeCreate()}
   }
 }
 
+Element::~Element() {
+  taitank::NodeFree(node_);
+}
+
 auto Element::window() /*NOLINT(misc-no-recursion)*/ -> Window * {
   auto *result{parent_? parent_->window(): 0};
   if (!result) {

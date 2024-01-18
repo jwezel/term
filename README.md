@@ -12,6 +12,8 @@ Table of contents
 
 * [Introduction](#introduction)
 * [Features](#features)
+* [Prerequisites](#prerequisites)
+* [Dependencies](#dependencies)
 * [Installation](#installation)
 * [Usage](#usage)
 * [Known issues and limitations](#known-issues-and-limitations)
@@ -56,13 +58,21 @@ Prerequisites
 - g++
 
 
+Dependencies
+------------
+
+- Boost
+- Taitank
+- utfcpp
+
+
 Installation
 ------------
 
 - Install prerequisites (brew is recommended, but you can use your package manager)
 
 ```bash
-a command-line command here
+TDB
 ```
 
 

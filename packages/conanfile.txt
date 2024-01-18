@@ -2,10 +2,7 @@
 boost/1.83.0
 doctest/2.4.10
 frozen/1.1.1
-rxcpp/4.1.0
-tl-optional/1.0.0
 utfcpp/3.1.2
-xxhash/0.8.0
 
 [generators]
 PkgConfigDeps

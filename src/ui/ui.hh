@@ -11,6 +11,8 @@ namespace jwezel::ui {
 struct Ui {
   explicit Ui(Terminal *terminal);
 
+  void run();
+
   ///
   /// Add window
   ///
@@ -22,6 +24,7 @@ struct Ui {
   private:
   Terminal *terminal_;
   std::unordered_set<jwezel::ui::Window *> windows_;
+  bool running_ = false;
 };
 
 } // namespace jwezel::ui

@@ -9,6 +9,10 @@ Ui::Ui(Terminal *terminal):
 terminal_(terminal)
 {}
 
+void Ui::run() {
+  terminal_->run();
+}
+
 void Ui::add(jwezel::ui::Window *window) {
   windows_.insert(window);
 }
