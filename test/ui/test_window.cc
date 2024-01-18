@@ -1,4 +1,4 @@
-#include "term/update.hh"
+#include "ui/widget.hh"
 #include <ui/ui.hh>
 #include <ui/window.hh>
 
@@ -47,9 +47,26 @@ TEST_CASE("UI Window") {
   jwezel::ui::Ui ui_(&term);
 
   SUBCASE("Window") {
-    auto w1 = jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 10, 6}, Text{"Title"});
-    CHECK_EQ(w1.text(Rectangle{1, 0, 6, 1}), Text{"Title"});
-    CHECK_EQ(term.display().text(), w1.text());
+    auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 10, 6}, Text{"Title"})};
+    auto test{Text{' '_C, Vector{10, 6}}};
+    test.box();
+    test.patch(Text{"Title"}, Vector{1, 0});
+    CHECK_EQ(w1.text(), test);
+    CHECK_EQ(term.display().text(), test);
+    SUBCASE("Widget") {
+      auto w2{jwezel::ui::Widget(Rectangle{1, 1, 8, 2}, ' '_C, &w1)};
+      w2.write(Vector{0, 0}, Text{"xxxxxxxxxxxxx"});
+      auto test2{test};
+      test2.patch(Text{"xxxxxxx"}, Vector{1, 1});
+      CHECK_EQ(term.display().text(), test2);
+      SUBCASE("Move widget") {
+        w2.move(Rectangle{2, 1, 9, 2});
+        auto test3{test};
+        test3.patch(Text{"xxxxxxx"}, Vector{2, 1});
+        CHECK_EQ(term.display().text(), test3);
+      }
+    }
+    CHECK_EQ(term.display().text(), test);
   }
 }
 
