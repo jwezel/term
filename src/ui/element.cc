@@ -14,7 +14,11 @@ node_{taitank::NodeCreate()}
 }
 
 auto Element::window() /*NOLINT(misc-no-recursion)*/ -> Window * {
-  return parent_? parent_->window(): 0;
+  auto *result{parent_? parent_->window(): 0};
+  if (!result) {
+    throw std::runtime_error("Can't find window");
+  }
+  return result;
 }
 
 }  // namespace jwezel::ui
