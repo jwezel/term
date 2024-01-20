@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <util/xxh64.hpp>
 
 #include <util/basic.hh>
@@ -11,27 +12,63 @@ constexpr u8 EVENT_ID_SEED = xxh64::hash("EVENT_ID_SEED", sizeof "EVENT_ID_SEED"
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define CLASS_ID(NAME) \
 public: \
-static auto id() -> u8 {return xxh64::hash(#NAME, sizeof #NAME, EVENT_ID_SEED);}; \
-virtual auto vid() const -> u8 {return id();} \
-static auto classname() -> const char * {return #NAME;} \
-virtual auto vclassname() const -> const char * {return classname();}
+static const auto type_ = xxh64::hash(#NAME, sizeof #NAME, EVENT_ID_SEED); \
+constexpr static const auto typeName_ = #NAME; \
+[[nodiscard]] virtual auto type() const -> u8 { \
+  return type_; \
+} \
+[[nodiscard]] virtual auto typeName() const -> const char * { \
+  return typeName_; \
+}
 
-struct Event
+struct BaseEvent
 {
-  Event() = default;
+  BaseEvent() = default;
 
-  Event(const Event &) = default;
+  virtual ~BaseEvent() = default;
 
-  Event(Event &&) = default;
+  BaseEvent(const BaseEvent &) = default;
 
-  auto operator=(const Event &) -> Event & = delete;
+  BaseEvent(BaseEvent &&) = default;
 
-  auto operator=(Event &&) -> Event & = delete;
+  auto operator=(const BaseEvent &) -> BaseEvent & = delete;
 
-  inline virtual ~Event() = default;
+  auto operator=(BaseEvent &&) -> BaseEvent & = delete;
 
   CLASS_ID(Event);
 };
 
+struct Event {
+  explicit Event(BaseEvent *event):
+  event_(event)
+  {}
+
+  Event() = default;
+
+  virtual ~Event() = default;
+
+  Event(const Event &) = delete;
+
+  Event(Event &&) = default;
+
+  auto operator =(const Event &) -> Event & = delete;
+
+  auto operator =(Event &&) -> Event & = default;
+
+  auto operator()() const -> BaseEvent * {
+    return event_.get();
+  }
+
+  [[nodiscard]] virtual auto type() const -> u8 {
+    return event_->type();
+  }
+
+  [[nodiscard]] virtual auto typeName() const -> const char * {
+    return event_->typeName();
+  }
+
+  private:
+  std::unique_ptr<BaseEvent> event_;
+};
 
 } // namespace jwezel

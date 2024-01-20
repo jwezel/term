@@ -13,6 +13,8 @@ struct Ui {
 
   void run();
 
+  void stop();
+
   ///
   /// Add window
   ///

@@ -3,6 +3,7 @@
 #include "container.hh"
 #include "element.hh"
 #include "frame_style.hh"
+#include "widget.hh"
 
 #include <term/geometry.hh>
 #include <term/surface.hh>
@@ -21,15 +22,23 @@ struct Window: jwezel::Window, Container {
 
   Window(const Window &) = delete;
 
-  Window(Window &&)  noexcept = delete;
+  Window(Window &&) noexcept = delete;
 
-  auto operator=(const Window &) -> Window & = delete;
+  auto operator =(const Window &) -> Window & = delete;
 
-  auto operator=(Window &&) -> Window & = delete;
+  auto operator =(Window &&) -> Window & = delete;
 
   ~Window() override = default;
 
+  void focus(Widget *widget);
+
+  [[nodiscard]] auto focus() -> Widget *;
+
+  [[nodiscard]] auto defaultFocus() -> Widget *;
+
   [[nodiscard]] inline auto window() -> Window * override {return this;}
+
+  auto event(const jwezel::Event &event) -> bool override;
 
   private:
   struct Device: jwezel::Device {
@@ -44,6 +53,7 @@ struct Window: jwezel::Window, Container {
   Device device_;
   Surface surface_;
   Text title_;
+  Widget *focus_;
 };
 
 } // namespace jwezel::ui

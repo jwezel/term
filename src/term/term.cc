@@ -55,14 +55,24 @@ void Terminal::focus(Window *window) {
   focusWindow_ = window;
 }
 
-auto Terminal::event() -> Event * {
+auto Terminal::event() -> Event {
   return keyboard_.event();
 }
 
 void Terminal::run() {
-  while (running_) {
-    (void)keyboard_.event();
+  if (!focusWindow_) {
+    focus(dynamic_cast<Window *>(zorder().back()));
   }
+  running_ = true;
+  while (running_) {
+    if (focusWindow_) {
+      focusWindow_->event(keyboard_.event());
+    }
+  }
+}
+
+void Terminal::stop() {
+  running_ = false;
 }
 
 auto Terminal::expand(const Vector &size) -> bool {

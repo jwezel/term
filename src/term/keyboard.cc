@@ -457,7 +457,7 @@ auto Keyboard::key() -> Unicode {
   return key;
 }
 
-auto Keyboard::mouseReport() -> tuple<MouseButton, MouseModifiers, u2, u2, MouseAction> {
+auto Keyboard::mouseReport() -> tuple<MouseButton, MouseModifiers, Vector, MouseAction> {
   static const basic_regex reportPattern(R"((\d+);(\d+);(\d+)([Mm]))");
   static const auto reportBufferSize{16}, MaxAscii{255};
   Unicode key_ = 0;
@@ -483,24 +483,27 @@ auto Keyboard::mouseReport() -> tuple<MouseButton, MouseModifiers, u2, u2, Mouse
         static_cast<u1>((value1 >> 6U) & 1U),
         static_cast<u1>((value1 >> 7U) & 1U),
       },
-      stoi(subMatch[2].str()) - 1 - displayOffset_.x(),
-      u2(stoi(subMatch[3].str()) - 1 - displayOffset_.y()),
+      Vector(toDim(stoul(subMatch[2].str()) - 1 - displayOffset_.x()), toDim(stoul(subMatch[3].str()) - 1 - displayOffset_.y())),
       subMatch[4].str() == "M"? MouseAction::Down: MouseAction::Up
     };
   }
   throw runtime_error("Could not parse terminal mouse report");
 }
 
-auto Keyboard::event() -> InputEvent * {
+auto Keyboard::event() -> Event {
   auto key_ = key();
   if (key_ == Mouse) {
-    auto [button, modifiers, x, y, action]{mouseReport()};
+    auto [button, modifiers, position, action]{mouseReport()};
     if (modifiers.mod4) {
-      return new MouseMoveEvent{x, y};
+      return Event{new MouseMoveEvent{position}};
     }
-    return new MouseButtonEvent{button, modifiers, x, y, action};
+    return Event{new MouseButtonEvent{button, modifiers, position, action}};
   }
-  return new KeyEvent{key_};
+  return Event{new KeyEvent{key_}};
+}
+
+auto MouseEvent::translated(const Vector &shift) -> MouseEvent {
+  return MouseEvent{position_ + shift};
 }
 
 } // namespace jwezel

@@ -2,6 +2,7 @@
 
 #include "geometry.hh"
 #include "surface.hh"
+#include "term/event.hh"
 #include "term_interface.hh"
 #include "text.hh"
 
@@ -65,6 +66,8 @@ struct Window: TextElement {
   explicit operator string() const;
 
   void move(const Rectangle &area) override;
+
+  virtual auto event(const Event &event) -> bool;
 
   [[nodiscard]] inline auto terminal() const {return terminal_;}
 

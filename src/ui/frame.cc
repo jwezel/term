@@ -1,6 +1,6 @@
 #include "frame.hh"
 #include "term/geometry.hh"
-#include "ui/container.hh"
+#include "container.hh"
 
 namespace jwezel::ui {
 

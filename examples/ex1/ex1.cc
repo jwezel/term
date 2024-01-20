@@ -1,10 +1,10 @@
-#include <util/basic.hh>
 #include <term/display.hh>
 #include <term/event.hh>
 #include <term/geometry.hh>
 #include <term/keyboard.hh>
 #include <term/term.hh>
 #include <term/text.hh>
+#include <util/basic.hh>
 
 #include <format>
 #include <memory>
@@ -64,9 +64,9 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
   ws[cw]->write(Vector{1, 0}, Text(format("Window {}", ws.size()), RgbRed, RgbGray7, bold, mix));
   term.desktop().write(Vector{0, 0}, Text("Desktop", RgbWhite, RgbNone, {}, mix));
   while (true) {
-    auto *event{term.event()};
-    if (event->vid() == jwezel::KeyEvent::id()) {
-      auto *kbEvent{dynamic_cast<jwezel::KeyEvent *>(event)};
+    auto event{term.event()};
+    if (event.type() == jwezel::KeyEvent::type_) {
+      auto *kbEvent{dynamic_cast<jwezel::KeyEvent *>(event())};
       switch (kbEvent->key()) {
 
         case Up:
@@ -205,10 +205,11 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
         break;
 
         default:
+        term.display().write("\a");
         break;
       }
-    } else if (event->vid() == jwezel::MouseButtonEvent::id()) {
-      auto *mbEvent{dynamic_cast<jwezel::MouseButtonEvent *>(event)};
+    } else if (event.type() == jwezel::MouseButtonEvent::type_) {
+      auto *mbEvent{dynamic_cast<jwezel::MouseButtonEvent *>(event())};
       static vector<string> mouseEvent{
         "Nothing", "Mouse button 1 clicked", "Mouse Button 2 clicked", "Mouse button 3 clicked", "Mouse moved"
       };
@@ -221,8 +222,8 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
           "Event: {:22s}\nColumn: {:3d}\nLine: {:3d}\nState: {}\n"
           "Shift: {}\nControl: {}\nAlt: {}\nMod 4: {}\nMod 5: {}\nMod 6: {}",
           mouseEvent[static_cast<int>(mbEvent->button())],
-          mbEvent->column(),
-          mbEvent->line(),
+          mbEvent->position().x(),
+          mbEvent->position().y(),
           mouseState[static_cast<int>(mbEvent->action())],
           mbEvent->modifiers().shift,
           mbEvent->modifiers().control,
@@ -232,16 +233,16 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
           mbEvent->modifiers().mod6
         )
       );
-    } else if (event->vid() == jwezel::MouseMoveEvent::id()) {
-      auto *mbEvent{dynamic_cast<jwezel::MouseMoveEvent *>(event)};
+    } else if (event.type() == jwezel::MouseMoveEvent::type_) {
+      auto *mbEvent{dynamic_cast<jwezel::MouseMoveEvent *>(event())};
       ws[0]->write(
         Vector{1, 1},
         format(
           "Event: {:22s}\nColumn: {:3d}\nLine: {:3d}\nState: {}\n"
           "Shift: {}\nControl: {}\nAlt: {}\nMod 4: {}\nMod 5: {}\nMod 6: {}",
           "Mouse moved",
-          mbEvent->column(),
-          mbEvent->line(),
+          mbEvent->position().x(),
+          mbEvent->position().y(),
           "              ",
           "              ",
           "              ",

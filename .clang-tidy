@@ -14,8 +14,9 @@ Checks: >
   -google-runtime-operator,
   -hicpp-signed-bitwise,
   -hicpp-use-nullptr,
-  -modernize-use-nullptr,
+  -misc-non-private-member-variables-in-classes,
   -modernize-pass-by-value,
+  -modernize-use-nullptr,
   -readability-function-cognitive-complexity,
   -readability-implicit-bool-conversion,
   -readability-isolate-declaration

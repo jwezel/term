@@ -71,19 +71,21 @@ struct Terminal: Surface, TerminalInterface {
   /// Get event
   ///
   /// @return     Event
-  auto event() -> Event *;
+  [[nodiscard]] auto event() -> Event;
 
   ///
   /// Run loop
   void run();
 
-  auto display() -> Display & {return display_;}
+  void stop();
 
-  auto desktop() -> Window & {return desktop_;}
+  [[nodiscard]] auto display() -> Display & {return display_;}
 
-  auto keyboard() -> Keyboard & {return keyboard_;}
+  [[nodiscard]] auto desktop() -> Window & {return desktop_;}
 
-  auto surface() -> Surface * override {return this;}
+  [[nodiscard]] auto keyboard() -> Keyboard & {return keyboard_;}
+
+  [[nodiscard]] auto surface() -> Surface * override {return this;}
 
   ///
   /// Possibly expand display and screen

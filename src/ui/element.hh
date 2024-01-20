@@ -1,8 +1,9 @@
 #pragma once
 
+#include "taitank_node.h"
+#include <term/event.hh>
 #include <term/surface.hh>
 
-#include "taitank_node.h"
 
 namespace jwezel::ui {
 
@@ -31,6 +32,20 @@ struct Element
   [[nodiscard]] virtual auto window() /*NOLINT(misc-no-recursion)*/-> struct Window *;
 
   auto parent() {return parent_;}
+
+  auto event(const jwezel::Event &event) -> bool;
+
+  bool onMouseMove(const Event &/*event*/) {
+    return false;
+  }
+
+  bool onMouseButton(const Event &/*event*/) {
+    return false;
+  }
+
+  bool onKey(const Event &/*event*/) {
+    return false;
+  }
 
   private:
   struct Container *parent_;

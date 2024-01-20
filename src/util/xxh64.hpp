@@ -26,7 +26,7 @@
 #include <cstdint>
 
 struct xxh64 {
-    static constexpr uint64_t hash (const char *p, uint64_t len, uint64_t seed) {
+    static constexpr uint64_t hash (const char *p, uint64_t len, uint64_t seed) noexcept {
         return finalize ((len >= 32 ? h32bytes (p, len, seed) : seed + PRIME5) + len, p + (len & ~0x1F), len & 0x1F);
     }
 private:

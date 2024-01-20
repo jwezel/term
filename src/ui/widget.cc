@@ -1,11 +1,10 @@
 #include "container.hh"
 #include "element.hh"
-#include "term/surface.hh"
 #include "widget.hh"
 #include "window.hh"
 
 #include <term/geometry.hh>
-
+#include <term/surface.hh>
 
 namespace jwezel::ui {
 

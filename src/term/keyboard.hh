@@ -1,9 +1,9 @@
 #pragma once
 
-#include <util/basic.hh>
 #include <term/event.hh>
 #include <term/geometry.hh>
 #include <term/text.hh>
+#include <util/basic.hh>
 
 #include <deque>
 #include <map>
@@ -177,7 +177,7 @@ struct MouseModifiers {
   u1 mod6: 1;
 };
 
-struct InputEvent: public Event {
+struct InputEvent: public BaseEvent {
   CLASS_ID(InputEvent);
 };
 
@@ -194,44 +194,44 @@ struct KeyEvent: public InputEvent {
 };
 
 struct MouseEvent: public InputEvent {
+  explicit MouseEvent(const  Vector &position):
+  position_{position}
+  {}
+
+  [[nodiscard]] inline auto position() const {return position_;}
+
+  virtual auto translated(const Vector &shift) -> MouseEvent;
+
+  private:
+  Vector position_;
+
   CLASS_ID(MouseEvent);
 };
 
 struct MouseButtonEvent: MouseEvent {
-  MouseButtonEvent(MouseButton button, const MouseModifiers &modifiers, u2 column, u2 line, MouseAction action):
-  button_(button), modifiers_(modifiers), column_(column), line_(line), action_(action)
+  MouseButtonEvent(MouseButton button, const MouseModifiers &modifiers, const Vector &position, MouseAction action):
+  MouseEvent{position},
+  button_(button), modifiers_(modifiers), action_(action)
   {}
 
   [[nodiscard]] inline auto button() const {return button_;}
 
   [[nodiscard]] inline auto modifiers() const {return modifiers_;}
 
-  [[nodiscard]] inline auto column() const {return column_;}
-
-  [[nodiscard]] inline auto line() const {return line_;}
-
   [[nodiscard]] inline auto action() const {return action_;}
 
   private:
   MouseButton button_;
   MouseModifiers modifiers_;
-  u2 column_;
-  u2 line_;
   MouseAction action_;
 
   CLASS_ID(MouseButtonEvent);
 };
 
 struct MouseMoveEvent: MouseEvent {
-  MouseMoveEvent(u2 column, u2 line): column_{column}, line_{line} {}
-
-  [[nodiscard]] inline auto column() const {return column_;}
-
-  [[nodiscard]] inline auto line() const {return line_;}
-
-  private:
-  u2 column_;
-  u2 line_;
+  explicit MouseMoveEvent(const Vector &position):
+  MouseEvent{position}
+  {}
 
   CLASS_ID(MouseMoveEvent);
 };
@@ -281,14 +281,14 @@ struct Keyboard {
   /// Mouse report
   ///
   /// @return     Terminal mouse event data
-  auto mouseReport() -> tuple<MouseButton, MouseModifiers, u2, u2, MouseAction>;
+  auto mouseReport() -> tuple<MouseButton, MouseModifiers, Vector, MouseAction>;
 
   [[nodiscard]] auto keyPrefixes() const -> const PrefixNode & {return keyPrefixes_;}
   ///
   /// Get input event
   ///
   /// @return     The input event.
-  [[nodiscard]] auto event() -> InputEvent *;
+  [[nodiscard]] auto event() -> Event;
 
   inline void displayOffset(const Vector &offset) {
     displayOffset_ = offset;

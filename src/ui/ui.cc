@@ -13,6 +13,10 @@ void Ui::run() {
   terminal_->run();
 }
 
+void Ui::stop() {
+  terminal_->stop();
+}
+
 void Ui::add(jwezel::ui::Window *window) {
   windows_.insert(window);
 }
