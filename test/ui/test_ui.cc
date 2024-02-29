@@ -3,6 +3,7 @@
 #include <ui/window.hh>
 
 #include <term/geometry.hh>
+#include <term/keyboard.hh>
 #include <term/term.hh>
 #include <term/text.hh>
 #include <term/window.hh>
@@ -37,13 +38,21 @@ using
 // NOLINTBEGIN(misc-use-anonymous-namespace)
 
 TEST_CASE("UI Window") {
-  auto *output{tmpfile()};
-  auto *input{tmpfile()};
-  (void)fputs("\x1b[1;1R", input);
-  (void)fputs("\x1b[1;1R", input);
-  (void)fputs("\x1b[10;20R", input);
-  (void)fseek(input, 0, SEEK_SET);
-  Terminal term('.'_C, VectorMin, VectorMin, VectorMax, output->_fileno, input->_fileno);
+  char tempFilename[TMP_MAX];
+  char outputFilename[TMP_MAX];
+  (void)tmpnam(tempFilename); //NOLINT(concurrency-mt-unsafe)
+  (void)tmpnam(outputFilename); //NOLINT(concurrency-mt-unsafe)
+  auto *output{fopen(outputFilename, "ae")};
+  auto *inputWrite{fopen(tempFilename, "ae")};
+  auto *inputRead{fopen(tempFilename, "re")};
+  MESSAGE(std::string(tempFilename));
+  MESSAGE(std::string(outputFilename));
+  REQUIRE_NE(fputs("\x1b[1;1R", inputWrite), EOF);
+  REQUIRE_NE(fputs("\x1b[1;1R", inputWrite), EOF);
+  REQUIRE_NE(fputs("\x1b[10;20R", inputWrite), EOF);
+  REQUIRE_FALSE(fflush(inputWrite));
+  CAPTURE(ftell(inputWrite));
+  Terminal term('.'_C, VectorMin, VectorMin, VectorMax, output->_fileno, inputRead->_fileno);
   jwezel::ui::Ui ui_(&term);
 
   SUBCASE("Window") {
@@ -65,9 +74,47 @@ TEST_CASE("UI Window") {
         test3.patch(Text{"xxxxxxx"}, Vector{2, 1});
         CHECK_EQ(term.display().text(), test3);
       }
+      SUBCASE("Mouse input") {
+        bool called{false};
+        REQUIRE_NE(fputs("\x1b[<0;3;2M", inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        CAPTURE(ftell(inputWrite));
+        w2.onMouseButton(
+          [&called, &w2](const jwezel::ui::Element &el, const jwezel::Event &ev) {
+            if (&el == &w2 and ev.type() == jwezel::MouseButtonEvent::type_) {
+              called = true;
+            }
+            return true;
+          }
+        );
+        CHECK_EQ(ftell(inputRead), 20);
+        term.runEvent();
+        CHECK_EQ(ftell(inputRead), 29);
+        CHECK(called);
+      }
+      SUBCASE("Keyboard input") {
+        bool called{false};
+        REQUIRE_NE(fputs("x", inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        CAPTURE(ftell(inputWrite));
+        w2.onKey(
+          [&called, &w2](const jwezel::ui::Element &el, const jwezel::Event &ev) {
+            if (&el == &w2 and ev.type() == jwezel::KeyEvent::type_) {
+              called = true;
+            }
+            return true;
+          }
+        );
+        CHECK_EQ(ftell(inputRead), 20);
+        term.runEvent();
+        CHECK_EQ(ftell(inputRead), 21);
+        CHECK(called);
+      }
     }
     CHECK_EQ(term.display().text(), test);
   }
+  REQUIRE_FALSE(fclose(inputRead));
+  REQUIRE_FALSE(fclose(inputWrite));
 }
 
 // NOLINTEND(misc-use-anonymous-namespace)

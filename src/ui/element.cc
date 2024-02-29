@@ -2,8 +2,8 @@
 #include "ui/window.hh"
 
 #include <iostream>
-#include <term/keyboard.hh>
 #include <taitank.h>
+#include <term/keyboard.hh>
 
 namespace jwezel::ui {
 
@@ -30,20 +30,30 @@ auto Element::window() /*NOLINT(misc-no-recursion)*/ -> Window * {
 
 auto Element::event(const Event &event) -> bool {
   switch (event.type()) {
+
     case MouseMoveEvent::type_:
-    return onMouseMove(
+    return mouseMoveEvent(
       Event{new MouseMoveEvent{dynamic_cast<MouseMoveEvent *>(event())->position() + window()->area().position()}}
     );
     break;
 
-    case MouseButtonEvent::type_:
-    return onMouseButton(
-      Event{new MouseMoveEvent{dynamic_cast<MouseMoveEvent *>(event())->position() + window()->area().position()}}
-    );
+    case MouseButtonEvent::type_: {
+      auto *buttonEvent{dynamic_cast<MouseButtonEvent *>(event())};
+      return mouseButtonEvent(
+        Event{
+          new MouseButtonEvent{
+            buttonEvent->button(),
+            buttonEvent->modifiers(),
+            buttonEvent->position() + window()->area().position(),
+            buttonEvent->action()
+          }
+        }
+      );
+    }
     break;
 
     case KeyEvent::type_:
-    return onKey(event);
+    return keyEvent(event);
     break;
 
     default:
@@ -52,5 +62,48 @@ auto Element::event(const Event &event) -> bool {
   }
   return false;
 }
+
+auto Element::mouseMoveEvent(const Event &event) -> bool {
+  for (auto &handler : eventHandlers_) {
+    if (handler.first == MouseMoveEvent::type_) {
+      return handler.second(*this, event);
+    }
+  }
+  return false;
+}
+
+auto Element::mouseButtonEvent(const Event &event) -> bool {
+  for (auto &handler : eventHandlers_) {
+    if (handler.first == MouseButtonEvent::type_) {
+      return handler.second(*this, event);
+    }
+  }
+  return false;
+}
+
+auto Element::keyEvent(const Event &event) -> bool {
+  for (auto &handler : eventHandlers_) {
+    if (handler.first == KeyEvent::type_) {
+      return handler.second(*this, event);
+    }
+  }
+  return false;
+}
+
+auto Element::onMouseMove(const std::function<bool(Element &element, const Event &)>& handler) -> int {
+  eventHandlers_.emplace_back(MouseMoveEvent::type_, handler);
+  return static_cast<int>(eventHandlers_.size() - 1);
+}
+
+auto Element::onMouseButton(const std::function<bool(Element &element, const Event &)>& handler) -> int {
+  eventHandlers_.emplace_back(MouseButtonEvent::type_, handler);
+  return static_cast<int>(eventHandlers_.size() - 1);
+}
+
+auto Element::onKey(const std::function<bool(Element &element, const Event &)>& handler) -> int {
+  eventHandlers_.emplace_back(KeyEvent::type_, handler);
+  return static_cast<int>(eventHandlers_.size() - 1);
+}
+
 
 }  // namespace jwezel::ui

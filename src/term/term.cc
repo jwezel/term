@@ -59,15 +59,20 @@ auto Terminal::event() -> Event {
   return keyboard_.event();
 }
 
+void Terminal::runEvent() {
+  auto currentEvent{keyboard_.event()};
+  if (focusWindow_) {
+    focusWindow_->event(currentEvent);
+  }
+}
+
 void Terminal::run() {
   if (!focusWindow_) {
     focus(dynamic_cast<Window *>(zorder().back()));
   }
   running_ = true;
   while (running_) {
-    if (focusWindow_) {
-      focusWindow_->event(keyboard_.event());
-    }
+    runEvent();
   }
 }
 

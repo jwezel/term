@@ -73,6 +73,8 @@ struct Terminal: Surface, TerminalInterface {
   /// @return     Event
   [[nodiscard]] auto event() -> Event;
 
+  void runEvent();
+
   ///
   /// Run loop
   void run();

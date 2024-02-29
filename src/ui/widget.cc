@@ -15,6 +15,11 @@ TextElement{
   background
 },
 ui::Element{dynamic_cast<Container *>(parent)}
-{}
+{
+  auto *window = parent->window();
+  if (!window->focus()) {
+    window->focus(this);
+  }
+}
 
 } // namespace jwezel::ui

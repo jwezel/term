@@ -12,7 +12,7 @@ constexpr u8 EVENT_ID_SEED = xxh64::hash("EVENT_ID_SEED", sizeof "EVENT_ID_SEED"
 // NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define CLASS_ID(NAME) \
 public: \
-static const auto type_ = xxh64::hash(#NAME, sizeof #NAME, EVENT_ID_SEED); \
+constexpr static const auto type_ = xxh64::hash(#NAME, sizeof #NAME, EVENT_ID_SEED); \
 constexpr static const auto typeName_ = #NAME; \
 [[nodiscard]] virtual auto type() const -> u8 { \
   return type_; \

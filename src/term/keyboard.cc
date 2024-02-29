@@ -393,7 +393,6 @@ auto Keyboard::key() -> Unicode {
   }
   char inputKey = 0;
   auto *node{&keyPrefixes_};
-  // PrefixNode *previousNode;
   u32string inputBuffer;
   while (true) {
     ssize_t readLength = 0;
@@ -483,7 +482,10 @@ auto Keyboard::mouseReport() -> tuple<MouseButton, MouseModifiers, Vector, Mouse
         static_cast<u1>((value1 >> 6U) & 1U),
         static_cast<u1>((value1 >> 7U) & 1U),
       },
-      Vector(toDim(stoul(subMatch[2].str()) - 1 - displayOffset_.x()), toDim(stoul(subMatch[3].str()) - 1 - displayOffset_.y())),
+      Vector(
+        toDim(stoul(subMatch[2].str()) - 1 - displayOffset_.x()),
+        toDim(stoul(subMatch[3].str()) - 1 - displayOffset_.y())
+      ),
       subMatch[4].str() == "M"? MouseAction::Down: MouseAction::Up
     };
   }

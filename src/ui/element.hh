@@ -1,7 +1,9 @@
 #pragma once
 
-#include "taitank_node.h"
+#include <functional>
+#include <taitank_node.h>
 #include <term/event.hh>
+#include <term/keyboard.hh>
 #include <term/surface.hh>
 
 
@@ -35,21 +37,22 @@ struct Element
 
   auto event(const jwezel::Event &event) -> bool;
 
-  bool onMouseMove(const Event &/*event*/) {
-    return false;
-  }
+  auto mouseMoveEvent(const Event &event) -> bool;
 
-  bool onMouseButton(const Event &/*event*/) {
-    return false;
-  }
+  auto mouseButtonEvent(const Event &event) -> bool;
 
-  bool onKey(const Event &/*event*/) {
-    return false;
-  }
+  auto keyEvent(const Event &event) -> bool;
+
+  auto onMouseMove(const std::function<bool(Element &element, const Event &)>& handler) -> int;
+
+  auto onMouseButton(const std::function<bool(Element &element, const Event &)>& handler) -> int;
+
+  auto onKey(const std::function<bool(Element &element, const Event &)>& handler) -> int;
 
   private:
   struct Container *parent_;
   TaitankNodeRef node_;
+  vector<pair<decltype(BaseEvent::type_), std::function<bool(Element &element, const Event &)>>> eventHandlers_;
 };
 
 } // namespace jwezel::ui
