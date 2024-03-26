@@ -81,7 +81,6 @@ jobs:
         conan profile detect || true
         conan install packages --build=missing
         CC=gcc-13 CXX=g++-13 PKG_CONFIG_PATH=packages meson setup build
-        meson compile -C build
         meson test -C build
         exit 0
 
