@@ -81,7 +81,7 @@ jobs:
         conan profile detect || true
         conan install packages --build=missing
         CC=gcc-13 CXX=g++-13 PKG_CONFIG_PATH=packages meson setup build
-        meson test -C build
+        COLUMNS=128 LINES=48 meson test -C build
         exit 0
 
     - name: Perform CodeQL Analysis
