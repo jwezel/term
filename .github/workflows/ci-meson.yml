@@ -18,6 +18,7 @@ jobs:
         path: ~/.conan2
         key: ${{ runner.os }}-conan2-${{ hashFiles('**/conanfile.txt') }}
     - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
     - name: Install GCC
     #   uses: egor-tensin/setup-gcc@v1.3
     #   with:
@@ -28,7 +29,7 @@ jobs:
     #     cache: 'pip'
       uses: Dup4/actions-setup-gcc@v1
       with:
-        version: latest    - uses: actions/setup-python@v5
+        version: latest
         cache: 'gcc'
     - run: git submodule update --init --recursive
     - run: pip install -r requirements.txt
