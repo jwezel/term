@@ -26,11 +26,11 @@ jobs:
     #   with:
     #     python-version: '3.x'
     #     cache: 'pip'
-    - name: Setup GCC
-        uses: Dup4/actions-setup-gcc@v1
-        with:
-        version: latest    - uses: actions/setup-python@v5
-        cache: 'gcc'
+      - name: Setup GCC
+          uses: Dup4/actions-setup-gcc@v1
+          with:
+          version: latest    - uses: actions/setup-python@v5
+          cache: 'gcc'
     - run: git submodule update --init --recursive
     - run: pip install -r requirements.txt
     - run: conan profile detect || true
