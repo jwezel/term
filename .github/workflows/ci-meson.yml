@@ -12,13 +12,16 @@ jobs:
     runs-on:
       - ubuntu-latest
     steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+        cache: 'python'
     - name: Cache Conan packages
       uses: actions/cache@v3
       with:
         path: ~/.conan2
         key: ${{ runner.os }}-conan2-${{ hashFiles('**/conanfile.txt') }}
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
     - name: Install GCC
     #   uses: egor-tensin/setup-gcc@v1.3
     #   with:
@@ -29,7 +32,7 @@ jobs:
     #     cache: 'pip'
       uses: Dup4/actions-setup-gcc@v1
       with:
-        version: latest
+        version: 14
         cache: 'gcc'
     - run: git submodule update --init --recursive
     - run: pip install -r requirements.txt
