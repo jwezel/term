@@ -57,8 +57,8 @@ auto Element::event(const Event &event) -> bool {
 
 auto Element::mouseMoveEvent(const Event &event) -> bool {
   for (auto &handler : eventHandlers_) {
-    if (handler.first == MouseMoveEvent::type_) {
-      return handler.second(*this, event);
+    if (handler.first == MouseMoveEvent::type_ and handler.second(*this, event)) {
+      return true;
     }
   }
   return false;
@@ -66,8 +66,8 @@ auto Element::mouseMoveEvent(const Event &event) -> bool {
 
 auto Element::mouseButtonEvent(const Event &event) -> bool {
   for (auto &handler : eventHandlers_) {
-    if (handler.first == MouseButtonEvent::type_) {
-      return handler.second(*this, event);
+    if (handler.first == MouseButtonEvent::type_ and handler.second(*this, event)) {
+      return true;
     }
   }
   return false;
@@ -75,8 +75,8 @@ auto Element::mouseButtonEvent(const Event &event) -> bool {
 
 auto Element::keyEvent(const Event &event) -> bool {
   for (auto &handler : eventHandlers_) {
-    if (handler.first == KeyEvent::type_) {
-      return handler.second(*this, event);
+    if (handler.first == KeyEvent::type_ and handler.second(*this, event)) {
+      return true;
     }
   }
   return false;

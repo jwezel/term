@@ -41,17 +41,7 @@ struct Window: jwezel::Window, Container {
   auto event(const jwezel::Event &event) -> bool override;
 
   private:
-  struct Device: jwezel::Device {
-    explicit Device(Window *window);
-    void update(const jwezel::Updates &updates) override;
-
-    private:
-    Window *window_;
-  };
-
   std::unique_ptr<FrameStyle> style_; // internal, never visible in the public API
-  Device device_;
-  Surface surface_;
   Text title_;
   Widget *focus_ = nullptr; // weak reference to the focused widget
 };

@@ -1,6 +1,8 @@
 #include "ui/button.hh"
 #include "ui/horizontal_box.hh"
 #include "ui/label.hh"
+#include "ui/line_edit.hh"
+#include "ui/text_area.hh"
 #include "ui/vertical_box.hh"
 #include "ui/widget.hh"
 #include <ui/ui.hh>
@@ -47,7 +49,7 @@ TEST_CASE("UI Window") {
   (void)tmpnam(tempFilename); //NOLINT(concurrency-mt-unsafe)
   (void)tmpnam(outputFilename); //NOLINT(concurrency-mt-unsafe)
   auto *output{fopen(outputFilename, "ae")};
-  auto *inputWrite{fopen(tempFilename, "ae")};
+  auto *inputWrite{fopen(tempFilename, "we")};
   auto *inputRead{fopen(tempFilename, "re")};
   MESSAGE(std::string(tempFilename));
   MESSAGE(std::string(outputFilename));
@@ -249,6 +251,112 @@ TEST_CASE("UI Window") {
         term.runEvent();
         CHECK_FALSE(called);
       }
+    }
+    SUBCASE("Text input") {
+      auto input{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, Text{"Hello"})};
+      auto test2{test};
+      test2.patch(Text{"Hello"}, Vector{1, 1});
+      CHECK_EQ(term.display().text(), test2);
+      SUBCASE("Type") {
+        REQUIRE_NE(fputs("X", inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+        auto test3{test};
+        test3.patch(Text{"HelloX"}, Vector{1, 1});
+        CHECK_EQ(term.display().text(), test3);
+        CHECK_EQ(input.content().data[0][5].rune, 'X');
+      }
+      SUBCASE("Arrow left and type") {
+        REQUIRE_NE(fputs("\x1b[D\x1b[D\x1b[DX", inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+        term.runEvent();
+        term.runEvent();
+        term.runEvent();
+        auto test3{test};
+        test3.patch(Text{"HeXllo"}, Vector{1, 1});
+        CHECK_EQ(term.display().text(), test3);
+        CHECK_EQ(input.content().data[0][2].rune, 'X');
+      }
+      SUBCASE("Backspace") {
+        REQUIRE_NE(fputs("\x7f", inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+        auto test3{test};
+        test3.patch(Text{"Hell"}, Vector{1, 1});
+        CHECK_EQ(term.display().text(), test3);
+      }
+      SUBCASE("Enter accepts") {
+        bool called{false};
+        REQUIRE_NE(fputs("\x0d", inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        input.onAccept(
+          [&called](const jwezel::ui::Element &, const jwezel::Event &) {
+            called = true;
+            return true;
+          }
+        );
+        term.runEvent();
+        CHECK(called);
+        CHECK_EQ(input.content().data.size(), 1);
+      }
+    }
+    SUBCASE("Scrolling input") {
+      auto input{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 7, 2}, Text{"HelloWorld"})};
+      auto test2{test};
+      test2.patch(Text{"World"}, Vector{1, 1});
+      CHECK_EQ(term.display().text(), test2);
+      REQUIRE_NE(fputs("X", inputWrite), EOF);
+      REQUIRE_FALSE(fflush(inputWrite));
+      term.runEvent();
+      auto test3{test};
+      test3.patch(Text{"orldX"}, Vector{1, 1});
+      CHECK_EQ(term.display().text(), test3);
+    }
+    SUBCASE("Text area") {
+      auto area{jwezel::ui::TextArea(w1, Rectangle{1, 1, 19, 4}, Text{"Hello"})};
+      auto test2{test};
+      test2.patch(Text{"Hello"}, Vector{1, 1});
+      CHECK_EQ(term.display().text(), test2);
+      SUBCASE("Enter inserts newline") {
+        REQUIRE_NE(fputs("\x0dWorld", inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+        term.runEvent();
+        term.runEvent();
+        term.runEvent();
+        term.runEvent();
+        term.runEvent();
+        auto test3{test};
+        test3.patch(Text{"Hello"}, Vector{1, 1});
+        test3.patch(Text{"World"}, Vector{1, 2});
+        CHECK_EQ(term.display().text(), test3);
+        CHECK_EQ(area.content().data.size(), 2);
+      }
+      SUBCASE("Backspace joins lines") {
+        REQUIRE_NE(fputs("\x0d\x7f", inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+        term.runEvent();
+        CHECK_EQ(area.content().data.size(), 1);
+        CHECK_EQ(area.content().data[0].size(), 5);
+      }
+    }
+    SUBCASE("Click to focus") {
+      auto input1{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, Text{"One"})};
+      auto input2{jwezel::ui::LineEdit(w1, Rectangle{1, 3, 19, 4}, Text{"Two"})};
+      REQUIRE_NE(fputs("\x1b[<0;3;4M", inputWrite), EOF);
+      REQUIRE_FALSE(fflush(inputWrite));
+      term.runEvent();
+      REQUIRE_NE(fputs("X", inputWrite), EOF);
+      REQUIRE_FALSE(fflush(inputWrite));
+      term.runEvent();
+      auto test2{test};
+      test2.patch(Text{"One"}, Vector{1, 1});
+      test2.patch(Text{"TwoX"}, Vector{1, 3});
+      CHECK_EQ(term.display().text(), test2);
+      CHECK_EQ(input2.content().data[0][3].rune, 'X');
+      CHECK_EQ(input1.content().data[0].size(), 3);
     }
     CHECK_EQ(term.display().text(), test);
   }

@@ -4,13 +4,10 @@
 #include "window.hh"
 
 #include <format>
-#include <iostream>
 
 namespace jwezel {
 
 using std::format;
-
-using std::cerr;
 
 //~Backdrop~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

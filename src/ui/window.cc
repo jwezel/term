@@ -42,22 +42,10 @@ Window::Window(Ui &ui, const Char &background, const Rectangle &area, const Text
 jwezel::Window{&ui.terminal(), DefaultSize(ui, area), background},
 Container{nullptr},
 style_{std::make_unique<DefaultWindowFrameStyle>(this, title)},
-device_{this},
-surface_{&device_},
 title_{title},
 focus_{nullptr}
 {
   style_->draw();
-}
-
-Window::Device::Device(Window *window):
-window_{window}
-{}
-
-void Window::Device::update(const jwezel::Updates &updates) {
-  for (const auto &update_ : updates) {
-    window_->write(update_.position, update_.text);
-  }
 }
 
 void Window::focus(Widget *widget) {
@@ -73,6 +61,24 @@ void Window::move(const Rectangle &area) {
 }
 
 auto Window::event(const jwezel::Event &event) -> bool {
+  if (event.type() == MouseMoveEvent::type_ or event.type() == MouseButtonEvent::type_) {
+    const auto position{dynamic_cast<MouseEvent *>(event())->position()};
+    Surface::Fragment *fragment{};
+    try {
+      fragment = surface()->find(position);
+    } catch (const std::logic_error &) { // no single topmost element at this position
+      fragment = 0;
+    }
+    if (auto *widget{dynamic_cast<Widget *>(fragment? fragment->element: nullptr)}; widget) {
+      if (
+        event.type() == MouseButtonEvent::type_ and
+        dynamic_cast<MouseButtonEvent *>(event())->action() == MouseAction::Down
+      ) {
+        focus(widget);
+      }
+      return widget->event(event);
+    }
+  }
   if (focus_) {
     return focus_->event(event);
   }
