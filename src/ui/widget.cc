@@ -26,4 +26,10 @@ void Widget::move(const Rectangle &area) {
   TextElement::move(area);
 }
 
+auto Widget::moveEvent(const Rectangle &area) -> bool {
+  TextElement::moveEvent(area);
+  render();
+  return true;
+}
+
 } // namespace jwezel::ui

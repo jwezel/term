@@ -1,4 +1,5 @@
 #include "ui/horizontal_box.hh"
+#include "ui/label.hh"
 #include "ui/vertical_box.hh"
 #include "ui/widget.hh"
 #include <ui/ui.hh>
@@ -168,6 +169,33 @@ TEST_CASE("UI Window") {
       CHECK_EQ(w2.area(), (Rectangle{1, 1, 6, 11}));
       CHECK_EQ(w3.area(), (Rectangle{7, 1, 13, 11}));
       CHECK_EQ(w4.area(), (Rectangle{14, 1, 19, 11}));
+    }
+    SUBCASE("Label") {
+      auto label{jwezel::ui::Label(w1, Rectangle{1, 1, 19, 3}, Text{"Hello"})};
+      auto test2{test};
+      test2.patch(Text{"Hello"}, Vector{1, 1});
+      CHECK_EQ(term.display().text(), test2);
+      SUBCASE("Move label") {
+        label.move(Rectangle{2, 2, 19, 4});
+        auto test3{test};
+        test3.patch(Text{"Hello"}, Vector{2, 2});
+        CHECK_EQ(term.display().text(), test3);
+      }
+    }
+    SUBCASE("Label in box") {
+      auto box{jwezel::ui::VerticalBox(w1, Rectangle{1, 1, 19, 9})};
+      auto label{jwezel::ui::Label(box, Text{"Hello"})};
+      auto label2{jwezel::ui::Label(box, Text{"World"})};
+      auto test2{test};
+      test2.patch(Text{"Hello"}, Vector{1, 1});
+      test2.patch(Text{"World"}, Vector{1, 5});
+      CHECK_EQ(term.display().text(), test2);
+      SUBCASE("Clip label") {
+        auto label3{jwezel::ui::Label(w1, Rectangle{1, 9, 19, 11}, Text{"Hello World and much more"})};
+        auto test3{test2};
+        test3.patch(Text{"Hello World and mu"}, Vector{1, 9});
+        CHECK_EQ(term.display().text(), test3);
+      }
     }
     CHECK_EQ(term.display().text(), test);
   }
