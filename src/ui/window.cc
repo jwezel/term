@@ -6,6 +6,7 @@
 #include <term/surface.hh>
 #include <term/window.hh>
 
+#include <algorithm>
 #include <memory>
 
 namespace jwezel::ui {
@@ -32,6 +33,8 @@ struct DefaultWindowFrameStyle: FrameStyle {
     window_->write(Vector{1, 0}, title_);
   }
 
+  [[nodiscard]] auto inset() const -> Dim override {return 1;}
+
   private:
   TextElement *window_;
   Text title_;
@@ -48,6 +51,25 @@ title_{title}
 
 void Window::move(const Rectangle &area) {
   Root::move(area);
+}
+
+auto Window::content() const -> Rectangle {
+  const auto size{area().size()};
+  const auto inset{style_->inset()};
+  return Rectangle{
+    inset,
+    inset,
+    std::max(inset, toDim(size.x() - inset)),
+    std::max(inset, toDim(size.y() - inset))
+  };
+}
+
+void Window::handleGeometry(const Rectangle &previous) {
+  if (previous.size() != area().size()) {
+    fill(background()); // the frame has to be drawn again
+    style_->draw();
+  }
+  Root::handleGeometry(previous);
 }
 
 } // namespace jwezel::ui

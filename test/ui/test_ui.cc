@@ -780,6 +780,91 @@ TEST_CASE("UI Window") {
       CHECK_EQ(input.content().data[0].size(), 2);
     }
   }
+
+  SUBCASE("Desktop layout") {
+    Window extra{&term, Rectangle{0, 0, 20, 12}, '#'_C}; // the display, and with it the desktop, is 20 x 12 now
+    auto &desktop{ui_.desktop()};
+    CHECK_EQ(desktop.bounds(), Rectangle{0, 0, 20, 12});
+    auto box{jwezel::ui::VerticalBox(desktop, jwezel::RectangleDefault)};
+    auto top{jwezel::ui::LineEdit(box, Text{"A"})};
+    auto bottom{jwezel::ui::LineEdit(box, Text{"B"})};
+    auto fixed{jwezel::ui::Label(desktop, Rectangle{2, 2, 6, 3}, Text{"ok"})};
+    CHECK_EQ(box.bounds(), Rectangle{0, 0, 20, 12});
+    CHECK_EQ(top.bounds(), Rectangle{0, 0, 20, 6});
+    CHECK_EQ(bottom.bounds(), Rectangle{0, 6, 20, 12});
+    CHECK_EQ(fixed.bounds(), Rectangle{2, 2, 6, 3});
+    SUBCASE("The desktop grows") {
+      Window bigger{&term, Rectangle{0, 0, 30, 15}, '#'_C};
+      CHECK_EQ(desktop.bounds(), Rectangle{0, 0, 30, 15});
+      CHECK_EQ(box.bounds(), Rectangle{0, 0, 30, 15}); // fills the desktop
+      CHECK_EQ(top.bounds(), Rectangle{0, 0, 30, 8});
+      CHECK_EQ(bottom.bounds(), Rectangle{0, 8, 30, 15});
+      CHECK_EQ(fixed.bounds(), Rectangle{2, 2, 6, 3}); // has an area of its own
+      CHECK_EQ(top.area(), Rectangle{0, 0, 30, 8});
+    }
+    SUBCASE("A box with an area of its own does not fill") {
+      auto sized{jwezel::ui::HorizontalBox(desktop, Rectangle{1, 1, 11, 5})};
+      Window bigger{&term, Rectangle{0, 0, 30, 15}, '#'_C};
+      CHECK_EQ(sized.bounds(), Rectangle{1, 1, 11, 5});
+    }
+  }
+
+  SUBCASE("Window resize") {
+    auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{2, 1, 22, 13}, Text{"T"})};
+    auto box{jwezel::ui::VerticalBox(w1, jwezel::RectangleDefault)};
+    auto input{jwezel::ui::LineEdit(box, Text{"Hi"})};
+    auto fixed{jwezel::ui::Label(w1, Rectangle{1, 1, 3, 2}, Text{"ok"})};
+    auto framed{
+      [](const Vector &size) {
+        auto result{Text{' '_C, size}};
+        result.box();
+        result.patch(Text{"T"}, Vector{1, 0});
+        return result;
+      }
+    };
+    CHECK_EQ(w1.content(), Rectangle{1, 1, 19, 11}); // inside the frame
+    CHECK_EQ(box.bounds(), Rectangle{1, 1, 19, 11});
+    CHECK_EQ(input.bounds(), Rectangle{1, 1, 19, 11});
+    CHECK_EQ(w1.text(), framed(Vector{20, 12}));
+    SUBCASE("Grow") {
+      w1.move(Rectangle{2, 1, 32, 16});
+      CHECK_EQ(w1.content(), Rectangle{1, 1, 29, 14});
+      CHECK_EQ(box.bounds(), Rectangle{1, 1, 29, 14});
+      CHECK_EQ(input.bounds(), Rectangle{1, 1, 29, 14});
+      CHECK_EQ(input.area(), Rectangle{3, 2, 31, 15}); // on the display
+      CHECK_EQ(fixed.bounds(), Rectangle{1, 1, 3, 2});
+      CHECK_EQ(w1.text(), framed(Vector{30, 15})); // the frame has been drawn again
+      CHECK_EQ(term.display().caret(), Vector{5, 2}); // end of "Hi"
+    }
+    SUBCASE("Shrink") {
+      w1.move(Rectangle{2, 1, 12, 8});
+      CHECK_EQ(box.bounds(), Rectangle{1, 1, 9, 6});
+      CHECK_EQ(input.bounds(), Rectangle{1, 1, 9, 6});
+      CHECK_EQ(w1.text(), framed(Vector{10, 7}));
+    }
+    SUBCASE("Move only") {
+      w1.move(Rectangle{6, 4, 26, 16});
+      CHECK_EQ(box.bounds(), Rectangle{1, 1, 19, 11}); // relative to the window: nothing changed
+      CHECK_EQ(input.area(), Rectangle{7, 5, 25, 15});
+      CHECK_EQ(fixed.area(), Rectangle{7, 5, 9, 6});
+      CHECK_EQ(term.display().caret(), Vector{9, 5});
+    }
+    SUBCASE("Moved by the terminal") {
+      term.moveWindow(w1, Rectangle{6, 4, 36, 19}); // moved and resized, not through the window
+      CHECK_EQ(box.bounds(), Rectangle{1, 1, 29, 14});
+      CHECK_EQ(input.area(), Rectangle{7, 5, 35, 18});
+      CHECK_EQ(fixed.area(), Rectangle{7, 5, 9, 6});
+      CHECK_EQ(w1.text(), framed(Vector{30, 15}));
+    }
+    SUBCASE("Without room for content") {
+      w1.move(Rectangle{2, 1, 4, 3}); // nothing left inside the frame
+      CHECK_EQ(w1.content().width(), 0);
+      CHECK_EQ(w1.text().size(), Vector{2, 2});
+      w1.move(Rectangle{2, 1, 22, 13}); // and back
+      CHECK_EQ(box.bounds(), Rectangle{1, 1, 19, 11});
+      CHECK_EQ(input.bounds(), Rectangle{1, 1, 19, 11});
+    }
+  }
   REQUIRE_FALSE(fclose(inputRead));
   REQUIRE_FALSE(fclose(inputWrite));
 }

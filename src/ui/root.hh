@@ -24,7 +24,11 @@ struct Widget;
 /// elements are owned by whoever created them, and must be destroyed before
 /// the root.
 ///
-/// All areas of the elements in a root are relative to the host window.
+/// All areas of the elements in a root are relative to the host window. The
+/// root always follows the size and position of the host window: when it
+/// changes, the elements are laid out again. Elements that were created
+/// without an area fill the content area of the root, the others keep their
+/// area.
 struct Root: Container, InputHandler {
   ///
   /// Create Root
@@ -51,6 +55,16 @@ struct Root: Container, InputHandler {
   [[nodiscard]] auto root() -> Root * override {return this;}
 
   ///
+  /// Get the area that elements without an area of their own fill
+  ///
+  /// By default this is the whole host window, the area of the desktop for example.
+  ///
+  /// @return     The content area, relative to the host window
+  [[nodiscard]] virtual auto content() const -> Rectangle {return Rectangle{Vector{0, 0}, host_.area().size()};}
+
+  auto add(Element &child) -> Container & override;
+
+  ///
   /// Focus a widget
   ///
   /// @param      widget  The widget (weak reference), or nullptr for none
@@ -71,11 +85,17 @@ struct Root: Container, InputHandler {
   /// relative to it and follow
   void move(const Rectangle &area) override;
 
+  ///
+  /// Place all elements again, relative to the host window as it is now
+  void layout();
+
   [[nodiscard]] auto bounds() -> Rectangle override {return host_.area();}
 
   auto handleEvent(const Event &event) -> bool override;
 
   void handleFocus() override;
+
+  void handleGeometry(const Rectangle &previous) override;
 
   private:
   jwezel::Window &host_;

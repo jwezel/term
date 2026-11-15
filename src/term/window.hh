@@ -78,6 +78,12 @@ struct InputHandler {
   ///
   /// The window received the terminal focus
   virtual void handleFocus() {}
+
+  ///
+  /// The window was moved or resized
+  ///
+  /// @param[in]  previous  The area the window had before
+  virtual void handleGeometry(const Rectangle &/*previous*/) {}
 };
 
 ///
@@ -106,6 +112,12 @@ struct Window: TextElement {
   ///
   /// Called when the window has received the terminal focus
   virtual void focusEvent();
+
+  ///
+  /// Called when the window has been moved or resized
+  ///
+  /// @param[in]  previous  The area the window had before
+  virtual void geometryEvent(const Rectangle &previous);
 
   ///
   /// Set the input handler (weak reference, nullptr for none)

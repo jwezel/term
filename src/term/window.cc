@@ -55,4 +55,10 @@ void Window::focusEvent() {
   }
 }
 
+void Window::geometryEvent(const Rectangle &previous) {
+  if (inputHandler_) {
+    inputHandler_->handleGeometry(previous);
+  }
+}
+
 }  // namespace jwezel

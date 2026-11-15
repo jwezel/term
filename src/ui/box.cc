@@ -11,6 +11,7 @@ area_{area},
 layout_{layout},
 orientation_{orientation}
 {
+  layoutManaged(area == RectangleDefault);
   parent.add(*this);
 }
 

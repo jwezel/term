@@ -59,7 +59,11 @@ void Terminal::deleteElement(Element *element, Element *destination) {
 
 void Terminal::reshapeElement(Element *element, const Rectangle &area) {
   expand(area.position2()); // the display grows to fit, whichever element it is
+  const auto previous{element->area()};
   Surface::reshapeElement(element, area);
+  if (auto *window{element->inputWindow()}; window == element and previous != area) {
+    window->geometryEvent(previous); // windows have to follow their geometry, e.g. to lay out their UI
+  }
   placeCaret();
 }
 

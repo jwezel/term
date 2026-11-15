@@ -58,6 +58,14 @@ struct Element
 
   auto parent() {return parent_;}
 
+  ///
+  /// Whether the area of the element is left to its parent
+  ///
+  /// This is the case for elements created without an area (`RectangleDefault`): a box
+  /// assigns them their slice, and a root lets them fill its content area, also when the
+  /// window is resized.
+  [[nodiscard]] auto layoutManaged() const -> bool {return layoutManaged_;}
+
   auto event(const jwezel::Event &event) -> bool;
 
   auto mouseMoveEvent(const Event &event) -> bool;
@@ -72,8 +80,12 @@ struct Element
 
   auto onKey(const std::function<bool(const Element &element, const Event &)>& handler) -> int;
 
+  protected:
+  void layoutManaged(bool managed) {layoutManaged_ = managed;}
+
   private:
   struct Container *parent_;
+  bool layoutManaged_{false};
   vector<pair<decltype(BaseEvent::type_), std::function<bool(const Element &element, const Event &)>>> eventHandlers_;
 };
 

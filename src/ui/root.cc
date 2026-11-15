@@ -41,16 +41,34 @@ void Root::forget(Widget &widget) {
   }
 }
 
-void Root::move(const Rectangle &area) {
-  std::vector<std::pair<ui::Element *, Rectangle>> placements;
-  for (auto *child: children()) {
-    placements.emplace_back(child, child->bounds());
+auto Root::add(Element &child) -> Container & {
+  Container::add(child);
+  if (child.layoutManaged()) {
+    if (const auto area{content()}; area.width() > 0 and area.height() > 0) {
+      child.move(area);
+    }
   }
-  host_.jwezel::Window::move(area);
-  for (const auto &[child, relative]: placements) {
-    child->move(relative);
+  return *this;
+}
+
+void Root::move(const Rectangle &area) {
+  host_.jwezel::Window::move(area); // the elements follow in handleGeometry
+}
+
+void Root::layout() {
+  const auto area{content()};
+  for (auto *child: children()) {
+    if (!child->layoutManaged()) {
+      child->move(child->bounds());
+    } else if (area.width() > 0 and area.height() > 0) {
+      child->move(area);
+    }
   }
   updateCaret();
+}
+
+void Root::handleGeometry(const Rectangle &/*previous*/) {
+  layout();
 }
 
 void Root::handleFocus() {

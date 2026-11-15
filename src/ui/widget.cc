@@ -25,8 +25,10 @@ TextElement{
   displayArea(area, parent),
   background
 },
-ui::Element{&parent}
+ui::Element{&parent},
+bounds_{area}
 {
+  layoutManaged(area == RectangleDefault);
   parent.add(*this);
   if (auto *root{parent.root()}; !root->focus()) {
     root->focus(this);
@@ -48,12 +50,9 @@ auto Widget::inputWindow() -> jwezel::Window * {
   return &root()->host();
 }
 
-auto Widget::bounds() -> Rectangle {
-  return TextElement::area() - root()->origin();
-}
-
 auto Widget::moveEvent(const Rectangle &area) -> bool {
   TextElement::moveEvent(area);
+  bounds_ = area - root()->origin();
   render();
   return true;
 }

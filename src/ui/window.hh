@@ -40,6 +40,12 @@ struct Window: jwezel::Window, Root {
   /// and follow
   void move(const Rectangle &area) override;
 
+  ///
+  /// The area inside the frame
+  [[nodiscard]] auto content() const -> Rectangle override;
+
+  void handleGeometry(const Rectangle &previous) override;
+
   private:
   std::unique_ptr<FrameStyle> style_; // internal, never visible in the public API
   Text title_;

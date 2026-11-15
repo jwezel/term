@@ -15,7 +15,7 @@ struct Widget: TextElement, ui::Element
 
   void move(const Rectangle &area) override;
 
-  [[nodiscard]] auto bounds() -> Rectangle override;
+  [[nodiscard]] auto bounds() -> Rectangle override {return bounds_;}
 
   [[nodiscard]] auto inputWindow() -> jwezel::Window * override;
 
@@ -48,6 +48,9 @@ struct Widget: TextElement, ui::Element
   /// constructor as well.
   virtual void render() {}
 
+
+  private:
+  Rectangle bounds_; // area relative to the root
 };
 
 } // namespace jwezel::ui
