@@ -473,7 +473,7 @@ auto Keyboard::mouseReport() -> tuple<MouseButton, MouseModifiers, Vector, Mouse
   if (regex_match(report, subMatch, reportPattern)) {
     auto value1{static_cast<u1>(stoul(subMatch[1].str()))};
     return {
-      static_cast<MouseButton>((value1 & 3U) + 1U),
+      static_cast<MouseButton>(value1 & 3U),
       MouseModifiers{
         static_cast<u1>((value1 >> 2U) & 1U),
         static_cast<u1>((value1 >> 4U) & 1U),

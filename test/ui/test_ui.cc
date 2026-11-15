@@ -1,3 +1,4 @@
+#include "ui/button.hh"
 #include "ui/horizontal_box.hh"
 #include "ui/label.hh"
 #include "ui/vertical_box.hh"
@@ -195,6 +196,58 @@ TEST_CASE("UI Window") {
         auto test3{test2};
         test3.patch(Text{"Hello World and mu"}, Vector{1, 9});
         CHECK_EQ(term.display().text(), test3);
+      }
+    }
+    SUBCASE("Button") {
+      auto button{jwezel::ui::Button(w1, Rectangle{1, 1, 8, 2}, Text{"OK"})};
+      auto test2{test};
+      test2.patch(Text{"[ OK ]"}, Vector{1, 1});
+      CHECK_EQ(term.display().text(), test2);
+      SUBCASE("Press with space") {
+        bool called{false};
+        REQUIRE_NE(fputs(" ", inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        CAPTURE(ftell(inputWrite));
+        button.onPress(
+          [&called](const jwezel::ui::Element &, const jwezel::Event &) {
+            called = true;
+            return true;
+          }
+        );
+        CHECK_EQ(ftell(inputRead), 20);
+        term.runEvent();
+        CHECK_EQ(ftell(inputRead), 21);
+        CHECK(called);
+      }
+      SUBCASE("Press with mouse") {
+        bool called{false};
+        REQUIRE_NE(fputs("\x1b[<0;3;2M", inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        CAPTURE(ftell(inputWrite));
+        button.onPress(
+          [&called](const jwezel::ui::Element &, const jwezel::Event &) {
+            called = true;
+            return true;
+          }
+        );
+        CHECK_EQ(ftell(inputRead), 20);
+        term.runEvent();
+        CHECK_EQ(ftell(inputRead), 29);
+        CHECK(called);
+      }
+      SUBCASE("Mouse outside") {
+        bool called{false};
+        REQUIRE_NE(fputs("\x1b[<0;11;2M", inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        CAPTURE(ftell(inputWrite));
+        button.onPress(
+          [&called](const jwezel::ui::Element &, const jwezel::Event &) {
+            called = true;
+            return true;
+          }
+        );
+        term.runEvent();
+        CHECK_FALSE(called);
       }
     }
     CHECK_EQ(term.display().text(), test);

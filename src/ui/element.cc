@@ -25,7 +25,7 @@ auto Element::event(const Event &event) -> bool {
 
     case MouseMoveEvent::type_:
     return mouseMoveEvent(
-      Event{new MouseMoveEvent{dynamic_cast<MouseMoveEvent *>(event())->position() + window()->area().position()}}
+      Event{new MouseMoveEvent{dynamic_cast<MouseMoveEvent *>(event())->position() - window()->area().position()}}
     );
     break;
 
@@ -36,7 +36,7 @@ auto Element::event(const Event &event) -> bool {
           new MouseButtonEvent{
             buttonEvent->button(),
             buttonEvent->modifiers(),
-            buttonEvent->position() + window()->area().position(),
+            buttonEvent->position() - window()->area().position(),
             buttonEvent->action()
           }
         }
