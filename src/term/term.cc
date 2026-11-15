@@ -99,10 +99,14 @@ void Terminal::focus(Window *window) {
   if (window == focusWindow_) {
     return;
   }
+  auto *previous{focusWindow_};
   focusWindow_ = window;
   caretOwner_ = nullptr; // the caret of the previously focused window is gone
   caretPosition_.reset();
   placeCaret();
+  if (previous) {
+    previous->blurEvent();
+  }
   if (window) {
     window->focusEvent();
   }

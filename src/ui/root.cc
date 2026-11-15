@@ -24,8 +24,15 @@ Root::~Root() {
 }
 
 void Root::focus(Widget *widget) {
+  auto *previous{focus_};
   focus_ = widget;
+  if (previous and previous != widget) {
+    previous->focusChanged(false);
+  }
   updateCaret();
+  if (widget and previous != widget) {
+    widget->focusChanged(true);
+  }
 }
 
 void Root::updateCaret() {
@@ -37,7 +44,8 @@ void Root::forget(Widget &widget) {
     grab_ = nullptr;
   }
   if (focus_ == &widget) {
-    focus(nullptr);
+    focus_ = nullptr; // no notification: the widget is on its way out
+    updateCaret();
   }
 }
 
@@ -73,6 +81,15 @@ void Root::handleGeometry(const Rectangle &/*previous*/) {
 
 void Root::handleFocus() {
   updateCaret();
+  if (focus_) {
+    focus_->focusChanged(true);
+  }
+}
+
+void Root::handleBlur() {
+  if (focus_) {
+    focus_->focusChanged(false);
+  }
 }
 
 auto Root::handleEvent(const Event &event) -> bool {
@@ -102,17 +119,21 @@ auto Root::handleEvent(const Event &event) -> bool {
         widget = nullptr;
       }
     }
+    auto *target{widget? widget->eventTarget(): nullptr};
     if (change == MouseCapture::Change::began) {
       grab_ = widget;
       if (own) {
         // Click to focus: the widget that was hit and the window it is in
-        if (widget) {
-          focus(widget);
+        if (focus_ and target != focus_) {
+          focus_->pressedElsewhere();
+        }
+        if (target) {
+          focus(target);
         }
         host_.terminal()->focus(&host_);
       }
     }
-    const auto handled{widget? widget->event(event): false};
+    const auto handled{target? target->event(event): false};
     if (change == MouseCapture::Change::ended) {
       grab_ = nullptr;
     }

@@ -95,6 +95,8 @@ struct Root: Container, InputHandler {
 
   void handleFocus() override;
 
+  void handleBlur() override;
+
   void handleGeometry(const Rectangle &previous) override;
 
   private:

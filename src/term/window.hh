@@ -80,6 +80,10 @@ struct InputHandler {
   virtual void handleFocus() {}
 
   ///
+  /// The window lost the terminal focus
+  virtual void handleBlur() {}
+
+  ///
   /// The window was moved or resized
   ///
   /// @param[in]  previous  The area the window had before
@@ -112,6 +116,10 @@ struct Window: TextElement {
   ///
   /// Called when the window has received the terminal focus
   virtual void focusEvent();
+
+  ///
+  /// Called when the window has lost the terminal focus
+  virtual void blurEvent();
 
   ///
   /// Called when the window has been moved or resized

@@ -1,4 +1,5 @@
 #include "ui/button.hh"
+#include "ui/drop_down.hh"
 #include "ui/horizontal_box.hh"
 #include "ui/label.hh"
 #include "ui/line_edit.hh"
@@ -863,6 +864,305 @@ TEST_CASE("UI Window") {
       w1.move(Rectangle{2, 1, 22, 13}); // and back
       CHECK_EQ(box.bounds(), Rectangle{1, 1, 19, 11});
       CHECK_EQ(input.bounds(), Rectangle{1, 1, 19, 11});
+    }
+  }
+
+  SUBCASE("Drop down") {
+    auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 20, 12}, Text{"Title"})};
+    const std::vector<Text> fruit{Text{"Apple"}, Text{"Banana"}, Text{"Cherry"}};
+    auto drop{jwezel::ui::DropDown(w1, Rectangle{1, 1, 19, 2}, fruit, 1)};
+    auto field{jwezel::ui::LineEdit(w1, Rectangle{1, 3, 19, 4}, Text{"x"})};
+    auto field2{jwezel::ui::LineEdit(w1, Rectangle{1, 6, 19, 7}, Text{"y"})};
+    int chosen{0};
+    drop.onSelect(
+      [&chosen](const jwezel::ui::Element &, const jwezel::Event &) {
+        ++chosen;
+        return true;
+      }
+    );
+    auto send{
+      [&](const char *input) {
+        REQUIRE_NE(fputs(input, inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+      }
+    };
+    auto padded{[](const std::string &text) {return text + std::string(18 - text.size(), ' ');}};
+    auto closed{[&](const std::string &item) {return "[ " + item + std::string(12 - item.size(), ' ') + " ▼ ]";}};
+    auto row{
+      [&](int line) { // the content of a row; the highlight is checked separately
+        auto result{term.display().text()[Rectangle{1, jwezel::toDim(line), 19, jwezel::toDim(line + 1)}]};
+        for (auto &cell: result.data.at(0)) {
+          cell.attributes.attr = static_cast<jwezel::Attributes>(cell.attributes.attr & ~jwezel::reverse);
+        }
+        return result;
+      }
+    };
+    auto reversed{
+      [&](int line) {
+        return (term.display().text().data[static_cast<size_t>(line)][1].attributes.attr & jwezel::reverse) != 0;
+      }
+    };
+    CHECK_EQ(drop.selected(), 1);
+    CHECK_FALSE(drop.isOpen());
+    CHECK_EQ(w1.focus(), &drop);
+    CHECK_EQ(row(1), Text{closed("Banana")});
+    CHECK_EQ(row(3), Text{padded("x")});
+    CHECK_FALSE(term.display().caret());
+    SUBCASE("Open") {
+      send(" ");
+      CHECK(drop.isOpen());
+      CHECK_EQ(row(2), Text{padded(" Apple")});
+      CHECK_EQ(row(3), Text{padded(" Banana")}); // in front of the field
+      CHECK_EQ(row(4), Text{padded(" Cherry")});
+      CHECK_EQ(row(5), Text{padded("")});
+      CHECK_FALSE(reversed(2));
+      CHECK(reversed(3)); // the selected item is highlighted
+      CHECK_FALSE(reversed(4));
+      SUBCASE("Escape closes without choosing") {
+        send("\x1b");
+        CHECK_FALSE(drop.isOpen());
+        CHECK_EQ(drop.selected(), 1);
+        CHECK_EQ(chosen, 0);
+        CHECK_EQ(row(3), Text{padded("x")}); // the field is back
+      }
+      SUBCASE("Enter chooses") {
+        send("\x1b[A"); // up
+        CHECK(reversed(2));
+        CHECK_FALSE(reversed(3));
+        send("\x0d");
+        CHECK_FALSE(drop.isOpen());
+        CHECK_EQ(drop.selected(), 0);
+        CHECK_EQ(chosen, 1);
+        CHECK_EQ(row(1), Text{closed("Apple")});
+        CHECK_EQ(row(3), Text{padded("x")});
+      }
+      SUBCASE("Space chooses") {
+        send("\x1b[B");
+        send(" ");
+        CHECK_FALSE(drop.isOpen());
+        CHECK_EQ(drop.selected(), 2);
+        CHECK_EQ(chosen, 1);
+      }
+      SUBCASE("The highlight stops at the ends") {
+        send("\x1b[B");
+        send("\x1b[B");
+        send("\x1b[B");
+        CHECK(reversed(4));
+        send("\x1b[H"); // home
+        CHECK(reversed(2));
+        send("\x1b[A");
+        CHECK(reversed(2));
+        send("\x1b[F"); // end
+        CHECK(reversed(4));
+      }
+      SUBCASE("Other keys are not for the list") {
+        send("X");
+        CHECK(drop.isOpen());
+        CHECK_EQ(field.content().data[0].size(), 1);
+      }
+      SUBCASE("Choosing the selected item is a choice too") {
+        send("\x0d");
+        CHECK_EQ(drop.selected(), 1);
+        CHECK_EQ(chosen, 1);
+      }
+    }
+    SUBCASE("Down opens") {
+      send("\x1b[B");
+      CHECK(drop.isOpen());
+    }
+    SUBCASE("Other keys do nothing when closed") {
+      send("X");
+      send("\x1b[A");
+      CHECK_FALSE(drop.isOpen());
+      CHECK_EQ(field.content().data[0].size(), 1);
+    }
+    SUBCASE("Mouse") {
+      SUBCASE("Click opens, click on an item chooses") {
+        send("\x1b[<0;4;2M"); // display (3, 1): the drop down
+        CHECK(drop.isOpen());
+        send("\x1b[<0;4;2m"); // released over it: stays open
+        CHECK(drop.isOpen());
+        send("\x1b[<0;4;5M"); // display (3, 4): "Cherry"
+        CHECK_FALSE(drop.isOpen());
+        CHECK_EQ(drop.selected(), 2);
+        CHECK_EQ(chosen, 1);
+        send("\x1b[<0;4;5m"); // the release goes nowhere
+        CHECK_EQ(chosen, 1);
+        CHECK_EQ(row(1), Text{closed("Cherry")});
+        CHECK_EQ(field.content().data[0].size(), 1); // nothing has been typed into the field
+      }
+      SUBCASE("Clicking the drop down again closes") {
+        send("\x1b[<0;4;2M");
+        send("\x1b[<0;4;2m");
+        send("\x1b[<0;4;2M");
+        send("\x1b[<0;4;2m");
+        CHECK_FALSE(drop.isOpen());
+        CHECK_EQ(chosen, 0);
+      }
+      SUBCASE("Press, move to an item and release") {
+        send("\x1b[<0;4;2M");
+        send("\x1b[<32;4;3M"); // display (3, 2): "Apple"
+        CHECK(reversed(2));
+        CHECK_FALSE(reversed(3));
+        send("\x1b[<32;4;5M"); // "Cherry"
+        CHECK(reversed(4));
+        send("\x1b[<0;4;5m");
+        CHECK_FALSE(drop.isOpen());
+        CHECK_EQ(drop.selected(), 2);
+        CHECK_EQ(chosen, 1);
+      }
+      SUBCASE("Press and release elsewhere closes") {
+        send("\x1b[<0;4;2M");
+        send("\x1b[<32;11;9M");
+        send("\x1b[<0;11;9m"); // display (10, 8)
+        CHECK_FALSE(drop.isOpen());
+        CHECK_EQ(drop.selected(), 1);
+        CHECK_EQ(chosen, 0);
+      }
+      SUBCASE("Motion over the open list highlights") {
+        send(" ");
+        send("\x1b[<35;4;3M"); // motion without a button over "Apple"
+        CHECK(reversed(2));
+        CHECK_FALSE(reversed(3));
+        send("\x1b[<35;4;2M"); // over the drop down itself: nothing changes
+        CHECK(reversed(2));
+      }
+      SUBCASE("Wheel") {
+        send(" ");
+        send("\x1b[<65;4;3M"); // wheel down over the list
+        CHECK(reversed(4));
+        send("\x1b[<64;4;3M"); // wheel up
+        CHECK(reversed(3));
+        send("\x1b[<64;4;3M");
+        CHECK(reversed(2));
+        CHECK(drop.isOpen());
+        CHECK_EQ(chosen, 0);
+      }
+      SUBCASE("Wheel does not open or click") {
+        send("\x1b[<64;4;2M");
+        send("\x1b[<65;4;2M");
+        CHECK_FALSE(drop.isOpen());
+      }
+      SUBCASE("The other buttons do not do anything") {
+        send("\x1b[<2;4;2M");
+        send("\x1b[<2;4;2m");
+        CHECK_FALSE(drop.isOpen());
+      }
+      SUBCASE("Clicking the frame closes but keeps the focus") {
+        send(" ");
+        send("\x1b[<0;1;1M"); // display (0, 0)
+        CHECK_FALSE(drop.isOpen());
+        CHECK_EQ(w1.focus(), &drop);
+        CHECK_EQ(row(3), Text{padded("x")});
+      }
+      SUBCASE("Clicking another widget closes and moves the focus") {
+        send(" ");
+        send("\x1b[<0;4;7M"); // display (3, 6): field2
+        CHECK_FALSE(drop.isOpen());
+        CHECK_EQ(w1.focus(), &field2);
+        CHECK_EQ(drop.selected(), 1);
+        CHECK_EQ(chosen, 0);
+        send("Z");
+        CHECK_EQ(field2.content().data[0].size(), 2);
+      }
+    }
+    SUBCASE("Scrolling") {
+      std::vector<Text> many;
+      for (auto i = 0; i < 12; ++i) {
+        many.emplace_back("Item" + std::to_string(i));
+      }
+      drop.items(many);
+      drop.maxRows(3);
+      drop.select(0);
+      CHECK_EQ(drop.maxRows(), 3);
+      send(" ");
+      CHECK_EQ(row(2), Text{padded(" Item0")});
+      CHECK_EQ(row(4), Text{padded(" Item2")});
+      CHECK_EQ(row(5), Text{padded("")}); // only three rows
+      send("\x1b[F");
+      CHECK_EQ(row(2), Text{padded(" Item9")});
+      CHECK_EQ(row(4), Text{padded(" Item11")});
+      CHECK(reversed(4));
+      send("\x1b[5~"); // page up
+      CHECK_EQ(row(2), Text{padded(" Item8")});
+      CHECK(reversed(2));
+      send("\x1b[<0;4;4M"); // display (3, 3): the middle row, "Item9"
+      CHECK_EQ(drop.selected(), 9);
+    }
+    SUBCASE("The list closes") {
+      send(" ");
+      REQUIRE(drop.isOpen());
+      SUBCASE("When the window loses the focus") {
+        auto w2{jwezel::ui::Window(ui_, ' '_C, Rectangle{22, 3, 38, 8}, Text{"Other"})};
+        CHECK_FALSE(drop.isOpen());
+        CHECK_EQ(row(3), Text{padded("x")});
+      }
+      SUBCASE("When the focus moves to another widget") {
+        w1.focus(&field);
+        CHECK_FALSE(drop.isOpen());
+      }
+      SUBCASE("When the drop down is moved") {
+        drop.move(Rectangle{2, 1, 18, 2});
+        CHECK_FALSE(drop.isOpen());
+        CHECK_EQ(drop.bounds(), Rectangle{2, 1, 18, 2});
+        CHECK_EQ(row(3), Text{padded("x")});
+      }
+      SUBCASE("When the items are replaced") {
+        drop.items({Text{"Only"}});
+        CHECK_FALSE(drop.isOpen());
+        CHECK_EQ(drop.selected(), 0);
+        CHECK_EQ(row(1), Text{closed("Only")});
+      }
+      SUBCASE("When the window comes back after another was in front") {
+        auto w2{jwezel::ui::Window(ui_, ' '_C, Rectangle{22, 3, 38, 8}, Text{"Other"})};
+        send("\x1b[<0;4;2M"); // display (3, 1): back to w1
+        CHECK_EQ(term.focus(), &w1);
+        CHECK(drop.isOpen()); // this click opened it again
+      }
+    }
+    SUBCASE("Destroyed while open") {
+      {
+        auto temp{jwezel::ui::DropDown(w1, Rectangle{1, 8, 19, 9}, fruit)};
+        w1.focus(&temp);
+        temp.open();
+        CHECK(temp.isOpen());
+        CHECK_EQ(row(9), Text{padded(" Apple")});
+      }
+      CHECK_EQ(w1.focus(), nullptr);
+      CHECK_EQ(row(9), Text{padded("")});
+      CHECK_EQ(row(8), Text{padded("")});
+      send("\x1b[<0;4;10M"); // where the popup was: nothing
+      send("\x1b[<0;4;10m");
+    }
+    SUBCASE("No items") {
+      drop.items({});
+      CHECK_EQ(drop.selected(), -1);
+      CHECK_EQ(row(1), Text{closed("")});
+      send(" ");
+      CHECK_FALSE(drop.isOpen());
+    }
+    SUBCASE("Selecting") {
+      drop.select(2);
+      CHECK_EQ(row(1), Text{closed("Cherry")});
+      drop.select(7);
+      CHECK_EQ(drop.selected(), 2);
+      drop.select(-4);
+      CHECK_EQ(drop.selected(), 0);
+      CHECK_EQ(chosen, 0); // programmatic selection is not a choice
+    }
+    SUBCASE("In a box") {
+      auto box{jwezel::ui::VerticalBox(w1, Rectangle{1, 8, 19, 11})};
+      auto first{jwezel::ui::DropDown(box, fruit, 0)};
+      auto second{jwezel::ui::DropDown(box, fruit, 2)};
+      CHECK_EQ(first.bounds(), Rectangle{1, 8, 19, 10});
+      CHECK_EQ(second.bounds(), Rectangle{1, 10, 19, 11});
+      CHECK_EQ(row(8), Text{closed("Apple")});
+      CHECK_EQ(row(10), Text{closed("Cherry")});
+      w1.focus(&second);
+      send(" ");
+      CHECK(second.isOpen());
+      CHECK_EQ(row(11), Text{padded(" Apple")}); // opens below the second one
     }
   }
   REQUIRE_FALSE(fclose(inputRead));

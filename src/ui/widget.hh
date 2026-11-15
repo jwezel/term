@@ -37,6 +37,29 @@ struct Widget: TextElement, ui::Element
   /// @return     Display position of the caret, or nothing for no caret
   [[nodiscard]] virtual auto caret() const -> std::optional<Vector> {return std::nullopt;}
 
+  ///
+  /// Get the widget that handles the mouse input directed at this widget
+  ///
+  /// A widget that is only a part of another one (a popup of a drop down, say)
+  /// hands its mouse input to the widget it belongs to, which owns it and can
+  /// therefore safely change or even remove it while handling the input.
+  ///
+  /// @return     The widget itself by default
+  [[nodiscard]] virtual auto eventTarget() -> Widget * {return this;}
+
+  ///
+  /// The widget started or stopped being the one that gets the keyboard input
+  ///
+  /// This is the case when the focus moves to or from the widget within its
+  /// root and when the window of the root gains or loses the terminal focus.
+  ///
+  /// @param[in]  focused  True if the widget gets the keyboard input now
+  virtual void focusChanged(bool /*focused*/) {}
+
+  ///
+  /// A mouse button went down somewhere else than on this widget, while it has the focus
+  virtual void pressedElsewhere() {}
+
   protected:
   ///
   /// Render the widget content into its text buffer
