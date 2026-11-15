@@ -49,6 +49,38 @@ struct Backdrop: public Surface::Element {
 };
 
 ///
+/// Receiver of the input and focus events of a window
+///
+/// Lets behavior be attached to a window that cannot be derived from, like
+/// the desktop. The handler is a weak reference: the handler is owned by its
+/// creator and has to unregister before the window goes away.
+struct InputHandler {
+  InputHandler() = default;
+
+  InputHandler(const InputHandler &) = delete;
+
+  InputHandler(InputHandler &&) = delete;
+
+  auto operator=(const InputHandler &) -> InputHandler & = delete;
+
+  auto operator=(InputHandler &&) -> InputHandler & = delete;
+
+  virtual ~InputHandler() = default;
+
+  ///
+  /// Handle an input event
+  ///
+  /// @param[in]  event  The event
+  ///
+  /// @return     True if the event was handled
+  virtual auto handleEvent(const Event &event) -> bool = 0;
+
+  ///
+  /// The window received the terminal focus
+  virtual void handleFocus() {}
+};
+
+///
 /// Window
 struct Window: TextElement {
   explicit Window(struct TerminalInterface *terminal, const Rectangle &area, const Char &background = Space, Window *below = 0);
@@ -67,11 +99,17 @@ struct Window: TextElement {
 
   void move(const Rectangle &area) override;
 
+  ///
+  /// Handle an input event; goes to the input handler, if there is one
   virtual auto event(const Event &event) -> bool;
 
   ///
   /// Called when the window has received the terminal focus
-  virtual void focusEvent() {}
+  virtual void focusEvent();
+
+  ///
+  /// Set the input handler (weak reference, nullptr for none)
+  void inputHandler(InputHandler *handler) {inputHandler_ = handler;}
 
   [[nodiscard]] auto inputWindow() -> Window * override {return this;}
 
@@ -79,6 +117,7 @@ struct Window: TextElement {
 
   private:
   struct TerminalInterface *terminal_;
+  InputHandler *inputHandler_{};
 };
 
 } // namespace jwezel

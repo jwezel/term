@@ -29,7 +29,7 @@ struct Widget: TextElement, ui::Element
 
   auto operator=(Widget &&) -> Widget & = delete;
 
-  ~Widget() override = default;
+  ~Widget() override;
 
   ///
   /// Where the text caret (hardware cursor) of the widget is, when it has the focus

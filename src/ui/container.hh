@@ -17,6 +17,12 @@ struct Container: ui::Element {
     return *this;
   }
 
+  ///
+  /// Remove a child; called when the child is destroyed
+  virtual void remove(Element &child) {
+    children_.erase(&child);
+  }
+
   auto children() const -> const unordered_set<Element *> & {return children_;}
 
   private:

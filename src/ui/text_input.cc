@@ -1,5 +1,5 @@
 #include "text_input.hh"
-#include "window.hh"
+#include "root.hh"
 
 #include <algorithm>
 
@@ -214,8 +214,8 @@ void TextInput::render() {
       );
     }
   }
-  if (auto *window{this->window()}; window->focus() == this) {
-    window->updateCaret(); // before writing, so the display parks the cursor at the new caret afterwards
+  if (auto *root{this->root()}; root->focus() == this) {
+    root->updateCaret(); // before writing, so the display parks the cursor at the new caret afterwards
   }
   write(Vector{0, 0}, visible);
 }

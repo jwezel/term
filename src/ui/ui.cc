@@ -6,7 +6,8 @@
 namespace jwezel::ui {
 
 Ui::Ui(Terminal &terminal):
-terminal_{terminal}
+terminal_{terminal},
+desktop_{terminal.desktop()}
 {}
 
 void Ui::run() {

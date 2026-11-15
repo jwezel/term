@@ -9,7 +9,7 @@
 namespace jwezel::ui {
 
 struct Container;
-struct Window;
+struct Root;
 
 struct Element
 {
@@ -28,9 +28,17 @@ struct Element
 
   auto operator=(Element &&) -> Element & = delete;
 
+  ///
+  /// Destroy the element
+  ///
+  /// The element leaves its parent, which therefore has to outlive it.
   virtual ~Element();
 
-  [[nodiscard]] virtual auto window() /*NOLINT(misc-no-recursion)*/-> Window *;
+  ///
+  /// Get the root of the element tree this element is in
+  ///
+  /// @return     The root, which is the (framed) window or the desktop the UI is shown in
+  [[nodiscard]] virtual auto root() /*NOLINT(misc-no-recursion)*/-> Root *;
 
   ///
   /// Move element to a new area

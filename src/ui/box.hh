@@ -50,6 +50,10 @@ struct Box: Container {
   auto add(Element &child) -> Container & override;
 
   ///
+  /// Remove a child and lay out the remaining children again
+  void remove(Element &child) override;
+
+  ///
   /// Move box to a new area and lay out all children again
   ///
   /// @param[in]  area  The new area

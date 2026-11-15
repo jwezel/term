@@ -45,8 +45,14 @@ void Window::move(const Rectangle &area) {
   TextElement::move(area);
 }
 
-auto Window::event(const Event &/*event*/) -> bool {
-  return false;
+auto Window::event(const Event &event) -> bool {
+  return inputHandler_? inputHandler_->handleEvent(event): false;
+}
+
+void Window::focusEvent() {
+  if (inputHandler_) {
+    inputHandler_->handleFocus();
+  }
 }
 
 }  // namespace jwezel

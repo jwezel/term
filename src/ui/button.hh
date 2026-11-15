@@ -11,7 +11,9 @@ namespace jwezel::ui {
 /// Button widget
 ///
 /// Displays its text framed by brackets and can be pressed with the Space
-/// key or with a left mouse button click inside its area. Press handlers
+/// key or with a left mouse button click: the button has to be released
+/// inside the button as well as pressed, so a click can be called off by
+/// moving the mouse out of the button before releasing it. Press handlers
 /// registered with onPress() are invoked with the triggering event.
 struct Button: Label {
   using Handler = std::function<bool(const ui::Element &element, const Event &event)>;
@@ -60,6 +62,7 @@ struct Button: Label {
   void press(const Event &event);
 
   std::vector<Handler> pressHandlers_;
+  bool armed_{false}; // the left mouse button went down inside the button and is still down
 };
 
 } // namespace jwezel::ui

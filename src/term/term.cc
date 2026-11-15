@@ -49,12 +49,16 @@ void Terminal::deleteElement(Element *element, Element *destination) {
   if (element == focusWindow_) {
     focusWindow_ = element == &desktop_? nullptr: &desktop_; // the desktop takes over the focus
   }
+  if (element == captureWindow_) {
+    captureWindow_ = nullptr;
+  }
   Surface::deleteElement(element, destination);
   contract();
   placeCaret();
 }
 
 void Terminal::reshapeElement(Element *element, const Rectangle &area) {
+  expand(area.position2()); // the display grows to fit, whichever element it is
   Surface::reshapeElement(element, area);
   placeCaret();
 }
@@ -117,16 +121,32 @@ auto Terminal::event() -> Event {
 void Terminal::runEvent() {
   auto currentEvent{keyboard_.event()};
   auto *target{focusWindow_};
+  auto change{MouseCapture::Change::none};
   // Mouse input goes to the window under the mouse, whether or not it has the focus;
-  // it is up to the window to claim the focus
+  // it is up to the window to claim the focus. Once a button is down, the motion and
+  // the release stay with the window that got the press.
   if (currentEvent.type() == MouseButtonEvent::type_ or currentEvent.type() == MouseMoveEvent::type_) {
-    auto *window{windowAt(dynamic_cast<MouseEvent *>(currentEvent())->position())};
-    if (window and window != &desktop_) {
+    if (currentEvent.type() == MouseButtonEvent::type_) {
+      change = mouseCapture_.track(*dynamic_cast<MouseButtonEvent *>(currentEvent()));
+    }
+    auto *window{
+      captureWindow_ and change != MouseCapture::Change::began?
+        captureWindow_
+      :
+        windowAt(dynamic_cast<MouseEvent *>(currentEvent())->position())
+    };
+    if (change == MouseCapture::Change::began) {
+      captureWindow_ = window;
+    }
+    if (window) {
       target = window;
     }
   }
   if (target) {
     target->event(currentEvent);
+  }
+  if (change == MouseCapture::Change::ended) {
+    captureWindow_ = nullptr;
   }
 }
 

@@ -1,6 +1,7 @@
 #include "box.hh"
 
 #include <cmath>
+#include <vector>
 
 namespace jwezel::ui {
 
@@ -18,6 +19,12 @@ auto Box::add(Element &child) -> Container & {
   ordered_.push_back(&child);
   layout();
   return *this;
+}
+
+void Box::remove(Element &child) {
+  Container::remove(child);
+  std::erase(ordered_, &child);
+  layout();
 }
 
 void Box::move(const Rectangle &area) {

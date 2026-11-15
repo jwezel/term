@@ -224,7 +224,7 @@ TEST_CASE("UI Window") {
         CHECK_EQ(ftell(inputRead), 21);
         CHECK(called);
       }
-      SUBCASE("Press with mouse") {
+      SUBCASE("Click with mouse") {
         bool called{false};
         REQUIRE_NE(fputs("\x1b[<0;3;2M", inputWrite), EOF);
         REQUIRE_FALSE(fflush(inputWrite));
@@ -238,7 +238,47 @@ TEST_CASE("UI Window") {
         CHECK_EQ(ftell(inputRead), 20);
         term.runEvent();
         CHECK_EQ(ftell(inputRead), 29);
+        CHECK_FALSE(called); // a press alone is not a click
+        REQUIRE_NE(fputs("\x1b[<0;3;2m", inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+        CHECK_EQ(ftell(inputRead), 38);
         CHECK(called);
+      }
+      SUBCASE("Click calls off by moving out") {
+        int called{0};
+        button.onPress(
+          [&called](const jwezel::ui::Element &, const jwezel::Event &) {
+            ++called;
+            return true;
+          }
+        );
+        auto send{
+          [&](const char *input) {
+            REQUIRE_NE(fputs(input, inputWrite), EOF);
+            REQUIRE_FALSE(fflush(inputWrite));
+            term.runEvent();
+          }
+        };
+        send("\x1b[<0;3;2M"); // press inside
+        send("\x1b[<32;11;2M"); // drag out (motion with the button down)
+        send("\x1b[<0;11;2m"); // release outside: the release still reaches the button
+        CHECK_EQ(called, 0);
+        send("\x1b[<0;3;2m"); // a stray release inside does not click either
+        CHECK_EQ(called, 0);
+        send("\x1b[<0;11;2M"); // press outside
+        send("\x1b[<32;3;2M"); // drag in
+        send("\x1b[<0;3;2m"); // release inside
+        CHECK_EQ(called, 0);
+        send("\x1b[<0;3;2M");
+        send("\x1b[<32;4;2M"); // moving inside is fine
+        send("\x1b[<0;4;2m");
+        CHECK_EQ(called, 1);
+        send("\x1b[<64;3;2M"); // the wheel is not a click
+        CHECK_EQ(called, 1);
+        send("\x1b[<1;3;2M"); // neither is another button
+        send("\x1b[<1;3;2m");
+        CHECK_EQ(called, 1);
       }
       SUBCASE("Mouse outside") {
         bool called{false};
@@ -411,8 +451,12 @@ TEST_CASE("UI Window") {
       REQUIRE_NE(fputs("\x1b[<0;7;9M", inputWrite), EOF); // window-relative (2, 5), display (6, 8)
       REQUIRE_FALSE(fflush(inputWrite));
       term.runEvent();
-      CHECK(pressed);
+      CHECK_FALSE(pressed);
       CHECK_FALSE(term.display().caret()); // a button has no caret
+      REQUIRE_NE(fputs("\x1b[<0;7;9m", inputWrite), EOF);
+      REQUIRE_FALSE(fflush(inputWrite));
+      term.runEvent();
+      CHECK(pressed);
     }
     SUBCASE("Click on focused widget keeps focus") {
       REQUIRE_NE(fputs("\x1b[<0;7;5M", inputWrite), EOF); // window-relative (2, 1) is input1
@@ -518,15 +562,93 @@ TEST_CASE("UI Window") {
         CHECK_EQ(other.content().data[0].size(), 3);
         CHECK_EQ(input2.content().data[0].size(), 3);
       }
-      SUBCASE("Click on desktop keeps focus") {
-        send("\x1b[<0;21;21M"); // display (20, 20): nothing there
+      SUBCASE("Click on desktop focuses it") {
+        send("\x1b[<0;31;13M"); // display (30, 12): bare desktop
+        CHECK_EQ(term.focus(), &term.desktop());
+        CHECK_FALSE(term.display().caret()); // nothing on the desktop has a caret
+        send("X"); // the desktop has no widget to type into
+        CHECK_EQ(other.content().data[0].size(), 2);
+        CHECK_EQ(input1.content().data[0].size(), 3);
+        send("\x1b[<0;30;5M"); // and clicking another window takes the focus away from it
         CHECK_EQ(term.focus(), &w2);
-        send("X");
-        CHECK_EQ(other.content().data[0].size(), 3);
+        CHECK_EQ(term.display().caret(), Vector{29, 4});
       }
       SUBCASE("Mouse move does not change focus") {
         send("\x1b[<35;7;7M"); // button-less motion over input2 of w1
         CHECK_EQ(term.focus(), &w2);
+      }
+      SUBCASE("Press, drag and release stay with the window of the press") {
+        int w1Buttons{0}, w1Moves{0}, w2Buttons{0}, w2Moves{0};
+        input2.onMouseButton(
+          [&](const jwezel::ui::Element &, const jwezel::Event &) {
+            ++w1Buttons;
+            return false;
+          }
+        );
+        input2.onMouseMove(
+          [&](const jwezel::ui::Element &, const jwezel::Event &) {
+            ++w1Moves;
+            return false;
+          }
+        );
+        other.onMouseButton(
+          [&](const jwezel::ui::Element &, const jwezel::Event &) {
+            ++w2Buttons;
+            return false;
+          }
+        );
+        other.onMouseMove(
+          [&](const jwezel::ui::Element &, const jwezel::Event &) {
+            ++w2Moves;
+            return false;
+          }
+        );
+        send("\x1b[<0;7;7M"); // press on input2 of w1
+        CHECK_EQ(term.focus(), &w1);
+        send("\x1b[<32;31;5M"); // drag over the input of w2
+        send("\x1b[<0;31;5m"); // release over it
+        CHECK_EQ(w1Buttons, 2); // press and release
+        CHECK_EQ(w1Moves, 1);
+        CHECK_EQ(w2Buttons, 0);
+        CHECK_EQ(w2Moves, 0);
+        CHECK_EQ(term.focus(), &w1); // releasing over w2 did not focus it
+        send("\x1b[<35;31;5M"); // motion without a button goes to the window under the mouse again
+        CHECK_EQ(w2Moves, 1);
+        CHECK_EQ(w1Moves, 1);
+        send("\x1b[<0;31;5M"); // a new press over w2 is for w2
+        CHECK_EQ(term.focus(), &w2);
+        CHECK_EQ(w2Buttons, 1);
+        send("\x1b[<0;31;5m");
+        CHECK_EQ(w2Buttons, 2);
+        CHECK_EQ(w1Buttons, 2);
+      }
+      SUBCASE("Press on frame is not for the widgets it is dragged over") {
+        int buttons{0}, moves{0};
+        input2.onMouseButton(
+          [&](const jwezel::ui::Element &, const jwezel::Event &) {
+            ++buttons;
+            return false;
+          }
+        );
+        input2.onMouseMove(
+          [&](const jwezel::ui::Element &, const jwezel::Event &) {
+            ++moves;
+            return false;
+          }
+        );
+        send("\x1b[<0;5;4M"); // press on the frame of w1
+        send("\x1b[<32;7;7M"); // drag over input2
+        send("\x1b[<0;7;7m"); // release over it
+        CHECK_EQ(buttons, 0);
+        CHECK_EQ(moves, 0);
+        CHECK_EQ(term.focus(), &w1);
+        CHECK_EQ(w1.focus(), &input1);
+      }
+      SUBCASE("Lost release") {
+        send("\x1b[<0;7;7M"); // press on input2 of w1, the release never arrives
+        send("\x1b[<0;30;5M"); // the next press starts over, at w2
+        CHECK_EQ(term.focus(), &w2);
+        send("\x1b[<0;30;5m");
       }
     }
     SUBCASE("Destroyed focused window hands focus to the desktop") {
@@ -559,6 +681,103 @@ TEST_CASE("UI Window") {
     SUBCASE("Move window carries caret") {
       w1.move(Rectangle{10, 6, 30, 18});
       CHECK_EQ(term.display().caret(), Vector{14, 7});
+    }
+  }
+
+  SUBCASE("Desktop") {
+    auto &desktop{ui_.desktop()};
+    auto input{jwezel::ui::LineEdit(desktop, Rectangle{2, 1, 12, 2}, Text{"Hi"})};
+    auto button{jwezel::ui::Button(desktop, Rectangle{2, 3, 12, 4}, Text{"Go"})};
+    int clicks{0};
+    button.onPress(
+      [&clicks](const jwezel::ui::Element &, const jwezel::Event &) {
+        ++clicks;
+        return true;
+      }
+    );
+    auto send{
+      [&](const char *input_) {
+        REQUIRE_NE(fputs(input_, inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+      }
+    };
+    CHECK_EQ(term.focus(), &term.desktop());
+    CHECK_EQ(desktop.focus(), &input); // the first widget starts focused, like in any window
+    CHECK_EQ(term.display().caret(), Vector{4, 1});
+    CHECK_EQ(term.display().text()[Rectangle{2, 1, 4, 2}], Text{"Hi"});
+    CHECK_EQ(term.display().text()[Rectangle{2, 3, 8, 4}], Text{"[ Go ]"});
+    SUBCASE("Type") {
+      send("X");
+      CHECK_EQ(input.content().data[0].size(), 3);
+      CHECK_EQ(term.display().text()[Rectangle{2, 1, 5, 2}], Text{"HiX"});
+      CHECK_EQ(term.display().caret(), Vector{5, 1});
+    }
+    SUBCASE("Click button") {
+      send("\x1b[<0;4;4M"); // display (3, 3)
+      CHECK_EQ(clicks, 0);
+      CHECK_EQ(desktop.focus(), &button);
+      CHECK_FALSE(term.display().caret());
+      send("\x1b[<0;4;4m");
+      CHECK_EQ(clicks, 1);
+    }
+    SUBCASE("Click input") {
+      send("\x1b[<0;4;4M");
+      send("\x1b[<0;4;4m");
+      CHECK_EQ(desktop.focus(), &button);
+      send("\x1b[<0;4;2M"); // display (3, 1)
+      send("\x1b[<0;4;2m");
+      CHECK_EQ(desktop.focus(), &input);
+      CHECK_EQ(term.display().caret(), Vector{4, 1});
+      send("X");
+      CHECK_EQ(input.content().data[0].size(), 3);
+    }
+    SUBCASE("Box") {
+      auto box{jwezel::ui::VerticalBox(desktop, Rectangle{0, 5, 10, 9})};
+      auto top{jwezel::ui::LineEdit(box, Text{"A"})};
+      auto bottom{jwezel::ui::LineEdit(box, Text{"B"})};
+      CHECK_EQ(top.bounds(), Rectangle{0, 5, 10, 7});
+      CHECK_EQ(bottom.bounds(), Rectangle{0, 7, 10, 9});
+      CHECK_EQ(term.display().text()[Rectangle{0, 7, 1, 8}], Text{"B"});
+      send("\x1b[<0;3;8M"); // display (2, 7): bottom
+      CHECK_EQ(desktop.focus(), &bottom);
+      send("X");
+      CHECK_EQ(bottom.content().data[0].size(), 2);
+      CHECK_EQ(top.content().data[0].size(), 1);
+      CHECK_EQ(term.display().caret(), Vector{2, 7});
+    }
+    SUBCASE("Window over the desktop") {
+      auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{6, 0, 20, 6}, Text{"Title"})};
+      auto inner{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 13, 2}, Text{"In"})};
+      CHECK_EQ(term.focus(), &w1);
+      CHECK_EQ(term.display().caret(), Vector{9, 1});
+      send("X");
+      CHECK_EQ(inner.content().data[0].size(), 3);
+      CHECK_EQ(input.content().data[0].size(), 2);
+      send("\x1b[<0;4;2M"); // display (3, 1): the input on the desktop, not covered by the window
+      send("\x1b[<0;4;2m");
+      CHECK_EQ(term.focus(), &term.desktop());
+      CHECK_EQ(term.display().caret(), Vector{4, 1});
+      send("Y");
+      CHECK_EQ(input.content().data[0].size(), 3);
+      CHECK_EQ(inner.content().data[0].size(), 3);
+    }
+    SUBCASE("Widgets leave when destroyed") {
+      {
+        auto extra{jwezel::ui::LineEdit(desktop, Rectangle{2, 5, 12, 6}, Text{"Tmp"})};
+        send("\x1b[<0;4;6M"); // display (3, 5)
+        send("\x1b[<0;4;6m");
+        CHECK_EQ(desktop.focus(), &extra);
+        CHECK_EQ(term.display().caret(), Vector{5, 5});
+        CHECK_EQ(desktop.children().size(), 3);
+      }
+      CHECK_EQ(desktop.focus(), nullptr);
+      CHECK_EQ(desktop.children().size(), 2);
+      CHECK_FALSE(term.display().caret());
+      send("X"); // nowhere to go, must not crash
+      send("\x1b[<0;4;6M"); // nor a click where the widget was
+      send("\x1b[<0;4;6m");
+      CHECK_EQ(input.content().data[0].size(), 2);
     }
   }
   REQUIRE_FALSE(fclose(inputRead));

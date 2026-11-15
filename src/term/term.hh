@@ -3,6 +3,7 @@
 #include "display.hh"
 #include "geometry.hh"
 #include "keyboard.hh"
+#include "mouse_capture.hh"
 #include "surface.hh"
 #include "term_interface.hh"
 #include "text.hh"
@@ -123,6 +124,8 @@ struct Terminal: Surface, TerminalInterface {
   const Surface::Element *caretOwner_{};
   std::optional<Vector> caretPosition_;
   Window *focusWindow_{}; // weak reference; set by the first window that is created, the desktop
+  Window *captureWindow_{}; // weak reference; the window that got the mouse press that is still going on
+  MouseCapture mouseCapture_;
   bool expand_;
   bool contract_;
   Keyboard keyboard_;

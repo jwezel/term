@@ -32,16 +32,22 @@ void Button::registerHandlers() {
   onMouseButton(
     [this](const ui::Element &, const Event &event) {
       auto *mouse{dynamic_cast<MouseButtonEvent *>(event())};
-      const Rectangle pointArea{mouse->position(), mouse->position() + Vector{1, 1}};
-      if (
-        mouse->action() == MouseAction::Down and
-        mouse->button() == MouseButton::Button1 and
-        (bounds() & pointArea)
-      ) {
-        press(event);
-        return true;
+      if (mouse->button() != MouseButton::Button1 or mouse->modifiers().mod5) { // not the left button, or the wheel
+        return false;
       }
-      return false;
+      const Rectangle pointArea{mouse->position(), mouse->position() + Vector{1, 1}};
+      const auto inside{bool{bounds() & pointArea}};
+      if (mouse->action() == MouseAction::Down) {
+        armed_ = inside;
+        return inside;
+      }
+      const auto fire{armed_ and inside};
+      const auto wasArmed{armed_};
+      armed_ = false;
+      if (fire) {
+        press(event);
+      }
+      return wasArmed;
     }
   );
 }

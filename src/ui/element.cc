@@ -1,5 +1,6 @@
 #include "element.hh"
-#include "ui/window.hh"
+#include "container.hh"
+#include "root.hh"
 
 #include <iostream>
 #include <term/keyboard.hh>
@@ -10,12 +11,16 @@ Element::Element(struct Container *parent):
 parent_(parent)
 {}
 
-Element::~Element() {}
+Element::~Element() {
+  if (parent_) {
+    parent_->remove(*this);
+  }
+}
 
-auto Element::window() /*NOLINT(misc-no-recursion)*/ -> Window * {
-  auto *result{parent_? parent_->window(): 0};
+auto Element::root() /*NOLINT(misc-no-recursion)*/ -> Root * {
+  auto *result{parent_? parent_->root(): 0};
   if (!result) {
-    throw std::runtime_error("Can't find window");
+    throw std::runtime_error("Can't find root");
   }
   return result;
 }
@@ -25,7 +30,7 @@ auto Element::event(const Event &event) -> bool {
 
     case MouseMoveEvent::type_:
     return mouseMoveEvent(
-      Event{new MouseMoveEvent{dynamic_cast<MouseMoveEvent *>(event())->position() - window()->area().position()}}
+      Event{new MouseMoveEvent{dynamic_cast<MouseMoveEvent *>(event())->position() - root()->origin()}}
     );
     break;
 
@@ -36,7 +41,7 @@ auto Element::event(const Event &event) -> bool {
           new MouseButtonEvent{
             buttonEvent->button(),
             buttonEvent->modifiers(),
-            buttonEvent->position() - window()->area().position(),
+            buttonEvent->position() - root()->origin(),
             buttonEvent->action()
           }
         }
