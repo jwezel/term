@@ -8,16 +8,16 @@
 
 namespace jwezel::ui {
 
-Widget::Widget(const Rectangle &area, const Char &background, Container *parent):
+Widget::Widget(const Rectangle &area, const Char &background, Container &parent):
 TextElement{
-  parent->window()->surface(),
+  parent.window()->surface(),
   area,
   background
 },
-ui::Element{dynamic_cast<Container *>(parent)}
+ui::Element{&parent}
 {
-  auto *window = parent->window();
-  if (!window->focus()) {
+  parent.add(*this);
+  if (auto *window{parent.window()}; !window->focus()) {
     window->focus(this);
   }
 }

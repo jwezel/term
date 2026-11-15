@@ -30,6 +30,9 @@ namespace
 /// @param      fragments1  The fragments 1
 /// @param[in]  fragments2  The fragments 2
 void split(const Rectangle & area, vector<Surface::Fragment> &fragments1, const vector<Surface::Fragment> &fragments2) {
+  if (fragments1.empty()) {
+    return;
+  }
   auto *element{fragments1[0].element};
   for (const auto &fragment2: fragments2) {
     if (area.intersects(fragment2.area)) {
@@ -41,7 +44,10 @@ void split(const Rectangle & area, vector<Surface::Fragment> &fragments1, const 
           back_inserter(fragments)
         );
       }
-      fragments1 = fragments;
+      fragments1.swap(fragments);
+      if (fragments1.empty()) {
+        return;
+      }
     }
   }
 }
@@ -55,16 +61,12 @@ void cover(Surface::Element &element1, const Surface::Element &element2) {
 template<class Range>
 auto SurfaceUpdates(const Range &fragments) -> Updates {
   Updates result;
-  result.reserve(std::ranges::distance(fragments));
+  result.reserve(static_cast<size_t>(std::ranges::distance(fragments)));
   for (const auto &fragment: fragments) {
-    const auto area = fragment.area;
+    const auto &area = fragment.area;
     result.emplace_back(
-      Update{
-        Vector(fragment.area.x1(), fragment.area.y1()),
-        fragment.element->text(
-          area - fragment.element->area().position()
-        )
-      }
+      Vector(area.x1(), area.y1()),
+      fragment.element->text(area - fragment.element->area().position())
     );
   }
   return result;

@@ -1,4 +1,4 @@
-#include "container.hh"
+#include "element.hh"
 #include "ui/window.hh"
 
 #include <iostream>
@@ -10,11 +10,7 @@ namespace jwezel::ui {
 Element::Element(struct Container *parent):
 parent_(parent),
 node_{taitank::NodeCreate()}
-{
-  if (parent) {
-    dynamic_cast<Container *>(parent)->add(this);
-  }
-}
+{}
 
 Element::~Element() {
   taitank::NodeFree(node_);
@@ -90,17 +86,17 @@ auto Element::keyEvent(const Event &event) -> bool {
   return false;
 }
 
-auto Element::onMouseMove(const std::function<bool(Element &element, const Event &)>& handler) -> int {
+auto Element::onMouseMove(const std::function<bool(const Element &element, const Event &)>& handler) -> int {
   eventHandlers_.emplace_back(MouseMoveEvent::type_, handler);
   return static_cast<int>(eventHandlers_.size() - 1);
 }
 
-auto Element::onMouseButton(const std::function<bool(Element &element, const Event &)>& handler) -> int {
+auto Element::onMouseButton(const std::function<bool(const Element &element, const Event &)>& handler) -> int {
   eventHandlers_.emplace_back(MouseButtonEvent::type_, handler);
   return static_cast<int>(eventHandlers_.size() - 1);
 }
 
-auto Element::onKey(const std::function<bool(Element &element, const Event &)>& handler) -> int {
+auto Element::onKey(const std::function<bool(const Element &element, const Event &)>& handler) -> int {
   eventHandlers_.emplace_back(KeyEvent::type_, handler);
   return static_cast<int>(eventHandlers_.size() - 1);
 }

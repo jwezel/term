@@ -1,4 +1,27 @@
+If:
+  PathMatch:
+    - .*/home/linuxbrew/.*
+    - .*/home/j/\.conan.*
+Diagnostics:
+  Suppress: '*'
+---
 CompileFlags:
-  Add:
-    - "-I/usr/include/c++/13"
-    - "-I/usr/include/x86_64-linux-gnu/c++/13"
+  Compiler: g++-15
+  BuiltinHeaders: QueryDriver
+Style:
+  QuotedHeaders:
+    - "src/.*"
+  #AngledHeaders: ["path/sdk/.*", "third-party/.*"]
+InlayHints:
+  Enabled: true
+  BlockEnd: false
+  Designators: true
+  ParameterNames: true
+  DeducedTypes: true
+  DefaultArguments: false
+  TypeNameLimit: 24
+Diagnostics:
+  Includes:
+    IgnoreHeader:
+      - .*/home/linuxbrew/.*
+      - .*/home/j/\.conan.*

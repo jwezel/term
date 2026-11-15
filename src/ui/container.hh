@@ -10,10 +10,10 @@ using std::unordered_set;
 
 struct Container: ui::Element {
 
-  explicit Container(Container *parent=0);
+  explicit Container(Container *parent=nullptr);
 
-  auto add(Element *child) -> Container & {
-    children_.insert(child);
+  auto add(Element &child) -> Container & {
+    children_.insert(&child);
     return *this;
   }
 

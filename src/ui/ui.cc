@@ -1,24 +1,20 @@
 #include "ui.hh"
+
 #include <term/term.hh>
 #include <term/window.hh>
 
-
 namespace jwezel::ui {
 
-Ui::Ui(Terminal *terminal):
-terminal_(terminal)
+Ui::Ui(Terminal &terminal):
+terminal_{terminal}
 {}
 
 void Ui::run() {
-  terminal_->run();
+  terminal_.run();
 }
 
 void Ui::stop() {
-  terminal_->stop();
-}
-
-void Ui::add(jwezel::ui::Window *window) {
-  windows_.insert(window);
+  terminal_.stop();
 }
 
 } // namespace jwezel::ui

@@ -12,6 +12,8 @@
 
 #include <format>
 
+#include <utf8cpp/utf8.h>
+
 namespace jwezel {
 
 using std::format;
@@ -67,16 +69,15 @@ Display::~Display() {
 
 void Display::write(const string_view &str) const {
   if (!str.empty()) {
-    string outstr{str};
-    const auto *wp{outstr.c_str()};
+    const auto *wp{str.data()};
     size_t wt{0};
-    size_t ws{outstr.size()};
+    const size_t ws{str.size()};
     while (wt < ws) {
-      auto wc{::write(output_, wp + wt, ws - wt)}; // NOLINT
+      const auto wc{::write(output_, wp + wt, ws - wt)}; // NOLINT
       if (wc < 0) {
         throw system_error(errno, system_category(), format("Could not write to display {}", output_));
       }
-      wt += wc;
+      wt += static_cast<size_t>(wc);
     }
   }
 }
@@ -85,6 +86,7 @@ auto Display::cursor() -> Vector {
   static const basic_regex reportPattern("\x1b\\[(\\d+);(\\d+)R");
   static const size_t MaxChars{10};
   string report;
+  report.reserve(32);
   for (size_t i = 0; i < MaxChars; ++i) {
     write("\x1b[6n");
     Unicode key{0};
@@ -189,6 +191,8 @@ void Display::update(const Vector &position, const Text &text) {
     return;
   }
   auto textArea{area.value() - position};
+  string utf8buf;
+  utf8buf.reserve(8);
   for (Dim line = textArea.y1(), dline = area.value().y1(); line < textArea.y2(); ++line, ++dline) {
     assert(line < toDim(text.data.size()));
     while (toDim(line + position.y()) >= text_.height()) {
@@ -201,7 +205,9 @@ void Display::update(const Vector &position, const Text &text) {
         foreground(ch.attributes.fg);
         background(ch.attributes.bg);
         attributes(ch.attributes.attr);
-        write(ch.utf8());
+        utf8buf.clear();
+        utf8::utf32to8(&ch.rune, &ch.rune + 1, back_inserter(utf8buf));
+        write(utf8buf);
         cursor_ = cursor_.right();
         if (cursor_.x() > maxSize_.x()) {
           cursor_ = Vector{0, cursor_.y()};

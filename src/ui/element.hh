@@ -18,8 +18,8 @@ struct Element
   ///
   /// Create Element
   ///
-  /// @param      parent  The parent
-  explicit Element(struct Container *parent=0);
+  /// @param      parent  The parent, if any
+  explicit Element(struct Container *parent=nullptr);
 
   Element(const Element &) = delete;
 
@@ -43,16 +43,16 @@ struct Element
 
   auto keyEvent(const Event &event) -> bool;
 
-  auto onMouseMove(const std::function<bool(Element &element, const Event &)>& handler) -> int;
+  auto onMouseMove(const std::function<bool(const Element &element, const Event &)>& handler) -> int;
 
-  auto onMouseButton(const std::function<bool(Element &element, const Event &)>& handler) -> int;
+  auto onMouseButton(const std::function<bool(const Element &element, const Event &)>& handler) -> int;
 
-  auto onKey(const std::function<bool(Element &element, const Event &)>& handler) -> int;
+  auto onKey(const std::function<bool(const Element &element, const Event &)>& handler) -> int;
 
   private:
   struct Container *parent_;
   TaitankNodeRef node_;
-  vector<pair<decltype(BaseEvent::type_), std::function<bool(Element &element, const Event &)>>> eventHandlers_;
+  vector<pair<decltype(BaseEvent::type_), std::function<bool(const Element &element, const Event &)>>> eventHandlers_;
 };
 
 } // namespace jwezel::ui

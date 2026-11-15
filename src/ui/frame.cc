@@ -4,13 +4,13 @@
 
 namespace jwezel::ui {
 
-Frame::Frame(FrameStyle *style, Container *parent, ui::Element *content, const Rectangle &area, const Char &background):
+Frame::Frame(Container &parent, const Rectangle &area, const Char &background, FrameStyle *style, ui::Element *content):
 Widget(area, background, parent),
 style_(style),
 content_(content)
 {
-  if (style) {
-    style->draw();
+  if (style_) {
+    style_->draw();
   }
 }
 

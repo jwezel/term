@@ -1,6 +1,5 @@
 #pragma once
 
-#include <iostream>
 #include <term/device.hh>
 #include <term/geometry.hh>
 #include <term/text.hh>
@@ -106,6 +105,10 @@ struct Surface {
 
   Surface() = default;
 
+  Surface(const Surface &) = default;
+  Surface(Surface &&) = delete;
+  Surface & operator=(const Surface &) = default;
+  Surface & operator=(Surface &&) = delete;
   virtual ~Surface() = default;
 
   void update(const vector<Fragment> &updates);
@@ -136,7 +139,7 @@ struct Surface {
 
   [[nodiscard]] auto position(Element *element, int default_=-1) -> int;
 
-  [[nodiscard]] inline auto zorder() const -> const auto & {return zorder_;}
+  [[nodiscard]]  auto zorder() const -> const auto & {return zorder_;}
 
   private:
   void reorder(int source, int destination);
@@ -226,11 +229,11 @@ struct TextElement: Surface::Element {
 
   auto below(int position=-1) -> bool;
 
-  [[nodiscard]] inline auto position() const {return position_;}
+  [[nodiscard]]  auto position() const {return position_;}
 
   void position(const Vector &position);
 
-  [[nodiscard]] inline auto background() const {return background_;}
+  [[nodiscard]]  auto background() const {return background_;}
 
   ///
   /// Get text element area

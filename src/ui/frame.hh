@@ -12,12 +12,20 @@ struct Frame: Widget {
 
   Frame() = delete;
 
+  ///
+  /// Create Frame
+  ///
+  /// @param      parent      The parent container
+  /// @param      area        The area
+  /// @param      background  The background
+  /// @param[in]  style       Optional frame style (weak reference; must outlive the frame)
+  /// @param      content     Optional content element (weak reference; must outlive the frame)
   explicit Frame(
-    FrameStyle *style=0,
-    Container *parent=0,
-    ui::Element *content=0,
+    Container &parent,
     const Rectangle &area=RectangleDefault,
-    const Char &background=Char{}
+    const Char &background=Char{},
+    FrameStyle *style=nullptr,
+    ui::Element *content=nullptr
   );
 
   ~Frame() override = default;

@@ -9,7 +9,7 @@ namespace jwezel::ui {
 
 struct Widget: TextElement, ui::Element
 {
-  explicit Widget(const Rectangle &area=RectangleDefault, const Char &background=Space, struct Container *parent=0);
+  explicit Widget(const Rectangle &area, const Char &background, Container &parent);
 
   Widget(const Widget &) = delete;
 

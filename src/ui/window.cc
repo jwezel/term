@@ -15,7 +15,7 @@ namespace {
 
 auto DefaultSize(Ui &ui, const Rectangle &area) {
   if (area == RectangleDefault) {
-    return Rectangle{Vector{0, 0}, ui.terminal()->display().maxSize() * 2 / 3};
+    return Rectangle{Vector{0, 0}, ui.terminal().display().maxSize() * 2 / 3};
   }
   return area;
 }
@@ -39,13 +39,13 @@ struct DefaultWindowFrameStyle: FrameStyle {
 };
 
 Window::Window(Ui &ui, const Char &background, const Rectangle &area, const Text &title):
-jwezel::Window{ui.terminal(), DefaultSize(ui, area), background},
-Container{0},
-style_{new DefaultWindowFrameStyle{this, title}},
+jwezel::Window{&ui.terminal(), DefaultSize(ui, area), background},
+Container{nullptr},
+style_{std::make_unique<DefaultWindowFrameStyle>(this, title)},
 device_{this},
 surface_{&device_},
 title_{title},
-focus_{0}
+focus_{nullptr}
 {
   style_->draw();
 }
@@ -65,13 +65,6 @@ void Window::focus(Widget *widget) {
 }
 
 auto Window::focus() -> Widget * {
- return focus_;
-}
-
-auto Window::defaultFocus() -> Widget * {
- if (!focus_ && !surface_.zorder().empty()) {
-    return dynamic_cast<Widget *>(surface_.zorder().front());
- }
  return focus_;
 }
 

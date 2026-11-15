@@ -319,10 +319,12 @@ auto Rgb::operator +(const Rgb &color2) const -> Rgb {
 }
 
 auto attrToString(Attributes attr) -> string {
-  string result, sep;
+  string result;
+  result.reserve(32);
+  string sep;
 
   if ((attr & bold) != 0U) {
-    result = "bold";
+    result += "bold";
     sep = ", ";
   }
   if ((attr & underline) != 0U) {
@@ -338,7 +340,6 @@ auto attrToString(Attributes attr) -> string {
   if ((attr & blink) != 0U) {
     result += sep;
     result += "blink";
-    sep = ", ";
   }
   return result;
 }
@@ -403,6 +404,7 @@ Char::operator string() const {
 
 auto Char::utf8() const -> string {
   string result;
+  result.reserve(4);
   utf8::utf32to8(&rune, &rune + 1, back_inserter(result));
   return result;
 }
@@ -414,38 +416,41 @@ auto Char::utf8() const -> string {
 ///
 /// @return     std::string_view
 auto asString(const String &s) -> string {
-  vector<Unicode> runes;
-  runes.reserve(s.size() * 3 / 2);
-  for (const Char &char_: s) {
-    runes.push_back(char_.rune);
-  }
   string result;
-  if (result.capacity() < runes.size()) {
-    result.reserve(runes.size() * 3 / 2);
+  result.reserve(s.size() * 4);
+  for (const Char &char_: s) {
+    utf8::utf32to8(&char_.rune, &char_.rune + 1, back_inserter(result));
   }
-  utf8::utf32to8(runes.begin(), runes.end(), back_inserter(result));
   return result;
 }
 
 Text::Text(const string_view &str_, const Rgb &fg, const Rgb &bg, const Attributes &attr, const AttributeMode &mix) {
   const auto _str{utf8::utf8to32(string(str_))};
   if (!_str.empty()) {
-    auto splits{_str | split('\n')}; // const not allowed
-    const size_t width = std::ranges::max(splits | transform([](auto line) {return line.size();}));
-    data.reserve(std::ranges::distance(splits));
-    for (auto line: splits) {
+    vector<std::u32string_view> lines;
+    size_t width = 0;
+    size_t lineStart = 0;
+    for (size_t i = 0; i <= _str.size(); ++i) {
+      if (i == _str.size() || _str[i] == U'\n') {
+        const auto lineSize = i - lineStart;
+        lines.emplace_back(_str.data() + lineStart, lineSize);
+        if (lineSize > width) {
+          width = lineSize;
+        }
+        lineStart = i + 1;
+      }
+    }
+    data.reserve(lines.size());
+    for (const auto &line: lines) {
       String iline;
-      iline.reserve(line.size());
-      // Copy line
+      iline.reserve(width);
       for (const Unicode &ch: line) {
         iline.emplace_back(ch, fg, bg, attr, mix);
       }
-      // Pad line
       for (size_t i = line.size(); i < width; ++i) {
         iline.emplace_back(' ', fg, bg, attr, mix);
       }
-      // Add line
-      data.emplace_back(iline);
+      data.emplace_back(std::move(iline));
     }
   }
 }
@@ -483,17 +488,11 @@ auto Text::size() const -> Vector {
 Text::operator string() const {
   // String representation
   string result;
-  vector<Unicode> runes;
-  if (!data.empty()) {
-    runes.reserve(data[0].size() + 1);
-  }
   for (const String &_line: data) {
-    runes.clear();
     for (const Char &char_: _line) {
-      runes.push_back(char_.rune);
+      utf8::utf32to8(&char_.rune, &char_.rune + 1, back_inserter(result));
     }
-    runes.push_back('\n');
-    utf8::utf32to8(runes.begin(), runes.end(), back_inserter(result));
+    utf8::append('\n', result);
   }
   return result;
 }
@@ -502,19 +501,15 @@ auto Text::repr() const -> string {
   // String representation
   static const auto UnicodeControlPicturesStart{0x2400};
   string result{"\"\"\"\n"};
-  vector<Unicode> runes;
-  runes.reserve(data.empty()? 4: data[0].size() + 1);
   for (const String &_line: data) {
-    runes.clear();
     for (const Char &char_: _line) {
-      runes.push_back(
+      const Unicode rune =
         // Replace control characters with corresponding Unicode rune
-        char_.rune < ' '? char_.rune + UnicodeControlPicturesStart: char_.rune
-      );
+        char_.rune < ' '? char_.rune + UnicodeControlPicturesStart: char_.rune;
+      utf8::utf32to8(&rune, &rune + 1, back_inserter(result));
     }
-    runes.push_back(L'¬');
-    runes.push_back('\n');
-    utf8::utf32to8(runes.begin(), runes.end(), back_inserter(result));
+    utf8::append(static_cast<Unicode>(U'¬'), result);
+    utf8::append('\n', result);
   }
   result += "\"\"\"\n";
   return result;
@@ -526,20 +521,27 @@ auto Text::rightAligned(Dim width) const -> Text {
     throw range_error("width < 0");
   }
   Text result;
-  for (String _line: data) {
+  result.data.reserve(data.size());
+  for (const String &_line: data) {
     // Trim line on right
     auto ci{_line.rbegin()};
     while (ci != _line.rend() && ci->rune == ' ') {
       ++ci;
     }
-    _line.resize(_line.rend() - ci);
-    // Space-fill on left
-    String filled(width, ' '_C.withAttr(_line[0].attributes));
-    copy(_line.begin(), _line.end(), back_inserter(filled));
-    // Trim line on left
-    String newLine{filled.end() - width, filled.end()};
-    // Add line
-    result.data.push_back(newLine);
+    const auto trimmedEnd = ci.base();
+    const auto trimmedSize = static_cast<Dim>(trimmedEnd - _line.begin());
+    // Space-fill on left, but keep only the rightmost `width` characters
+    String newLine;
+    newLine.reserve(static_cast<size_t>(width));
+    if (trimmedSize >= width) {
+      copy(trimmedEnd - width, trimmedEnd, back_inserter(newLine));
+    } else {
+      const auto padCount = width - trimmedSize;
+      const auto &padAttr = _line.empty() ? Char().attributes : _line[0].attributes;
+      fill_n(back_inserter(newLine), padCount, ' '_C.withAttr(padAttr));
+      copy(_line.begin(), trimmedEnd, back_inserter(newLine));
+    }
+    result.data.push_back(std::move(newLine));
   }
   return result;
 }
@@ -550,6 +552,7 @@ auto Text::centered(Dim width) const -> Text {
     throw range_error("width < 0");
   }
   Text result;
+  result.data.reserve(data.size());
   for (const String &_line: data) {
     // Trim line
     auto rend{_line.rbegin()};
@@ -567,10 +570,11 @@ auto Text::centered(Dim width) const -> Text {
       end = begin + width;
       result.data.emplace_back(begin, end);
     } else {
-      String newLine(width, ' '_C.withAttr(begin->attributes));
+      const auto &padAttr = begin != _line.end() ? begin->attributes : Char().attributes;
+      String newLine(width, ' '_C.withAttr(padAttr));
       const auto pos = (width - 1) / 2 - (_size - 1) / 2;
       copy(begin, end, newLine.begin() + pos);
-      result.data.push_back(newLine);
+      result.data.push_back(std::move(newLine));
     }
   }
   return result;
@@ -733,9 +737,8 @@ void Text::extend(const Vector &size, const Char &fill) {
 
 auto Text::fill(const Char &fill, const Rectangle &area) -> Rectangle {
   auto area_{area == RectangleMax? Rectangle{Vector{0, 0}, size()}: (extend(Vector{area.x2(), area.y2()}, fill), area)};
-  const auto _line{String(area_.width(), fill)};
   for (auto l = area_.y1(); l < area_.y2(); ++l) {
-    std::copy(_line.begin(), _line.end(), data[l].begin() + area_.x1());
+    std::fill_n(data[l].begin() + area_.x1(), area_.width(), fill);
   }
   return area_;
 }

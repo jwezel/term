@@ -53,7 +53,7 @@ TEST_CASE("UI Window") {
   REQUIRE_FALSE(fflush(inputWrite));
   CAPTURE(ftell(inputWrite));
   Terminal term('.'_C, VectorMin, VectorMin, VectorMax, output->_fileno, inputRead->_fileno);
-  jwezel::ui::Ui ui_(&term);
+  jwezel::ui::Ui ui_{term};
 
   SUBCASE("Window") {
     auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 10, 6}, Text{"Title"})};
@@ -63,7 +63,7 @@ TEST_CASE("UI Window") {
     CHECK_EQ(w1.text(), test);
     CHECK_EQ(term.display().text(), test);
     SUBCASE("Widget") {
-      auto w2{jwezel::ui::Widget(Rectangle{1, 1, 8, 2}, ' '_C, &w1)};
+      auto w2{jwezel::ui::Widget(Rectangle{1, 1, 8, 2}, ' '_C, w1)};
       w2.write(Vector{0, 0}, Text{"xxxxxxxxxxxxx"});
       auto test2{test};
       test2.patch(Text{"xxxxxxx"}, Vector{1, 1});

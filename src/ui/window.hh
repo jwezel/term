@@ -34,9 +34,7 @@ struct Window: jwezel::Window, Container {
 
   [[nodiscard]] auto focus() -> Widget *;
 
-  [[nodiscard]] auto defaultFocus() -> Widget *;
-
-  [[nodiscard]] inline auto window() -> Window * override {return this;}
+  [[nodiscard]] auto window() -> Window * override {return this;}
 
   auto event(const jwezel::Event &event) -> bool override;
 
@@ -49,11 +47,11 @@ struct Window: jwezel::Window, Container {
     Window *window_;
   };
 
-  std::unique_ptr<FrameStyle> style_;
+  std::unique_ptr<FrameStyle> style_; // internal, never visible in the public API
   Device device_;
   Surface surface_;
   Text title_;
-  Widget *focus_;
+  Widget *focus_ = nullptr; // weak reference to the focused widget
 };
 
 } // namespace jwezel::ui

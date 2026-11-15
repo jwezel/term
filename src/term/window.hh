@@ -69,7 +69,7 @@ struct Window: TextElement {
 
   virtual auto event(const Event &event) -> bool;
 
-  [[nodiscard]] inline auto terminal() const {return terminal_;}
+  [[nodiscard]] auto terminal() const {return terminal_;}
 
   private:
   struct TerminalInterface *terminal_;
