@@ -16,6 +16,9 @@
 
 #include <cstdio>
 #include <doctest/doctest.h>
+#include <fstream>
+#include <iterator>
+#include <string>
 
 using
   jwezel::AttributeMode::mix,
@@ -257,6 +260,7 @@ TEST_CASE("UI Window") {
       auto test2{test};
       test2.patch(Text{"Hello"}, Vector{1, 1});
       CHECK_EQ(term.display().text(), test2);
+      CHECK_EQ(term.display().caret(), Vector{6, 1});
       SUBCASE("Type") {
         REQUIRE_NE(fputs("X", inputWrite), EOF);
         REQUIRE_FALSE(fflush(inputWrite));
@@ -265,6 +269,7 @@ TEST_CASE("UI Window") {
         test3.patch(Text{"HelloX"}, Vector{1, 1});
         CHECK_EQ(term.display().text(), test3);
         CHECK_EQ(input.content().data[0][5].rune, 'X');
+        CHECK_EQ(term.display().caret(), Vector{7, 1});
       }
       SUBCASE("Arrow left and type") {
         REQUIRE_NE(fputs("\x1b[D\x1b[D\x1b[DX", inputWrite), EOF);
@@ -277,6 +282,7 @@ TEST_CASE("UI Window") {
         test3.patch(Text{"HeXllo"}, Vector{1, 1});
         CHECK_EQ(term.display().text(), test3);
         CHECK_EQ(input.content().data[0][2].rune, 'X');
+        CHECK_EQ(term.display().caret(), Vector{4, 1});
       }
       SUBCASE("Backspace") {
         REQUIRE_NE(fputs("\x7f", inputWrite), EOF);
@@ -357,8 +363,84 @@ TEST_CASE("UI Window") {
       CHECK_EQ(term.display().text(), test2);
       CHECK_EQ(input2.content().data[0][3].rune, 'X');
       CHECK_EQ(input1.content().data[0].size(), 3);
+      CHECK_EQ(term.display().caret(), Vector{5, 3});
     }
     CHECK_EQ(term.display().text(), test);
+  }
+
+  SUBCASE("Offset window") {
+    const Rectangle placement{4, 3, 24, 15};
+    auto w1{jwezel::ui::Window(ui_, ' '_C, placement, Text{"Title"})};
+    auto test{Text{' '_C, Vector{20, 12}}};
+    test.box();
+    test.patch(Text{"Title"}, Vector{1, 0});
+    auto input1{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, Text{"One"})};
+    auto input2{jwezel::ui::LineEdit(w1, Rectangle{1, 3, 19, 4}, Text{"Two"})};
+    auto button{jwezel::ui::Button(w1, Rectangle{1, 5, 19, 6}, Text{"Ok"})};
+    test.patch(Text{"One"}, Vector{1, 1});
+    test.patch(Text{"Two"}, Vector{1, 3});
+    test.patch(Text{"[ Ok ]"}, Vector{1, 5});
+    CHECK_EQ(input1.bounds(), Rectangle{1, 1, 19, 2});
+    CHECK_EQ(term.display().text()[placement], test);
+    CHECK_EQ(term.display().caret(), Vector{8, 4}); // display position, end of "One"
+    SUBCASE("Click to focus") {
+      REQUIRE_NE(fputs("\x1b[<0;7;7M", inputWrite), EOF); // window-relative (2, 3), display (6, 6)
+      REQUIRE_FALSE(fflush(inputWrite));
+      term.runEvent();
+      REQUIRE_NE(fputs("X", inputWrite), EOF);
+      REQUIRE_FALSE(fflush(inputWrite));
+      term.runEvent();
+      test.patch(Text{"TwoX"}, Vector{1, 3});
+      CHECK_EQ(term.display().text()[placement], test);
+      CHECK_EQ(input1.content().data[0].size(), 3);
+      CHECK_EQ(input2.content().data[0].size(), 4);
+      CHECK_EQ(term.display().caret(), Vector{9, 6});
+      std::ifstream written{outputFilename};
+      const std::string output_{std::istreambuf_iterator<char>{written}, {}};
+      // Hide, paint X at display (8, 6), show again: the cursor ends up right behind X, at the caret (9, 6)
+      CHECK(output_.ends_with("\x1b[7;10H\x1b[?25l\x1b[7;9HX\x1b[?25h"));
+    }
+    SUBCASE("Click button") {
+      bool pressed{false};
+      button.onPress(
+        [&pressed](const jwezel::ui::Element &, const jwezel::Event &) {
+          pressed = true;
+          return true;
+        }
+      );
+      REQUIRE_NE(fputs("\x1b[<0;7;9M", inputWrite), EOF); // window-relative (2, 5), display (6, 8)
+      REQUIRE_FALSE(fflush(inputWrite));
+      term.runEvent();
+      CHECK(pressed);
+      CHECK_FALSE(term.display().caret()); // a button has no caret
+    }
+    SUBCASE("Click outside widgets keeps focus") {
+      REQUIRE_NE(fputs("\x1b[<0;7;5M", inputWrite), EOF); // window-relative (2, 1) is input1
+      REQUIRE_FALSE(fflush(inputWrite));
+      term.runEvent();
+      REQUIRE_NE(fputs("X", inputWrite), EOF);
+      REQUIRE_FALSE(fflush(inputWrite));
+      term.runEvent();
+      CHECK_EQ(input1.content().data[0].size(), 4);
+    }
+    SUBCASE("Move window") {
+      const Rectangle moved{10, 6, 30, 18};
+      w1.move(moved);
+      CHECK_EQ(input1.bounds(), Rectangle{1, 1, 19, 2});
+      CHECK_EQ(term.display().text()[moved], test);
+      REQUIRE_NE(fputs("\x1b[<0;13;10M", inputWrite), EOF); // window-relative (2, 3), display (12, 9)
+      REQUIRE_FALSE(fflush(inputWrite));
+      term.runEvent();
+      REQUIRE_NE(fputs("X", inputWrite), EOF);
+      REQUIRE_FALSE(fflush(inputWrite));
+      term.runEvent();
+      CHECK_EQ(input2.content().data[0].size(), 4);
+      CHECK_EQ(term.display().caret(), Vector{15, 9});
+    }
+    SUBCASE("Move window carries caret") {
+      w1.move(Rectangle{10, 6, 30, 18});
+      CHECK_EQ(term.display().caret(), Vector{14, 7});
+    }
   }
   REQUIRE_FALSE(fclose(inputRead));
   REQUIRE_FALSE(fclose(inputWrite));

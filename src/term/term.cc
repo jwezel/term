@@ -51,6 +51,12 @@ void Terminal::moveWindow(Window &window, const Rectangle &area) {
   contract();
 }
 
+void Terminal::caret(Window &window, const std::optional<Vector> &position) {
+  if (&window == focusWindow_) {
+    display_.caret(position);
+  }
+}
+
 void Terminal::focus(Window *window) {
   focusWindow_ = window;
 }

@@ -11,7 +11,7 @@ namespace jwezel::ui {
 Widget::Widget(const Rectangle &area, const Char &background, Container &parent):
 TextElement{
   parent.window()->surface(),
-  area,
+  area + parent.window()->area().position(),
   background
 },
 ui::Element{&parent}
@@ -23,7 +23,11 @@ ui::Element{&parent}
 }
 
 void Widget::move(const Rectangle &area) {
-  TextElement::move(area);
+  TextElement::move(area + window()->area().position());
+}
+
+auto Widget::bounds() -> Rectangle {
+  return TextElement::area() - window()->area().position();
 }
 
 auto Widget::moveEvent(const Rectangle &area) -> bool {

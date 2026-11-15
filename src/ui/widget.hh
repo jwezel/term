@@ -5,6 +5,8 @@
 #include <term/geometry.hh>
 #include <term/surface.hh>
 
+#include <optional>
+
 namespace jwezel::ui {
 
 struct Widget: TextElement, ui::Element
@@ -12,6 +14,8 @@ struct Widget: TextElement, ui::Element
   explicit Widget(const Rectangle &area, const Char &background, Container &parent);
 
   void move(const Rectangle &area) override;
+
+  [[nodiscard]] auto bounds() -> Rectangle override;
 
   auto moveEvent(const Rectangle &area) -> bool override;
 
@@ -24,6 +28,12 @@ struct Widget: TextElement, ui::Element
   auto operator=(Widget &&) -> Widget & = delete;
 
   ~Widget() override = default;
+
+  ///
+  /// Where the text caret (hardware cursor) of the widget is, when it has the focus
+  ///
+  /// @return     Display position of the caret, or nothing for no caret
+  [[nodiscard]] virtual auto caret() const -> std::optional<Vector> {return std::nullopt;}
 
   protected:
   ///

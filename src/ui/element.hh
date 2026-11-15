@@ -35,6 +35,16 @@ struct Element
   /// @param[in]  area  The new area
   virtual void move(const Rectangle &area) = 0;
 
+  ///
+  /// Get the area of the element
+  ///
+  /// All areas of the ui layer (constructor areas, layouts, `move`, `bounds`)
+  /// are relative to the window; only the window itself is positioned on the
+  /// display.
+  ///
+  /// @return     The area relative to the window
+  [[nodiscard]] virtual auto bounds() -> Rectangle = 0;
+
   auto parent() {return parent_;}
 
   auto event(const jwezel::Event &event) -> bool;

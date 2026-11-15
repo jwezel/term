@@ -36,7 +36,7 @@ void Button::registerHandlers() {
       if (
         mouse->action() == MouseAction::Down and
         mouse->button() == MouseButton::Button1 and
-        (area() & pointArea)
+        (bounds() & pointArea)
       ) {
         press(event);
         return true;

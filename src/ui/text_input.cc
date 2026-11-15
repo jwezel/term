@@ -1,4 +1,5 @@
 #include "text_input.hh"
+#include "window.hh"
 
 #include <algorithm>
 
@@ -213,19 +214,22 @@ void TextInput::render() {
       );
     }
   }
-  if (
-    cursor_.x() >= scrollX_ and cursor_.x() < toDim(scrollX_ + size.x()) and
-    cursor_.y() >= scrollY_ and cursor_.y() < toDim(scrollY_ + size.y())
-  ) {
-    visible.setAttr(
-      CharAttributes{RgbNone, RgbNone, reverse},
-      Rectangle{
-        toDim(cursor_.x() - scrollX_), toDim(cursor_.y() - scrollY_),
-        toDim(cursor_.x() - scrollX_ + 1), toDim(cursor_.y() - scrollY_ + 1)
-      }
-    );
+  if (auto *window{this->window()}; window->focus() == this) {
+    window->updateCaret(); // before writing, so the display parks the cursor at the new caret afterwards
   }
   write(Vector{0, 0}, visible);
+}
+
+auto TextInput::caret() const -> std::optional<Vector> {
+  const auto size{area().size()};
+  if (
+    cursor_.x() < scrollX_ or cursor_.x() >= toDim(scrollX_ + size.x()) or
+    cursor_.y() < scrollY_ or cursor_.y() >= toDim(scrollY_ + size.y())
+  ) {
+    return std::nullopt;
+  }
+  const auto position{area().position()};
+  return Vector{toDim(position.x() + cursor_.x() - scrollX_), toDim(position.y() + cursor_.y() - scrollY_)};
 }
 
 } // namespace jwezel::ui

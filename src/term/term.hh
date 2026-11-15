@@ -67,6 +67,8 @@ struct Terminal: Surface, TerminalInterface {
   /// @param[in]  area      The area
   void moveWindow(Window &window, const Rectangle &area) override;
 
+  void caret(Window &window, const std::optional<Vector> &position) override;
+
   ///
   /// Get event
   ///

@@ -59,7 +59,7 @@ struct Box: Container {
   /// Recompute the position of all children
   void layout();
 
-  [[nodiscard]] auto area() const -> const Rectangle & {return area_;}
+  [[nodiscard]] auto bounds() -> Rectangle override {return area_;}
 
   private:
   [[nodiscard]] auto weight(Dim index) const -> double;

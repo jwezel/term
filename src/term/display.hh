@@ -6,6 +6,8 @@
 #include "text.hh"
 #include "update.hh"
 
+#include <optional>
+
 namespace jwezel {
 
 ///
@@ -78,7 +80,18 @@ struct Display: Device {
   /// @param[in]  mode  The mode
   ///
   /// @return     string with ANSI sequence
-  void cursor(bool mode) const;
+  void cursor(bool mode);
+
+  ///
+  /// Set the caret
+  ///
+  /// The caret is the hardware cursor, parked at the given position and shown
+  /// after every update; without a caret the cursor is hidden.
+  ///
+  /// @param[in]  position  Position relative to the display, or nothing to hide
+  void caret(const std::optional<Vector> &position);
+
+  [[nodiscard]] auto caret() const -> const std::optional<Vector> & {return caret_;}
 
   ///
   /// Set foreground
@@ -138,6 +151,8 @@ struct Display: Device {
   Keyboard &keyboard_;                //< Keyboard
   int output_;                        //< Output file descriptor
   Vector cursor_;                     //< Current cursor position
+  bool cursorVisible_{true};          //< Whether the hardware cursor is shown
+  std::optional<Vector> caret_;       //< Requested caret position
   Vector terminalSize_;               //< Terminal size (cache)
   Rgb foreground_;                    //< Current foreground color
   Rgb background_;                    //< Current background color

@@ -12,7 +12,8 @@ namespace jwezel::ui {
 ///
 /// Provides the editing engine: a content buffer, the cursor, key handling
 /// (characters, Backspace, Delete, arrows, Home/End, Enter) and scrolling.
-/// It renders the visible content with a reverse-video cursor cell.
+/// It renders the visible content and places the terminal's hardware cursor
+/// (the caret) at the editing position while it has the focus.
 /// Subclasses supply the policy: LineEdit accepts on Enter and scrolls one
 /// row; TextArea inserts a newline on Enter and scrolls vertically.
 struct TextInput: Widget {
@@ -44,6 +45,8 @@ struct TextInput: Widget {
   auto operator=(TextInput &&) -> TextInput & = delete;
 
   ~TextInput() override = default;
+
+  [[nodiscard]] auto caret() const -> std::optional<Vector> override;
 
   [[nodiscard]] auto content() const -> const Text & {return content_;}
 

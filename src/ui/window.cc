@@ -8,6 +8,8 @@
 #include <term/window.hh>
 
 #include <memory>
+#include <utility>
+#include <vector>
 
 namespace jwezel::ui {
 
@@ -50,6 +52,11 @@ focus_{nullptr}
 
 void Window::focus(Widget *widget) {
   focus_ = widget;
+  updateCaret();
+}
+
+void Window::updateCaret() {
+  terminal()->caret(*this, focus_? focus_->caret(): std::nullopt);
 }
 
 auto Window::focus() -> Widget * {
@@ -57,7 +64,15 @@ auto Window::focus() -> Widget * {
 }
 
 void Window::move(const Rectangle &area) {
+  std::vector<std::pair<ui::Element *, Rectangle>> placements;
+  for (auto *child: children()) {
+    placements.emplace_back(child, child->bounds());
+  }
   jwezel::Window::move(area);
+  for (const auto &[child, relative]: placements) {
+    child->move(relative);
+  }
+  updateCaret();
 }
 
 auto Window::event(const jwezel::Event &event) -> bool {

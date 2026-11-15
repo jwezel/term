@@ -109,9 +109,26 @@ void Display::cursor(Dim column, Dim line) {
   }
 }
 
-void Display::cursor(bool mode) const {
+void Display::cursor(bool mode) {
   static const array<string, 2> sequence{"\x1b[?25l", "\x1b[?25h"};
+  cursorVisible_ = mode;
   write(sequence[mode? 1: 0]); // NOLINT
+}
+
+void Display::caret(const std::optional<Vector> &position) {
+  caret_ = position;
+  if (
+    caret_ and
+    caret_->x() >= 0 and caret_->x() < size().x() and
+    caret_->y() >= 0 and caret_->y() < size().y()
+  ) {
+    cursor(toDim(caret_->x() + position_.x()), toDim(caret_->y() + position_.y()));
+    if (!cursorVisible_) {
+      cursor(true);
+    }
+  } else if (cursorVisible_) {
+    cursor(false);
+  }
 }
 
 void Display::foreground(const Rgb &color) {
@@ -221,9 +238,16 @@ void Display::update(const Vector &position, const Text &text) {
 }
 
 void Display::update(const Updates &updates) {
+  if (updates.empty()) {
+    return;
+  }
+  if (cursorVisible_) {
+    cursor(false); // keep the cursor from visibly jumping around while painting
+  }
   for (const auto &update_: updates) {
     update(update_.position, update_.text);
   }
+  caret(caret_);
 }
 
 auto Display::size() const -> Vector {
