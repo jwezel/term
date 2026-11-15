@@ -68,6 +68,10 @@ auto Window::focus() -> Widget * {
  return focus_;
 }
 
+void Window::move(const Rectangle &area) {
+  jwezel::Window::move(area);
+}
+
 auto Window::event(const jwezel::Event &event) -> bool {
   if (focus_) {
     return focus_->event(event);

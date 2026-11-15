@@ -11,6 +11,8 @@ struct Widget: TextElement, ui::Element
 {
   explicit Widget(const Rectangle &area, const Char &background, Container &parent);
 
+  void move(const Rectangle &area) override;
+
   Widget(const Widget &) = delete;
 
   Widget(Widget &&) = delete;

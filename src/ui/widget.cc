@@ -22,4 +22,8 @@ ui::Element{&parent}
   }
 }
 
+void Widget::move(const Rectangle &area) {
+  TextElement::move(area);
+}
+
 } // namespace jwezel::ui

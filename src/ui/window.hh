@@ -36,6 +36,8 @@ struct Window: jwezel::Window, Container {
 
   [[nodiscard]] auto window() -> Window * override {return this;}
 
+  void move(const Rectangle &area) override;
+
   auto event(const jwezel::Event &event) -> bool override;
 
   private:

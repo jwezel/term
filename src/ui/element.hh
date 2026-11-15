@@ -33,6 +33,12 @@ struct Element
 
   [[nodiscard]] virtual auto window() /*NOLINT(misc-no-recursion)*/-> struct Window *;
 
+  ///
+  /// Move element to a new area
+  ///
+  /// @param[in]  area  The new area
+  virtual void move(const Rectangle &area) = 0;
+
   auto parent() {return parent_;}
 
   auto event(const jwezel::Event &event) -> bool;

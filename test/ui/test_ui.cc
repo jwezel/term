@@ -1,3 +1,5 @@
+#include "ui/horizontal_box.hh"
+#include "ui/vertical_box.hh"
 #include "ui/widget.hh"
 #include <ui/ui.hh>
 #include <ui/window.hh>
@@ -49,15 +51,15 @@ TEST_CASE("UI Window") {
   MESSAGE(std::string(outputFilename));
   REQUIRE_NE(fputs("\x1b[1;1R", inputWrite), EOF);
   REQUIRE_NE(fputs("\x1b[1;1R", inputWrite), EOF);
-  REQUIRE_NE(fputs("\x1b[10;20R", inputWrite), EOF);
+  REQUIRE_NE(fputs("\x1b[30;40R", inputWrite), EOF);
   REQUIRE_FALSE(fflush(inputWrite));
   CAPTURE(ftell(inputWrite));
   Terminal term('.'_C, VectorMin, VectorMin, VectorMax, output->_fileno, inputRead->_fileno);
   jwezel::ui::Ui ui_{term};
 
   SUBCASE("Window") {
-    auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 10, 6}, Text{"Title"})};
-    auto test{Text{' '_C, Vector{10, 6}}};
+    auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 20, 12}, Text{"Title"})};
+    auto test{Text{' '_C, Vector{20, 12}}};
     test.box();
     test.patch(Text{"Title"}, Vector{1, 0});
     CHECK_EQ(w1.text(), test);
@@ -110,6 +112,62 @@ TEST_CASE("UI Window") {
         CHECK_EQ(ftell(inputRead), 21);
         CHECK(called);
       }
+    }
+    SUBCASE("Vertical box") {
+      auto box{jwezel::ui::VerticalBox(w1, Rectangle{1, 1, 19, 11})};
+      auto w2{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
+      auto w3{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
+      auto w4{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
+      CHECK_EQ(w2.area(), (Rectangle{1, 1, 19, 4}));
+      CHECK_EQ(w3.area(), (Rectangle{1, 4, 19, 8}));
+      CHECK_EQ(w4.area(), (Rectangle{1, 8, 19, 11}));
+    }
+    SUBCASE("Vertical spacing") {
+      auto box{jwezel::ui::VerticalBox(w1, Rectangle{1, 1, 19, 11}, jwezel::ui::BoxLayout{.spacing = 1})};
+      auto w2{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
+      auto w3{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
+      auto w4{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
+      CHECK_EQ(w2.area(), (Rectangle{1, 1, 19, 4}));
+      CHECK_EQ(w3.area(), (Rectangle{1, 5, 19, 7}));
+      CHECK_EQ(w4.area(), (Rectangle{1, 8, 19, 11}));
+    }
+    SUBCASE("Vertical padding") {
+      auto box{
+        jwezel::ui::VerticalBox(w1, Rectangle{1, 1, 19, 11}, jwezel::ui::BoxLayout{.spacing = 1, .padding = 1})
+      };
+      auto w2{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
+      auto w3{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
+      auto w4{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
+      CHECK_EQ(w2.area(), (Rectangle{2, 2, 18, 4}));
+      CHECK_EQ(w3.area(), (Rectangle{2, 5, 18, 7}));
+      CHECK_EQ(w4.area(), (Rectangle{2, 8, 18, 10}));
+    }
+    SUBCASE("Vertical weights") {
+      auto box{jwezel::ui::VerticalBox(w1, Rectangle{1, 1, 19, 11}, jwezel::ui::BoxLayout{.weights = {1, 2, 3}})};
+      auto w2{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
+      auto w3{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
+      auto w4{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
+      CHECK_EQ(w2.area(), (Rectangle{1, 1, 19, 3}));
+      CHECK_EQ(w3.area(), (Rectangle{1, 3, 19, 6}));
+      CHECK_EQ(w4.area(), (Rectangle{1, 6, 19, 11}));
+    }
+    SUBCASE("Horizontal box") {
+      auto box{jwezel::ui::HorizontalBox(w1, Rectangle{1, 1, 19, 11})};
+      auto w2{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
+      auto w3{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
+      auto w4{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
+      CHECK_EQ(w2.area(), (Rectangle{1, 1, 7, 11}));
+      CHECK_EQ(w3.area(), (Rectangle{7, 1, 13, 11}));
+      CHECK_EQ(w4.area(), (Rectangle{13, 1, 19, 11}));
+    }
+    SUBCASE("Horizontal spacing") {
+      auto box{jwezel::ui::HorizontalBox(w1, Rectangle{1, 1, 19, 11}, jwezel::ui::BoxLayout{.spacing = 1})};
+      auto w2{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
+      auto w3{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
+      auto w4{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
+      CHECK_EQ(w2.area(), (Rectangle{1, 1, 6, 11}));
+      CHECK_EQ(w3.area(), (Rectangle{7, 1, 13, 11}));
+      CHECK_EQ(w4.area(), (Rectangle{14, 1, 19, 11}));
     }
     CHECK_EQ(term.display().text(), test);
   }

@@ -12,7 +12,7 @@ struct Container: ui::Element {
 
   explicit Container(Container *parent=nullptr);
 
-  auto add(Element &child) -> Container & {
+  virtual auto add(Element &child) -> Container & {
     children_.insert(&child);
     return *this;
   }
