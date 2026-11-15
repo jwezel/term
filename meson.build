@@ -55,39 +55,8 @@ headers = [
 ]
 
 lib_incdir = include_directories([
-  'src',
-  'extern/Taitank/src'
+  'src'
 ])
-
-taitank_sources = [
-  'extern/Taitank/src/taitank_cache.cc',
-  'extern/Taitank/src/taitank.cc',
-  'extern/Taitank/src/taitank_config.cc',
-  'extern/Taitank/src/taitank_flex.cc',
-  'extern/Taitank/src/taitank_flexline.cc',
-  'extern/Taitank/src/taitank_node.cc',
-  'extern/Taitank/src/taitank_style.cc',
-  'extern/Taitank/src/taitank_util.cc',
-]
-taitank_headers = [
-  'extern/Taitank/src/taitank_cache.h',
-  'extern/Taitank/src/taitank_config.h',
-  'extern/Taitank/src/taitank_flex.h',
-  'extern/Taitank/src/taitank_flexline.h',
-  'extern/Taitank/src/taitank.h',
-  'extern/Taitank/src/taitank_node.h',
-  'extern/Taitank/src/taitank_style.h',
-  'extern/Taitank/src/taitank_util.h'
-]
-taitank_args = ['-w']
-taitank_lib = library(
-  'taitank',
-  taitank_sources,
-  install: false,
-  cpp_args: taitank_args,
-  gnu_symbol_visibility: 'default',
-  include_directories: lib_incdir
-)
 
 lib_dep = [
   dependency('utfcpp'),
@@ -101,7 +70,6 @@ shlib = shared_library(
   install: true,
   cpp_args: lib_args,
   dependencies: lib_dep,
-  link_with: taitank_lib,
   gnu_symbol_visibility: 'default',
   include_directories: lib_incdir
 )

@@ -1,16 +1,12 @@
 #pragma once
 
 #include <functional>
-#include <taitank_node.h>
 #include <term/event.hh>
 #include <term/keyboard.hh>
 #include <term/surface.hh>
 
 
 namespace jwezel::ui {
-
-using
-  taitank::TaitankNodeRef;
 
 struct Element
 {
@@ -57,7 +53,6 @@ struct Element
 
   private:
   struct Container *parent_;
-  TaitankNodeRef node_;
   vector<pair<decltype(BaseEvent::type_), std::function<bool(const Element &element, const Event &)>>> eventHandlers_;
 };
 

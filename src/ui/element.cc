@@ -2,19 +2,15 @@
 #include "ui/window.hh"
 
 #include <iostream>
-#include <taitank.h>
 #include <term/keyboard.hh>
 
 namespace jwezel::ui {
 
 Element::Element(struct Container *parent):
-parent_(parent),
-node_{taitank::NodeCreate()}
+parent_(parent)
 {}
 
-Element::~Element() {
-  taitank::NodeFree(node_);
-}
+Element::~Element() {}
 
 auto Element::window() /*NOLINT(misc-no-recursion)*/ -> Window * {
   auto *result{parent_? parent_->window(): 0};
