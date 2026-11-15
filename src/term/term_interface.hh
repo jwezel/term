@@ -33,11 +33,17 @@ struct TerminalInterface {
   /// Place the text caret (the hardware cursor)
   ///
   /// Only the focused window controls the caret; requests of other windows
-  /// are ignored.
+  /// are ignored. The caret is only shown while @a owner is the topmost
+  /// element at the caret position, so a covered owner has no visible caret.
   ///
   /// @param      window    The requesting window
+  /// @param      owner     The element the caret belongs to (weak reference)
   /// @param[in]  position  Display position of the caret, or nothing to hide it
-  virtual void caret(Window &/*window*/, const std::optional<Vector> &/*position*/) {}
+  virtual void caret(
+    Window &/*window*/,
+    const Surface::Element */*owner*/,
+    const std::optional<Vector> &/*position*/
+  ) {}
 
 };
 

@@ -67,7 +67,9 @@ struct Terminal: Surface, TerminalInterface {
   /// @param[in]  area      The area
   void moveWindow(Window &window, const Rectangle &area) override;
 
-  void caret(Window &window, const std::optional<Vector> &position) override;
+  void caret(Window &window, const Surface::Element *owner, const std::optional<Vector> &position) override;
+
+  void reshapeElement(Element *element, const Rectangle &area) override;
 
   ///
   /// Get event
@@ -104,6 +106,12 @@ struct Terminal: Surface, TerminalInterface {
   auto contract() -> bool override;
 
   private:
+  ///
+  /// Show the requested caret if its owner is visible there, hide it otherwise
+  void placeCaret();
+
+  const Surface::Element *caretOwner_{};
+  std::optional<Vector> caretPosition_;
   bool expand_;
   bool contract_;
   Keyboard keyboard_;

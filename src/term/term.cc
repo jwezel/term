@@ -7,6 +7,7 @@
 #include "text.hh"
 #include "window.hh"
 
+#include <stdexcept>
 #include <unistd.h>
 
 namespace jwezel {
@@ -38,11 +39,22 @@ void Terminal::addElement(Surface::Element *element, Surface::Element * below) {
     expand(element->area().position2());
   }
   Surface::addElement(element, below);
+  placeCaret();
 }
 
 void Terminal::deleteElement(Element *element, Element *destination) {
+  if (element == caretOwner_) {
+    caretOwner_ = nullptr;
+    caretPosition_.reset();
+  }
   Surface::deleteElement(element, destination);
   contract();
+  placeCaret();
+}
+
+void Terminal::reshapeElement(Element *element, const Rectangle &area) {
+  Surface::reshapeElement(element, area);
+  placeCaret();
 }
 
 void Terminal::moveWindow(Window &window, const Rectangle &area) {
@@ -51,10 +63,26 @@ void Terminal::moveWindow(Window &window, const Rectangle &area) {
   contract();
 }
 
-void Terminal::caret(Window &window, const std::optional<Vector> &position) {
+void Terminal::caret(Window &window, const Surface::Element *owner, const std::optional<Vector> &position) {
   if (&window == focusWindow_) {
-    display_.caret(position);
+    caretOwner_ = owner;
+    caretPosition_ = position;
+    placeCaret();
   }
+}
+
+void Terminal::placeCaret() {
+  bool visible{false};
+  if (caretOwner_ and caretPosition_) {
+    Fragment *fragment{};
+    try {
+      fragment = find(*caretPosition_);
+    } catch (const std::logic_error &) { // no single topmost element at this position
+      fragment = nullptr;
+    }
+    visible = fragment and fragment->element == caretOwner_;
+  }
+  display_.caret(visible? caretPosition_: std::nullopt);
 }
 
 void Terminal::focus(Window *window) {

@@ -414,7 +414,7 @@ TEST_CASE("UI Window") {
       CHECK(pressed);
       CHECK_FALSE(term.display().caret()); // a button has no caret
     }
-    SUBCASE("Click outside widgets keeps focus") {
+    SUBCASE("Click on focused widget keeps focus") {
       REQUIRE_NE(fputs("\x1b[<0;7;5M", inputWrite), EOF); // window-relative (2, 1) is input1
       REQUIRE_FALSE(fflush(inputWrite));
       term.runEvent();
@@ -422,6 +422,67 @@ TEST_CASE("UI Window") {
       REQUIRE_FALSE(fflush(inputWrite));
       term.runEvent();
       CHECK_EQ(input1.content().data[0].size(), 4);
+    }
+    auto send{
+      [&](const char *input) {
+        REQUIRE_NE(fputs(input, inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+      }
+    };
+    SUBCASE("Click on frame is ignored") {
+      send("\x1b[<0;5;4M"); // display (4, 3): top left corner of the window frame
+      send("X");
+      CHECK_EQ(input1.content().data[0].size(), 4); // focus unchanged
+      CHECK_EQ(input2.content().data[0].size(), 3);
+    }
+    SUBCASE("Covered widget") {
+      // Display areas: input1 {5, 4, 23, 5}, input2 {5, 6, 23, 7}
+      SUBCASE("Completely covered gets no keyboard input") {
+        {
+          Window cover{&term, Rectangle{5, 4, 23, 5}, '#'_C};
+          term.focus(&w1);
+          CHECK_FALSE(term.display().caret()); // the caret is hidden as well
+          send("X");
+          CHECK_EQ(input1.content().data[0].size(), 3);
+        }
+        CHECK_EQ(term.display().caret(), Vector{8, 4}); // uncovered: caret is back
+        send("X");
+        CHECK_EQ(input1.content().data[0].size(), 4);
+        CHECK_EQ(term.display().caret(), Vector{9, 4});
+      }
+      SUBCASE("Partly covered still gets keyboard input") {
+        Window cover{&term, Rectangle{15, 4, 23, 5}, '#'_C};
+        term.focus(&w1);
+        CHECK_EQ(term.display().caret(), Vector{8, 4}); // caret cell itself is visible
+        send("X");
+        CHECK_EQ(input1.content().data[0].size(), 4);
+        CHECK_EQ(term.display().caret(), Vector{9, 4});
+      }
+      SUBCASE("Caret cell covered") {
+        Window cover{&term, Rectangle{8, 4, 23, 5}, '#'_C};
+        term.focus(&w1);
+        CHECK_FALSE(term.display().caret());
+        send("X"); // the widget is still partly visible
+        CHECK_EQ(input1.content().data[0].size(), 4);
+        CHECK_FALSE(term.display().caret());
+      }
+      SUBCASE("Click on covered widget is ignored") {
+        Window cover{&term, Rectangle{5, 6, 23, 7}, '#'_C};
+        term.focus(&w1);
+        send("\x1b[<0;7;7M"); // display (6, 6): input2, covered
+        send("X");
+        CHECK_EQ(input1.content().data[0].size(), 4); // focus did not move
+        CHECK_EQ(input2.content().data[0].size(), 3);
+      }
+      SUBCASE("Click on uncovered part of a widget still focuses it") {
+        Window cover{&term, Rectangle{15, 6, 23, 7}, '#'_C};
+        term.focus(&w1);
+        send("\x1b[<0;7;7M"); // display (6, 6): input2, visible
+        send("X");
+        CHECK_EQ(input2.content().data[0].size(), 4);
+        CHECK_EQ(input1.content().data[0].size(), 3);
+      }
     }
     SUBCASE("Move window") {
       const Rectangle moved{10, 6, 30, 18};
