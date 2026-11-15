@@ -26,6 +26,10 @@ void Widget::move(const Rectangle &area) {
   TextElement::move(area + window()->area().position());
 }
 
+auto Widget::inputWindow() -> jwezel::Window * {
+  return window();
+}
+
 auto Widget::bounds() -> Rectangle {
   return TextElement::area() - window()->area().position();
 }

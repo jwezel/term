@@ -17,6 +17,8 @@ struct Widget: TextElement, ui::Element
 
   [[nodiscard]] auto bounds() -> Rectangle override;
 
+  [[nodiscard]] auto inputWindow() -> jwezel::Window * override;
+
   auto moveEvent(const Rectangle &area) -> bool override;
 
   Widget(const Widget &) = delete;

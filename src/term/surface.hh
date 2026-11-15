@@ -23,6 +23,8 @@ namespace jwezel {
 
 using std::initializer_list, std::pair;
 
+struct Window;
+
 struct Surface {
   struct Element;
 
@@ -88,6 +90,12 @@ struct Surface {
     virtual void update(const vector<Rectangle> &areas);
 
     virtual void update(const Rectangle &area_);
+
+    ///
+    /// Get the window that input directed at this element belongs to
+    ///
+    /// @return     The window, or nothing if the element is not part of a window
+    [[nodiscard]] virtual auto inputWindow() -> Window * {return nullptr;}
 
     [[nodiscard]] auto fragments() -> auto & {return fragments_;}
 

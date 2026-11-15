@@ -69,6 +69,12 @@ struct Window: TextElement {
 
   virtual auto event(const Event &event) -> bool;
 
+  ///
+  /// Called when the window has received the terminal focus
+  virtual void focusEvent() {}
+
+  [[nodiscard]] auto inputWindow() -> Window * override {return this;}
+
   [[nodiscard]] auto terminal() const {return terminal_;}
 
   private:

@@ -29,7 +29,6 @@ keyboard_{keyboardFd == -1? terminalFd: keyboardFd},
 display_{keyboard_, terminalFd, initialPosition, initialSize == VectorMin? Vector{1, 1}: initialSize, maxSize},
 backdrop_{this},
 desktop_{this, Rectangle{Vector{0, 0}, display_.size()}, background},
-focusWindow_{&desktop_},
 minimumSize_{display_.size()},
 running_{false}
 {}
@@ -46,6 +45,9 @@ void Terminal::deleteElement(Element *element, Element *destination) {
   if (element == caretOwner_) {
     caretOwner_ = nullptr;
     caretPosition_.reset();
+  }
+  if (element == focusWindow_) {
+    focusWindow_ = element == &desktop_? nullptr: &desktop_; // the desktop takes over the focus
   }
   Surface::deleteElement(element, destination);
   contract();
@@ -86,7 +88,26 @@ void Terminal::placeCaret() {
 }
 
 void Terminal::focus(Window *window) {
+  if (window == focusWindow_) {
+    return;
+  }
   focusWindow_ = window;
+  caretOwner_ = nullptr; // the caret of the previously focused window is gone
+  caretPosition_.reset();
+  placeCaret();
+  if (window) {
+    window->focusEvent();
+  }
+}
+
+auto Terminal::windowAt(const Vector &position) -> Window * {
+  try {
+    if (auto *fragment{find(position)}; fragment) {
+      return fragment->element->inputWindow();
+    }
+  } catch (const std::logic_error &) { // no single topmost element at this position
+  }
+  return nullptr;
 }
 
 auto Terminal::event() -> Event {
@@ -95,8 +116,17 @@ auto Terminal::event() -> Event {
 
 void Terminal::runEvent() {
   auto currentEvent{keyboard_.event()};
-  if (focusWindow_) {
-    focusWindow_->event(currentEvent);
+  auto *target{focusWindow_};
+  // Mouse input goes to the window under the mouse, whether or not it has the focus;
+  // it is up to the window to claim the focus
+  if (currentEvent.type() == MouseButtonEvent::type_ or currentEvent.type() == MouseMoveEvent::type_) {
+    auto *window{windowAt(dynamic_cast<MouseEvent *>(currentEvent())->position())};
+    if (window and window != &desktop_) {
+      target = window;
+    }
+  }
+  if (target) {
+    target->event(currentEvent);
   }
 }
 

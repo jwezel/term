@@ -49,6 +49,8 @@ struct Window: jwezel::Window, Container {
 
   auto event(const jwezel::Event &event) -> bool override;
 
+  void focusEvent() override;
+
   private:
   std::unique_ptr<FrameStyle> style_; // internal, never visible in the public API
   Text title_;

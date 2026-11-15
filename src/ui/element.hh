@@ -8,6 +8,9 @@
 
 namespace jwezel::ui {
 
+struct Container;
+struct Window;
+
 struct Element
 {
 
@@ -27,7 +30,7 @@ struct Element
 
   virtual ~Element();
 
-  [[nodiscard]] virtual auto window() /*NOLINT(misc-no-recursion)*/-> struct Window *;
+  [[nodiscard]] virtual auto window() /*NOLINT(misc-no-recursion)*/-> Window *;
 
   ///
   /// Move element to a new area

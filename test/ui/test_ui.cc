@@ -484,6 +484,64 @@ TEST_CASE("UI Window") {
         CHECK_EQ(input1.content().data[0].size(), 3);
       }
     }
+    SUBCASE("Two windows") {
+      auto w2{jwezel::ui::Window(ui_, ' '_C, Rectangle{26, 3, 40, 10}, Text{"Other"})};
+      auto other{jwezel::ui::LineEdit(w2, Rectangle{1, 1, 13, 2}, Text{"AB"})};
+      CHECK_EQ(term.focus(), &w2); // the newest window has the focus
+      CHECK_EQ(term.display().caret(), Vector{29, 4});
+      SUBCASE("Click on widget of another window focuses it") {
+        send("\x1b[<0;7;7M"); // display (6, 6): input2 of w1
+        CHECK_EQ(term.focus(), &w1);
+        CHECK_EQ(w1.focus(), &input2);
+        CHECK_EQ(term.display().caret(), Vector{8, 6}); // w2's caret is gone, w1's is shown
+        send("X");
+        CHECK_EQ(input2.content().data[0].size(), 4);
+        CHECK_EQ(other.content().data[0].size(), 2);
+        CHECK_EQ(term.display().caret(), Vector{9, 6});
+      }
+      SUBCASE("Click on frame of another window focuses it") {
+        send("\x1b[<0;5;4M"); // display (4, 3): frame of w1
+        CHECK_EQ(term.focus(), &w1);
+        CHECK_EQ(w1.focus(), &input1); // the focused widget of w1 is unchanged
+        CHECK_EQ(term.display().caret(), Vector{8, 4});
+        send("X");
+        CHECK_EQ(input1.content().data[0].size(), 4);
+        CHECK_EQ(other.content().data[0].size(), 2);
+      }
+      SUBCASE("Click back") {
+        send("\x1b[<0;7;7M");
+        CHECK_EQ(term.focus(), &w1);
+        send("\x1b[<0;30;5M"); // display (29, 4): other
+        CHECK_EQ(term.focus(), &w2);
+        CHECK_EQ(term.display().caret(), Vector{29, 4});
+        send("X");
+        CHECK_EQ(other.content().data[0].size(), 3);
+        CHECK_EQ(input2.content().data[0].size(), 3);
+      }
+      SUBCASE("Click on desktop keeps focus") {
+        send("\x1b[<0;21;21M"); // display (20, 20): nothing there
+        CHECK_EQ(term.focus(), &w2);
+        send("X");
+        CHECK_EQ(other.content().data[0].size(), 3);
+      }
+      SUBCASE("Mouse move does not change focus") {
+        send("\x1b[<35;7;7M"); // button-less motion over input2 of w1
+        CHECK_EQ(term.focus(), &w2);
+      }
+    }
+    SUBCASE("Destroyed focused window hands focus to the desktop") {
+      {
+        Window extra{&term, Rectangle{26, 3, 40, 10}, '#'_C};
+        CHECK_EQ(term.focus(), &extra);
+      }
+      CHECK_EQ(term.focus(), &term.desktop());
+      send("X"); // goes nowhere, but must not crash
+      CHECK_EQ(input1.content().data[0].size(), 3);
+      send("\x1b[<0;7;7M"); // click on input2 of w1 gets the focus back
+      CHECK_EQ(term.focus(), &w1);
+      send("X");
+      CHECK_EQ(input2.content().data[0].size(), 4);
+    }
     SUBCASE("Move window") {
       const Rectangle moved{10, 6, 30, 18};
       w1.move(moved);

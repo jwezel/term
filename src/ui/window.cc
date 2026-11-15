@@ -55,6 +55,10 @@ void Window::focus(Widget *widget) {
   updateCaret();
 }
 
+void Window::focusEvent() {
+  updateCaret();
+}
+
 void Window::updateCaret() {
   terminal()->caret(*this, focus_, focus_? focus_->caret(): std::nullopt);
 }
@@ -84,19 +88,24 @@ auto Window::event(const jwezel::Event &event) -> bool {
     } catch (const std::logic_error &) { // no single topmost element at this position
       fragment = 0;
     }
-    // Mouse input only reaches the widget that is visible at the position: nothing
-    // covered by another element, and nothing of another window
-    auto *widget{dynamic_cast<Widget *>(fragment? fragment->element: nullptr)};
-    if (!widget or widget->window() != this) {
+    // Mouse input only concerns what is visible at the position: nothing covered
+    // by another element, and nothing of another window
+    auto *element{fragment? fragment->element: nullptr};
+    auto *widget{dynamic_cast<Widget *>(element)};
+    if (element != static_cast<jwezel::Window *>(this) and (!widget or widget->window() != this)) {
       return false;
     }
     if (
       event.type() == MouseButtonEvent::type_ and
       dynamic_cast<MouseButtonEvent *>(event())->action() == MouseAction::Down
     ) {
-      focus(widget);
+      // Click to focus: the widget that was hit and the window it is in
+      if (widget) {
+        focus(widget);
+      }
+      terminal()->focus(this);
     }
-    return widget->event(event);
+    return widget? widget->event(event): false;
   }
   // Other input goes to the focused widget, unless it is completely covered
   if (focus_ and !focus_->fragments().empty()) {

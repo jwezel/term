@@ -85,6 +85,8 @@ struct Terminal: Surface, TerminalInterface {
 
   void stop();
 
+  [[nodiscard]] auto focus() const -> Window * {return focusWindow_;}
+
   [[nodiscard]] auto display() -> Display & {return display_;}
 
   [[nodiscard]] auto desktop() -> Window & {return desktop_;}
@@ -110,15 +112,23 @@ struct Terminal: Surface, TerminalInterface {
   /// Show the requested caret if its owner is visible there, hide it otherwise
   void placeCaret();
 
+  ///
+  /// Get the window that is visible at a display position
+  ///
+  /// @param[in]  position  The position
+  ///
+  /// @return     The window, or nothing if there is none (e.g. the backdrop)
+  auto windowAt(const Vector &position) -> Window *;
+
   const Surface::Element *caretOwner_{};
   std::optional<Vector> caretPosition_;
+  Window *focusWindow_{}; // weak reference; set by the first window that is created, the desktop
   bool expand_;
   bool contract_;
   Keyboard keyboard_;
   Display display_;
   Backdrop backdrop_;
   Window desktop_;
-  Window *focusWindow_;
   Vector minimumSize_;
   bool running_;
 };
