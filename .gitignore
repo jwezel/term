@@ -3,3 +3,4 @@ build
 .default.sublime-*
 packages/
 !packages/conanfile.txt
+.github/
