@@ -42,6 +42,12 @@ struct Rgb {
 
   auto operator = (const Rgb & color) -> Rgb & = default;
 
+  ///
+  /// Override color
+  ///
+  /// @param[in]  other  The overriding color
+  ///
+  /// @return     @a other, unless it is unspecified (RgbNone) or RgbTransparent, then this color
   auto operator |(const Rgb &other) const -> Rgb;
 
   auto operator ==(const Rgb &other) const -> bool;
@@ -174,7 +180,7 @@ enum class AttributeMode: u1 {
   merge,
   mix,
   replace,
-  ignore
+  ignore,
 };
 
 ///
@@ -182,7 +188,7 @@ enum class AttributeMode: u1 {
 enum class Alignment: u1 {
   left,
   center,
-  right
+  right,
 };
 
 const extern vector<string> AttributeMode2String;
@@ -236,7 +242,7 @@ struct CharAttributes {
 /// Line orientation
 enum Orientation {
   Horizontal,
-  Vertical
+  Vertical,
 };
 
 ///
@@ -250,7 +256,7 @@ enum QuadTupleField {
   south,
   west,
   east,
-  mode
+  mode,
 };
 
 ///
@@ -430,7 +436,7 @@ struct Text {
   ///
   /// @param[in]  str   The string
   /// @param[in]  attr  CharAttributes
-  inline Text(string_view str, const CharAttributes &attr):
+  Text(string_view str, const CharAttributes &attr):
   Text(str, attr.fg, attr.bg, attr.attr)
   {}
 

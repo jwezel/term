@@ -116,6 +116,59 @@ TEST_CASE("Color") {
   }
 }
 
+TEST_CASE("Color combining") {
+  const auto transparent{jwezel::RgbTransparent};
+  SUBCASE("Override") {
+    CHECK_EQ(jwezel::RgbRed | RgbBlue, RgbBlue); // a specified color overrides
+    CHECK_EQ(jwezel::RgbRed | RgbNone, jwezel::RgbRed); // unspecified or transparent ones do not
+    CHECK_EQ(jwezel::RgbRed | transparent, jwezel::RgbRed);
+    CHECK_EQ(RgbNone | RgbBlue, RgbBlue);
+    CHECK_EQ(transparent | RgbBlue, RgbBlue);
+    CHECK_EQ(RgbNone | transparent, RgbNone);
+    CHECK_EQ(transparent | RgbNone, transparent);
+  }
+  SUBCASE("Mix") {
+    CHECK_EQ(jwezel::RgbRed + RgbBlue, Rgb{0.5, 0., 0.5});
+    CHECK_EQ(jwezel::RgbRed + RgbNone, jwezel::RgbRed);
+    CHECK_EQ(RgbNone + RgbBlue, RgbBlue);
+    CHECK_EQ(transparent + RgbBlue, RgbBlue);
+    CHECK_EQ(jwezel::RgbRed + transparent, jwezel::RgbRed);
+    CHECK_EQ(RgbNone + transparent, RgbNone);
+  }
+  SUBCASE("Char combine") {
+    const Char destination{'a', jwezel::RgbRed, RgbBlue, bold};
+    const Char source{'b', RgbNone, RgbGreen, underline};
+    SUBCASE("merge: the source wins where it specifies, the destination shows through elsewhere") {
+      const auto result{destination.combine(Char{'b', RgbNone, RgbGreen, underline, AttributeMode::merge})};
+      CHECK_EQ(result.rune, 'b');
+      CHECK_EQ(result.attributes.fg, jwezel::RgbRed);
+      CHECK_EQ(result.attributes.bg, RgbGreen);
+      CHECK_EQ(result.attributes.attr, bold | underline);
+    }
+    SUBCASE("mix blends") {
+      const auto result{destination.combine(Char{'b', RgbNone, RgbGreen, underline, AttributeMode::mix})};
+      CHECK_EQ(result.attributes.fg, jwezel::RgbRed);
+      CHECK_EQ(result.attributes.bg, Rgb{0., 0.5, 0.5});
+    }
+    SUBCASE("replace") {
+      CHECK_EQ(destination.combine(source, AttributeMode::replace).attributes.fg, RgbNone);
+    }
+    SUBCASE("Tint without a rune") {
+      const auto result{destination.combine(Char{jwezel::NoneRune, RgbNone, RgbGreen, {}, AttributeMode::merge})};
+      CHECK_EQ(result.rune, 'a');
+      CHECK_EQ(result.attributes.bg, RgbGreen);
+    }
+  }
+  SUBCASE("Merging text onto a colored background") {
+    Text window{Char{' ', RgbNone, RgbBlue}, Vector{4, 1}};
+    window.patch(Text{"hi", jwezel::RgbRed, RgbNone}, Vector{0, 0}, AttributeMode::merge);
+    CHECK_EQ(window.data[0][0].rune, 'h');
+    CHECK_EQ(window.data[0][0].attributes.fg, jwezel::RgbRed); // the text's own color
+    CHECK_EQ(window.data[0][0].attributes.bg, RgbBlue); // the background shines through
+    CHECK_EQ(window.data[0][3].attributes.bg, RgbBlue);
+  }
+}
+
 TEST_CASE("Char") {
   SUBCASE("Char only") {
     Char ch('x');
