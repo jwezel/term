@@ -224,6 +224,9 @@ struct CharAttributes {
   ///
   /// Equality operator.
   ///
+  /// The mix mode only says how the attributes combine with others, it is not part
+  /// of the appearance, so it does not take part in the comparison.
+  ///
   /// @param[in]  other  The other
   ///
   /// @return     The result of the equality

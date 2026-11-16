@@ -368,11 +368,11 @@ CharAttributes::operator string() const {
 }
 
 auto CharAttributes::operator ==(const CharAttributes &other) const -> bool {
-  return fg == other.fg && bg == other.bg && attr == other.attr && mix == other.mix;
+  return fg == other.fg && bg == other.bg && attr == other.attr;
 }
 
 auto CharAttributes::operator !=(const CharAttributes &other) const -> bool {
-  return fg != other.fg && bg != other.bg && attr != other.attr && mix != other.mix;
+  return !(*this == other);
 }
 
 Char::Char():

@@ -116,6 +116,18 @@ TEST_CASE("Color") {
   }
 }
 
+TEST_CASE("Attribute equality") {
+  const CharAttributes a{jwezel::RgbRed, RgbBlue, bold, AttributeMode::merge};
+  CHECK(a == CharAttributes{jwezel::RgbRed, RgbBlue, bold, AttributeMode::replace}); // the mix is not compared
+  CHECK_FALSE(a != CharAttributes{jwezel::RgbRed, RgbBlue, bold});
+  CHECK(Char('a', a) == Char('a', jwezel::RgbRed, RgbBlue, bold, AttributeMode::ignore));
+  CHECK(a != CharAttributes{RgbGreen, RgbBlue, bold, AttributeMode::merge}); // one difference is enough
+  CHECK(a != CharAttributes{jwezel::RgbRed, RgbGreen, bold, AttributeMode::merge});
+  CHECK(a != CharAttributes{jwezel::RgbRed, RgbBlue, underline, AttributeMode::merge});
+  CHECK_FALSE(a == CharAttributes{RgbGreen, RgbBlue, bold, AttributeMode::merge});
+  CHECK(Char('a', a) != Char('b', a));
+}
+
 TEST_CASE("Color combining") {
   const auto transparent{jwezel::RgbTransparent};
   SUBCASE("Override") {
