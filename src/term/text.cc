@@ -640,6 +640,7 @@ auto Char::combine(
 
     case AttributeMode::replace:
     result = other;
+    result.rune = rune_;
     break;
 
     case AttributeMode::ignore:
@@ -824,7 +825,7 @@ void Text::setAttr(const CharAttributes &attr, const Rectangle &area, const Attr
     const Rectangle _area = area_.value();
     for (Dim l = _area.y1(); l < _area.y2(); ++l) {
       for (Dim c = _area.x1(); c < _area.x2(); ++c) {
-        data[l][c] = data[l][c].combine(Char(NoneRune, attr), AttributeMode::default_, AttributeMode::ignore, setMix);
+        data[l][c] = data[l][c].combine(Char(NoneRune, attr), AttributeMode::merge, AttributeMode::default_, setMix);
       }
     }
   }

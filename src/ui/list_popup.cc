@@ -60,9 +60,7 @@ void ListPopup::render() {
       visible.patch(item[Rectangle{0, 0, width, 1}], Vector{1, row});
     }
     if (index == highlighted_) {
-      for (auto &cell: visible.data[static_cast<size_t>(row)]) {
-        cell.attributes.attr = static_cast<Attributes>(cell.attributes.attr | reverse);
-      }
+      visible.setAttr(CharAttributes{RgbNone, RgbNone, reverse}, Rectangle{0, row, size.x(), toDim(row + 1)});
     }
   }
   write(Vector{0, 0}, visible);

@@ -542,9 +542,12 @@ struct Text {
   ///
   /// Set Char attributes.
   ///
+  /// The attributes are applied to the area like a layer without characters: the characters stay
+  /// and the attributes are combined according to the mode in @a attr (merge, if it has none).
+  ///
   /// @param[in]  attr    The attribute
   /// @param[in]  area    The area
-  /// @param[in]  setMix  The set mix
+  /// @param[in]  setMix  The mix mode the characters have afterwards (unchanged if default)
   void setAttr(const CharAttributes &attr, const Rectangle &area=RectangleMax, const AttributeMode &setMix=AttributeMode::default_);
 
   ///

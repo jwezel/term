@@ -153,6 +153,16 @@ TEST_CASE("Color combining") {
     SUBCASE("replace") {
       CHECK_EQ(destination.combine(source, AttributeMode::replace).attributes.fg, RgbNone);
     }
+    SUBCASE("A source rune replaces, whatever the mode") {
+      for (auto mode: {AttributeMode::merge, AttributeMode::mix, AttributeMode::replace, AttributeMode::ignore}) {
+        CHECK_EQ(destination.combine(Char{'b', RgbNone, RgbGreen, {}, mode}).rune, 'b');
+      }
+    }
+    SUBCASE("No source rune keeps the destination rune, whatever the mode") {
+      for (auto mode: {AttributeMode::merge, AttributeMode::mix, AttributeMode::replace, AttributeMode::ignore}) {
+        CHECK_EQ(destination.combine(Char{jwezel::NoneRune, RgbNone, RgbGreen, {}, mode}).rune, 'a');
+      }
+    }
     SUBCASE("Tint without a rune") {
       const auto result{destination.combine(Char{jwezel::NoneRune, RgbNone, RgbGreen, {}, AttributeMode::merge})};
       CHECK_EQ(result.rune, 'a');
@@ -289,7 +299,15 @@ TEST_CASE("Text") {
     SUBCASE("setAttr") {
       auto t2 = text;
       t2.setAttr(CharAttributes(RgbGreen, RgbYellow, jwezel::reverse, jwezel::AttributeMode::replace), Rectangle{0, 0, 2, 2});
-      CHECK_EQ(t2, Text("line1\nline 2", attr));
+      CHECK_EQ(t2.data[0][0], Char('l', RgbGreen, RgbYellow, jwezel::reverse, AttributeMode::replace)); // runes stay
+      CHECK_EQ(t2.data[1][1], Char('i', RgbGreen, RgbYellow, jwezel::reverse, AttributeMode::replace));
+      CHECK_EQ(t2.data[0][2], text.data[0][2]); // outside of the area nothing changes
+      CHECK_EQ(t2.data[1][2], text.data[1][2]);
+      auto t3 = text;
+      t3.setAttr(CharAttributes(RgbNone, RgbNone, jwezel::reverse), Rectangle{0, 0, 2, 1});
+      CHECK_EQ(t3.data[0][0].attributes.fg, text.data[0][0].attributes.fg); // merged: only the attribute is added
+      CHECK_EQ(t3.data[0][0].attributes.attr, text.data[0][0].attributes.attr | jwezel::reverse);
+      CHECK_EQ(t3.data[0][2], text.data[0][2]);
     }
   }
   SUBCASE("Five lines, fg red, bg blue, bold") {

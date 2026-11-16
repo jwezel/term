@@ -890,10 +890,11 @@ TEST_CASE("UI Window") {
     auto padded{[](const std::string &text) {return text + std::string(18 - text.size(), ' ');}};
     auto closed{[&](const std::string &item) {return "[ " + item + std::string(12 - item.size(), ' ') + " ▼ ]";}};
     auto row{
-      [&](int line) { // the content of a row; the highlight is checked separately
+      [&](int line) { // the content of a row; the highlight (reverse, and the mix it leaves behind) is checked separately
         auto result{term.display().text()[Rectangle{1, jwezel::toDim(line), 19, jwezel::toDim(line + 1)}]};
         for (auto &cell: result.data.at(0)) {
           cell.attributes.attr = static_cast<jwezel::Attributes>(cell.attributes.attr & ~jwezel::reverse);
+          cell.attributes.mix = jwezel::AttributeMode::default_;
         }
         return result;
       }
