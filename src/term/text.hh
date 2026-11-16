@@ -26,7 +26,11 @@ const Unicode NoneRune = 0xffffffff;
 ///
 /// RGB color attributes.
 struct Rgb {
-  explicit Rgb(f4 r=-1., f4 g=0., f4 b=0.) noexcept;
+  ///
+  /// Create RgbNone (no color specified)
+  Rgb() noexcept;
+
+  explicit Rgb(f4 r, f4 g=0., f4 b=0.) noexcept;
 
   ~Rgb() = default;
 
@@ -440,7 +444,7 @@ struct Text {
   /// @param[in]  str   The string
   /// @param[in]  attr  CharAttributes
   Text(string_view str, const CharAttributes &attr):
-  Text(str, attr.fg, attr.bg, attr.attr)
+  Text(str, attr.fg, attr.bg, attr.attr, attr.mix)
   {}
 
   ///

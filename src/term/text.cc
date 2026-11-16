@@ -139,15 +139,13 @@ const vector<pair<u4, QuadTuple>> _quadInitializer {
   }
 };
 
+Rgb::Rgb() noexcept:
+r(-1.), g(-1.), b(-1.)
+{}
+
 Rgb::Rgb(f4 r, f4 g, f4 b) noexcept:
 r(r), g(g), b(b)
-{
-  if (r == 0. && g == 0. && b == 0.) {
-    r = -1.;
-    g = -1.;
-    b = -1.;
-  }
-}
+{}
 
 Rgb::operator string() const {
   if (r == -1 && g == -1 && b == -1) {

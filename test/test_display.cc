@@ -81,6 +81,19 @@ TEST_CASE("Display") {
       CHECK_NE(fgets(buffer, sizeof buffer, output), nullptr);
       CHECK_EQ(string(buffer), string("\x1b[48;2;0;0;255m"));
     }
+    SUBCASE("Transparent colors are the terminal default") {
+      char buffer[BufferSize];
+      memset(buffer, 0, sizeof buffer);
+      disp.foreground(jwezel::RgbTransparent);
+      disp.foreground(jwezel::RgbNone); // nothing more to write
+      disp.background(jwezel::RgbTransparent); // the background is none already: nothing to write
+      disp.background(RgbBlue);
+      disp.background(jwezel::RgbTransparent);
+      disp.background(jwezel::RgbTransparent);
+      CHECK_EQ(fseek(output, 0, SEEK_SET), 0);
+      CHECK_NE(fgets(buffer, sizeof buffer, output), nullptr);
+      CHECK_EQ(string(buffer), string("\x1b[39m\x1b[48;2;0;0;255m\x1b[49m"));
+    }
     SUBCASE("Attributes") {
       char buffer[BufferSize];
       memset(buffer, 0, sizeof buffer);

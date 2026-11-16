@@ -131,7 +131,8 @@ void Display::caret(const std::optional<Vector> &position) {
   }
 }
 
-void Display::foreground(const Rgb &color) {
+void Display::foreground(const Rgb &color_) {
+  const auto &color{color_ == RgbTransparent? RgbNone: color_}; // nothing shines through at the display
   if (foreground_ != color) {
     foreground_ = color;
     if (color == RgbNone) {
@@ -149,7 +150,8 @@ void Display::foreground(const Rgb &color) {
   }
 }
 
-void Display::background(const Rgb &color) {
+void Display::background(const Rgb &color_) {
+  const auto &color{color_ == RgbTransparent? RgbNone: color_}; // nothing shines through at the display
   if (background_ != color) {
     background_ = color;
     if (color == RgbNone) {

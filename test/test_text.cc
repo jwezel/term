@@ -116,6 +116,26 @@ TEST_CASE("Color") {
   }
 }
 
+TEST_CASE("Color defaults") {
+  CHECK_EQ(Rgb{}, RgbNone);
+  CHECK_EQ(Rgb(), jwezel::RgbNone);
+  CHECK_EQ(string(Rgb{}), "RgbNone");
+  CHECK_EQ(Rgb(1.), jwezel::RgbRed); // the other components default to 0
+  CHECK_NE(jwezel::RgbBlack, RgbNone); // black is a color
+  CHECK_EQ(Rgb(0., 0., 0.), jwezel::RgbBlack);
+  CHECK_EQ(CharAttributes{}.fg, RgbNone);
+  CHECK_EQ(Char{}.attributes.bg, RgbNone);
+}
+
+TEST_CASE("Text from CharAttributes") {
+  const Text text{"ab", CharAttributes{jwezel::RgbRed, RgbBlue, bold, AttributeMode::mix}};
+  CHECK_EQ(text.data[0][1].attributes.fg, jwezel::RgbRed);
+  CHECK_EQ(text.data[0][1].attributes.bg, RgbBlue);
+  CHECK_EQ(text.data[0][1].attributes.attr, bold);
+  CHECK_EQ(text.data[0][1].attributes.mix, AttributeMode::mix); // used to be dropped
+  CHECK_EQ(Text{"ab", CharAttributes{}}.data[0][0].attributes.mix, AttributeMode::default_);
+}
+
 TEST_CASE("Attribute equality") {
   const CharAttributes a{jwezel::RgbRed, RgbBlue, bold, AttributeMode::merge};
   CHECK(a == CharAttributes{jwezel::RgbRed, RgbBlue, bold, AttributeMode::replace}); // the mix is not compared
