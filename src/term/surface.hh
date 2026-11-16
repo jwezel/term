@@ -126,8 +126,26 @@ struct Surface {
 
   virtual void reshapeElement(Element *element, const Rectangle &area);
 
+  ///
+  /// Move an element above another one
+  ///
+  /// The backdrop, the lowest element, cannot be moved. Nothing happens if the element is above the
+  /// destination already.
+  ///
+  /// @param      element      The element
+  /// @param      destination  The element to get above; nothing stands for the position beyond the top, so the
+  ///                          element ends up on top
   void above(Surface::Element *element, Surface::Element *destination=0);
 
+  ///
+  /// Move an element below another one
+  ///
+  /// The backdrop, the lowest element, cannot be moved, and nothing can get below it. Nothing happens if the
+  /// element is below the destination already.
+  ///
+  /// @param      element      The element
+  /// @param      destination  The element to get below. Nothing stands for the position beyond the top, so the
+  ///                          element ends up on top. The backdrop means the bottom, just above the backdrop.
   void below(Surface::Element *element, Surface::Element *destination=0);
 
   ///
@@ -253,12 +271,28 @@ struct TextElement: Surface::Element {
 
   auto moveEvent(const Rectangle &/*area*/) -> bool override;
 
+  ///
+  /// Move above an element, or one up if there is none
+  ///
+  /// @return     False if there was nothing to do because the element is on top already
   auto above(TextElement *element=0) -> bool;
 
+  ///
+  /// Move below an element, or one down if there is none
+  ///
+  /// @return     False if there was nothing to do because the element is at the bottom already
   auto below(TextElement *element=0) -> bool;
 
+  ///
+  /// Move above the element at a z-order position (negative: counted from the top)
+  ///
+  /// @throws     std::out_of_range if there is no such position
   auto above(int position=0) -> bool;
 
+  ///
+  /// Move below the element at a z-order position (negative: counted from the top)
+  ///
+  /// @throws     std::out_of_range if there is no such position
   auto below(int position=-1) -> bool;
 
   [[nodiscard]]  auto position() const {return position_;}

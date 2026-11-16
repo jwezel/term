@@ -304,7 +304,12 @@ void Surface::reshapeElement(Element *element, const Rectangle &area) {
 }
 
 void Surface::reorder(int source, int destination) {
-  if (destination == source) {
+  if (source <= 0) {
+    throw logic_error("Lowest element must be the 'backdrop', which must not be moved");
+  }
+  // Nothing goes below the backdrop, nor beyond the top
+  destination = std::clamp(destination, 1, static_cast<int>(zorder_.size()));
+  if (destination == source or destination == source + 1) { // the element stays where it is
     return;
   }
   vector<Fragment> updates;
@@ -346,13 +351,13 @@ void Surface::reorder(int source, int destination) {
 
 void Surface::above(Surface::Element * element, Surface::Element * destination) {
   if (element != destination) {
-    reorder(position(element), position(destination) + 1);
+    reorder(position(element), destination? position(destination) + 1: static_cast<int>(zorder_.size()));
   }
 }
 
 void Surface::below(Surface::Element * element, Surface::Element * destination) {
   if (element != destination) {
-    reorder(position(element), position(destination));
+    reorder(position(element), destination? position(destination): static_cast<int>(zorder_.size()));
   }
 }
 
@@ -440,22 +445,52 @@ auto TextElement::moveEvent(const Rectangle &area) -> bool {
 }
 
 auto TextElement::above(TextElement *element) -> bool {
-  surface()->above(this, element? element: surface()->zorder()[surface()->position(this) + 1]);
+  Element *destination{element};
+  if (!destination) { // one up
+    const auto next{static_cast<size_t>(surface()->position(this)) + 1};
+    if (next >= surface()->zorder().size()) {
+      return false; // already on top
+    }
+    destination = surface()->zorder()[next];
+  }
+  surface()->above(this, destination);
   return true;
 }
 
 auto TextElement::below(TextElement *element) -> bool {
-  surface()->below(this, element? element: surface()->zorder()[surface()->position(this) - 1]);
+  Element *destination{element};
+  if (!destination) { // one down
+    const auto previous{surface()->position(this) - 1};
+    if (previous < 1) {
+      return false; // already at the bottom, the backdrop is below
+    }
+    destination = surface()->zorder()[static_cast<size_t>(previous)];
+  }
+  surface()->below(this, destination);
   return true;
 }
 
+namespace {
+
+// Get the element at a z-order position; negative positions count from the top
+auto elementAt(const Surface &surface, int position) -> Surface::Element * {
+  const auto size{static_cast<int>(surface.zorder().size())};
+  const auto index{position < 0? position + size: position};
+  if (index < 0 or index >= size) {
+    throw std::out_of_range(format("z-order position {} is outside of 0 .. {}", position, size - 1));
+  }
+  return surface.zorder()[static_cast<size_t>(index)];
+}
+
+} // namespace
+
 auto TextElement::above(int position) -> bool {
-  surface()->above(this, surface()->zorder()[position < 0? position + surface()->zorder().size(): position]);
+  surface()->above(this, elementAt(*surface(), position));
   return true;
 }
 
 auto TextElement::below(int position) -> bool {
-  surface()->below(this, surface()->zorder()[position < 0? position + surface()->zorder().size(): position]);
+  surface()->below(this, elementAt(*surface(), position));
   return true;
 }
 

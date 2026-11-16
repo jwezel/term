@@ -397,6 +397,90 @@ TEST_CASE("Surface") {
         }
       );
     }
+    SUBCASE("Reordering at the ends") {
+      // win1 {1, 1, 9, 5} is below win2 {2, 0, 8, 6}
+      Window win2{&term, Rectangle{2, 0, 8, 6}, '.'_C};
+      const auto order{
+        [&] {
+          return vector<const Surface::Element *>(scr.zorder().begin(), scr.zorder().end());
+        }
+      };
+      const vector<const Surface::Element *> win1Below{&term.backdrop_, &win1, &win2};
+      const vector<const Surface::Element *> win1Above{&term.backdrop_, &win2, &win1};
+      const Updates win1Shows{{Vector{2, 1}, Text("      \n      \n      \n      ")}};
+      dev.updates_.clear();
+      SUBCASE("Above nothing is the top") {
+        scr.above(&win1);
+        TestFragments(scr);
+        CHECK_EQ(order(), win1Above);
+        CHECK_EQ(dev.updates_, win1Shows);
+      }
+      SUBCASE("Above nothing, already on top") {
+        scr.above(&win2);
+        TestFragments(scr);
+        CHECK_EQ(order(), win1Below);
+        CHECK(dev.updates_.empty());
+      }
+      SUBCASE("Below nothing is the top as well") {
+        scr.below(&win1);
+        TestFragments(scr);
+        CHECK_EQ(order(), win1Above);
+        CHECK_EQ(dev.updates_, win1Shows);
+      }
+      SUBCASE("Below the backdrop is the bottom") {
+        scr.below(&win2, &term.backdrop_);
+        TestFragments(scr);
+        CHECK_EQ(order(), win1Above);
+        CHECK_EQ(dev.updates_, win1Shows);
+      }
+      SUBCASE("Below the backdrop, already at the bottom") {
+        scr.below(&win1, &term.backdrop_);
+        TestFragments(scr);
+        CHECK_EQ(order(), win1Below);
+        CHECK(dev.updates_.empty());
+      }
+      SUBCASE("Above the element it is above already") {
+        scr.above(&win2, &win1); // used to overwrite another place in the z-order
+        TestFragments(scr);
+        CHECK_EQ(order(), win1Below);
+        CHECK(dev.updates_.empty());
+      }
+      SUBCASE("Below the element it is below already") {
+        scr.below(&win1, &win2);
+        TestFragments(scr);
+        CHECK_EQ(order(), win1Below);
+        CHECK(dev.updates_.empty());
+      }
+      SUBCASE("The backdrop does not move") {
+        CHECK_THROWS_AS(scr.above(&term.backdrop_, &win2), std::logic_error);
+        CHECK_THROWS_AS(scr.below(&term.backdrop_, &win1), std::logic_error);
+        CHECK_THROWS_AS(scr.above(&term.backdrop_), std::logic_error);
+        CHECK_EQ(order(), win1Below);
+      }
+      SUBCASE("One up and one down") {
+        CHECK(win1.above(nullptr));
+        CHECK_EQ(order(), win1Above);
+        CHECK_FALSE(win1.above(nullptr)); // on top
+        CHECK_EQ(order(), win1Above);
+        CHECK(win1.below(nullptr));
+        CHECK_EQ(order(), win1Below);
+        CHECK_FALSE(win1.below(nullptr)); // at the bottom
+        CHECK_EQ(order(), win1Below);
+        TestFragments(scr);
+      }
+      SUBCASE("By position") {
+        CHECK(win1.above(-1)); // above the topmost
+        CHECK_EQ(order(), win1Above);
+        CHECK(win1.below(0)); // below the backdrop is the bottom
+        CHECK_EQ(order(), win1Below);
+        CHECK(win1.above(2));
+        CHECK_EQ(order(), win1Above);
+        CHECK_THROWS_AS(win1.above(3), std::out_of_range);
+        CHECK_THROWS_AS(win1.below(-4), std::out_of_range);
+        CHECK_EQ(order(), win1Above);
+        TestFragments(scr);
+      }
+    }
   }
 }
 
@@ -573,13 +657,16 @@ TEST_CASE("Surface model") {
       } else {
         auto *element{pick()};
         auto *other{pick()};
-        if (element != other) {
+        // The destination is another element, or none, or the backdrop
+        const auto kind{number(0, 3)};
+        Surface::Element *destination{kind < 2? static_cast<Surface::Element *>(other): kind == 2? nullptr: scr.zorder()[0]};
+        if (element != destination) {
           if (choice == 8) {
             operation = "above";
-            scr.above(element, other);
+            scr.above(element, destination);
           } else {
             operation = "below";
-            scr.below(element, other);
+            scr.below(element, destination);
           }
         }
       }
