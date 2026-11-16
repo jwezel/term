@@ -106,12 +106,7 @@ auto Root::handleEvent(const Event &event) -> bool {
     } else {
       // Mouse input only concerns what is visible at the position: nothing covered
       // by another element, and nothing of another window
-      Surface::Fragment *fragment{};
-      try {
-        fragment = host_.surface()->find(position);
-      } catch (const std::logic_error &) { // no single topmost element at this position
-        fragment = nullptr;
-      }
+      const auto *fragment{host_.surface()->find(position)};
       auto *element{fragment? fragment->element: nullptr};
       widget = dynamic_cast<Widget *>(element);
       own = element == &host_ or (widget and widget->root() == this);

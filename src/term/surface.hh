@@ -4,20 +4,7 @@
 #include <term/geometry.hh>
 #include <term/text.hh>
 
-#include <boost/geometry/geometries/box.hpp>
-#include <boost/geometry/geometries/point.hpp>
-#include <boost/geometry/geometries/register/box.hpp>
-#include <boost/geometry/geometries/register/point.hpp>
-#include <boost/geometry/index/rtree.hpp>
 #include <initializer_list>
-
-// NOLINTBEGIN
-BOOST_GEOMETRY_REGISTER_POINT_2D(jwezel::Vector, jwezel::Dim, cs::cartesian, x(), y());
-BOOST_GEOMETRY_REGISTER_BOX_2D_4VALUES(jwezel::Rectangle, jwezel::Vector, x1(), y1(), x2(), y2());
-// NOLINTEND
-
-const auto maxRtreeElements = 16;
-const auto minRtreeElements = 4;
 
 namespace jwezel {
 
@@ -25,6 +12,17 @@ using std::initializer_list, std::pair;
 
 struct Window;
 
+///
+/// Surface of overlapping elements
+///
+/// The elements are kept in z-order, bottom to top. Each element has fragments: the rectangles
+/// of its area that are visible, so not covered by any element above it. The fragments of an element are
+/// disjoint, and every visible cell belongs to exactly one fragment.
+///
+/// The fragments are not recomputed when the surface changes, but updated where it does: an element that is
+/// added covers what is below it, an element that is removed or moves away uncovers what it showed for the
+/// elements below it, and reordering only concerns the elements that are passed. The device is told about all
+/// areas that have to be painted again.
 struct Surface {
   struct Element;
 
@@ -105,6 +103,7 @@ struct Surface {
 
     private:
     vector<Fragment> fragments_;
+    size_t canonicalFragments_{0}; // number of fragments the last time they were created from scratch
     Surface *surface_{0};
     friend struct Surface;
   };
@@ -120,10 +119,6 @@ struct Surface {
   virtual ~Surface() = default;
 
   void update(const vector<Fragment> &updates);
-
-  void removeRtreeFragments(Surface::Element &element);
-
-  void insertRtreeFragments(Surface::Element &element);
 
   virtual void addElement(Element *element, Element *below=0);
 
@@ -143,6 +138,13 @@ struct Surface {
   /// @return     Minimum size
   auto minSize(const Element *exclude=0) const -> Vector;
 
+  ///
+  /// Find the visible fragment at a position
+  ///
+  /// @param[in]  position  The position
+  ///
+  /// @return     The fragment of the element that is visible at the position, nullptr if there is none.
+  ///             The pointer is valid until the surface changes.
   [[nodiscard]] auto find(const Vector &position) const -> Fragment *;
 
   [[nodiscard]] auto position(Element *element, int default_=-1) -> int;
@@ -152,13 +154,35 @@ struct Surface {
   private:
   void reorder(int source, int destination);
 
+  ///
+  /// Create the fragments of the element at a z-order position from scratch
   void cover(long pos);
 
-  using RtreeEntry = pair<Rectangle, Fragment *>;
+  ///
+  /// Create the fragments again from scratch where they have fallen apart
+  ///
+  /// Incremental changes join what they can, but the fragments of an element can still multiply over time. An
+  /// element with more than twice the fragments it had when they were last created from scratch gets them
+  /// created again, which does not change what is visible, only how it is divided.
+  ///
+  /// @param[in]  from  z-order position of the first element to consider
+  /// @param[in]  to    z-order position after the last element to consider
+  void tidy(long from, long to);
+
+  ///
+  /// Hand regions that are no longer shown by an element to the elements below
+  ///
+  /// The regions are given to the elements below `above` down to `lowest`, topmost first, each getting what
+  /// lies in its area.
+  ///
+  /// @param      regions  The regions (disjoint rectangles)
+  /// @param[in]  above    z-order position of the element that uncovers the regions
+  /// @param[in]  lowest   z-order position of the lowest element that is considered
+  /// @param      updates  Receives what has to be painted again
+  void expose(vector<Rectangle> regions, long above, long lowest, vector<Fragment> &updates);
 
   vector<Element *> zorder_;
   Device *device_{};
-  boost::geometry::index::rtree<RtreeEntry, boost::geometry::index::quadratic<maxRtreeElements, minRtreeElements>> rtree;
 };
 
 struct TextElement: Surface::Element {

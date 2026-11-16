@@ -59,7 +59,7 @@ void Button::render() {
   for (Dim row = 0; row < text_.height(); ++row) {
     auto line{Text{Space, Vector{toDim(text_.width() + 4), 1}}};
     line.patch(Text{"[ "}, Vector{0, 0});
-    line.patch(text_[Rectangle{0, row, text_.width(), row + 1}], Vector{2, 0});
+    line.patch(text_[Rectangle{0, row, text_.width(), toDim(row + 1)}], Vector{2, 0});
     line.patch(Text{" ]"}, Vector{toDim(text_.width() + 2), 0});
     write(Vector{0, row}, line);
   }

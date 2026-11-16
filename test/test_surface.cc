@@ -10,7 +10,10 @@
 #include <algorithm>
 #include <format>
 #include <iterator>
+#include <memory>
+#include <random>
 #include <ranges>
+#include <string>
 #include <vector>
 
 #include <doctest/doctest.h>
@@ -106,24 +109,82 @@ struct Terminal: Surface, jwezel::TerminalInterface {
   Backdrop backdrop_;
 };
 
-// Test rtree: check whether all corners of all fragments can be found in rtree
-void TestRtree(const Surface &screen) {
+namespace {
+
+auto inside(const Rectangle &area, const Vector &position) -> bool {
+  return position.x() >= area.x1() and position.x() < area.x2() and position.y() >= area.y1() and position.y() < area.y2();
+}
+
+// The element visible at a position is the topmost whose area contains it
+auto topmost(const Surface &screen, const Vector &position) -> const Surface::Element * {
+  const Surface::Element *result{nullptr};
   for (const auto *element: screen.zorder()) {
-    for (const auto &fr: element->fragments()) {
-      const auto &fa{fr.area};
-      CHECK_EQ(screen.find(fa.position()), &fr);
-      if (fa.x2() > fa.x1()) {
-        CHECK_EQ(screen.find(Vector{Dim(fa.x2() - 1), fa.y1()}), &fr);
-        if (fa.y2() > fa.y1()) {
-          CHECK_EQ(screen.find(Vector{Dim(fa.x2() - 1), Dim(fa.y2() - 1)}), &fr);
-        }
-      } else {
-        if (fa.y2() > fa.y1()) {
-          CHECK_EQ(screen.find(Vector{fa.x1(), Dim(fa.y2() - 1)}), &fr);
+    if (inside(element->area(), position)) {
+      result = element;
+    }
+  }
+  return result;
+}
+
+// The topmost element of all cells of a region, by painting the elements bottom to top
+auto topmostCells(const Surface &screen, Dim width, Dim height) -> vector<const Surface::Element *> {
+  vector<const Surface::Element *> result(static_cast<size_t>(width) * static_cast<size_t>(height), nullptr);
+  for (const auto *element: screen.zorder()) {
+    const auto area{element->area() & Rectangle{0, 0, width, height}};
+    if (!area) {
+      continue;
+    }
+    for (Dim y = area->y1(); y < area->y2(); ++y) {
+      for (Dim x = area->x1(); x < area->x2(); ++x) {
+        result[static_cast<size_t>(y) * static_cast<size_t>(width) + static_cast<size_t>(x)] = element;
+      }
+    }
+  }
+  return result;
+}
+
+} // namespace
+
+// Test fragments: compare the surface with the definition of visibility. Every cell in the region is in exactly
+// one fragment of the surface, which belongs to the topmost element whose area has the cell, and find() gets that
+// fragment. Fragments must be inside the area of their element.
+void TestFragments(const Surface &screen, Dim width = 40, Dim height = 24) {
+  // One assertion for all cells: a check per cell makes the tests very slow
+  string problem;
+  const auto cells{static_cast<size_t>(width) * static_cast<size_t>(height)};
+  vector<int> counts(cells, 0);
+  vector<const Surface::Fragment *> owners(cells, nullptr);
+  for (const auto *element: screen.zorder()) {
+    for (const auto &fragment: element->fragments()) {
+      if (fragment.element != element or (fragment.area & element->area()) != std::optional{fragment.area}) {
+        problem = format("Fragment {} is not inside its element {}", string(fragment), string(element->area()));
+      }
+      if (const auto area{fragment.area & Rectangle{0, 0, width, height}}; area) {
+        for (Dim y = area->y1(); y < area->y2(); ++y) {
+          for (Dim x = area->x1(); x < area->x2(); ++x) {
+            const auto cell{static_cast<size_t>(y) * static_cast<size_t>(width) + static_cast<size_t>(x)};
+            ++counts[cell];
+            owners[cell] = &fragment;
+          }
         }
       }
     }
   }
+  const auto tops{topmostCells(screen, width, height)};
+  for (Dim y = 0; y < height and problem.empty(); ++y) {
+    for (Dim x = 0; x < width and problem.empty(); ++x) {
+      const Vector position{x, y};
+      const auto cell{static_cast<size_t>(y) * static_cast<size_t>(width) + static_cast<size_t>(x)};
+      if (counts[cell] != (tops[cell]? 1: 0)) {
+        problem = format("{} fragments at {}, expected {}", counts[cell], string(position), tops[cell]? 1: 0);
+      } else if (owners[cell] and owners[cell]->element != tops[cell]) {
+        problem = format("Fragment at {} belongs to the wrong element", string(position));
+      } else if (screen.find(position) != owners[cell]) {
+        problem = format("find() is wrong at {}", string(position));
+      }
+    }
+  }
+  CHECK_EQ(problem, "");
 }
 
 // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
@@ -144,13 +205,13 @@ TEST_CASE("Surface") {
   Surface &scr{*term.surface()};
   SUBCASE("Constructor") {
     CHECK_EQ(scr.zorder().size(), 1);
-    TestRtree(scr);
+    TestFragments(scr);
   }
   SUBCASE("AddWindow") {
     dev.updates_.clear();
     Window win1{&term, Rectangle{1, 1, 9, 5}};
     SUBCASE("Window") {
-      TestRtree(scr);
+      TestFragments(scr);
       auto expupdates{Updates{{Vector{1, 1}, Text("        \n        \n        \n        ")}}};
       CHECK_EQ(&win1, scr.zorder()[1]);
       CHECK_EQ(dev.updates_, expupdates);
@@ -169,7 +230,7 @@ TEST_CASE("Surface") {
     SUBCASE("AddWindow below") {
       dev.updates_.clear();
       Window win2{&term, Rectangle{2, 0, 8, 6}, '.'_C, &win1};
-      TestRtree(scr);
+      TestFragments(scr);
       // MESSAGE(win1.fragments[0]);
       // for (const auto &f: term.backdrop_.fragments) {
       //   MESSAGE(f);
@@ -205,7 +266,7 @@ TEST_CASE("Surface") {
       SUBCASE("ReshapeWindow") {
         dev.updates_.clear();
         scr.reshapeElement(&win2, Rectangle{4, 0, 10, 6});
-        TestRtree(scr);
+        TestFragments(scr);
         std::ranges::sort(dev.updates_);
         CHECK_EQ(
           dev.updates_,
@@ -261,10 +322,10 @@ TEST_CASE("Surface") {
     SUBCASE("Delete window") {
       {
         Window win2{&term, Rectangle{2, 0, 8, 6}, '.'_C, &win1};
-        TestRtree(scr);
+        TestFragments(scr);
         dev.updates_.clear();
       }
-      TestRtree(scr);
+      TestFragments(scr);
       auto expupdates2{
         Updates{
             {Vector{2, 0}, Text("      ")},
@@ -284,10 +345,10 @@ TEST_CASE("Surface") {
     }
     SUBCASE("Shift down") {
       Window win2{&term, Rectangle{2, 0, 8, 6}, '.'_C};
-      TestRtree(scr);
+      TestFragments(scr);
       dev.updates_.clear();
       scr.above(&win2, &term.backdrop_);
-      TestRtree(scr);
+      TestFragments(scr);
       auto expupdates2{
         Updates{
             {Vector{2, 1}, Text("      \n      \n      \n      ")},
@@ -311,10 +372,10 @@ TEST_CASE("Surface") {
     }
     SUBCASE("Shift up") {
       Window win2{&term, Rectangle{2, 0, 8, 6}, '.'_C};
-      TestRtree(scr);
+      TestFragments(scr);
       dev.updates_.clear();
       scr.below(&win1);
-      TestRtree(scr);
+      TestFragments(scr);
       auto expupdates2{
         Updates{
             {Vector{2, 1}, Text("      \n      \n      \n      ")},
@@ -336,6 +397,205 @@ TEST_CASE("Surface") {
         }
       );
     }
+  }
+}
+
+
+// A device that paints the updates into a grid, like a display
+struct PaintDevice: Device {
+  static const Dim width{40};
+  static const Dim height{24};
+
+  PaintDevice():
+  grid_(height, string(width, ' '))
+  {}
+
+  void update(const Updates &updates) override {
+    for (const auto &update_: updates) {
+      for (size_t row = 0; row < update_.text.data.size(); ++row) {
+        for (size_t column = 0; column < update_.text.data[row].size(); ++column) {
+          const auto x{update_.position.x() + static_cast<Dim>(column)}, y{update_.position.y() + static_cast<Dim>(row)};
+          if (x >= 0 and x < width and y >= 0 and y < height) {
+            grid_[y][x] = static_cast<char>(update_.text.data[row][column].rune);
+          }
+        }
+      }
+    }
+  }
+
+  // What the screen has to show: the character of the element on top of each cell
+  [[nodiscard]] auto expected(const Surface &screen) const -> vector<string> {
+    vector<string> result(height, string(width, ' '));
+    const auto tops{topmostCells(screen, width, height)};
+    for (Dim y = 0; y < height; ++y) {
+      for (Dim x = 0; x < width; ++x) {
+        if (const auto *element{tops[static_cast<size_t>(y) * width + static_cast<size_t>(x)]};
+            element and element != screen.zorder()[0]) {
+          result[y][x] = static_cast<char>(element->text(Rectangle{0, 0, 1, 1}).data[0][0].rune);
+        }
+      }
+    }
+    return result;
+  }
+
+  vector<string> grid_;
+};
+
+// An element that is nothing but an area, to build a surface from scratch
+struct BlockElement: Surface::Element {
+  BlockElement(Surface *surface, const Rectangle &area): Element{surface}, area_{area} {}
+  [[nodiscard]] auto area() const -> Rectangle override {return area_;}
+  [[nodiscard]] auto text(const Rectangle &area = jwezel::RectangleMax) const -> Text override {
+    return Text{jwezel::Space, area.size()};
+  }
+  auto moveEvent(const Rectangle &area) -> bool override {
+    area_ = area;
+    return true;
+  }
+  void move(const Rectangle &area) override {surface()->reshapeElement(this, area);}
+  Rectangle area_;
+};
+
+// Number of fragments if the surface were built from scratch with its elements in z-order
+auto fragmentsFromScratch(const Surface &screen) -> size_t {
+  Device dev;
+  Surface fresh{&dev};
+  vector<std::unique_ptr<BlockElement>> blocks;
+  for (const auto *element: screen.zorder()) {
+    blocks.push_back(std::make_unique<BlockElement>(&fresh, element->area()));
+    fresh.addElement(blocks.back().get());
+  }
+  size_t result{0};
+  for (const auto *element: fresh.zorder()) {
+    result += element->fragments().size();
+  }
+  return result;
+}
+
+TEST_CASE("Surface fragments stay bounded") {
+  // Elements that come, go, move and change their order for a long time must not make fragments multiply
+  Device dev;
+  Surface scr{&dev};
+  Backdrop backdrop{&scr};
+  std::mt19937 random{7};
+  auto number = [&random](int low, int high) {return std::uniform_int_distribution<int>{low, high}(random);};
+  auto area = [&] {
+    const auto x{number(0, 70)}, y{number(0, 40)};
+    return Rectangle{Dim(x), Dim(y), Dim(x + number(2, 30)), Dim(y + number(2, 12))};
+  };
+  vector<std::unique_ptr<BlockElement>> blocks;
+  for (auto i = 0; i < 24; ++i) {
+    blocks.push_back(std::make_unique<BlockElement>(&scr, area()));
+    scr.addElement(blocks.back().get());
+  }
+  auto pick = [&] {return blocks[static_cast<size_t>(number(0, static_cast<int>(blocks.size()) - 1))].get();};
+  auto fragments = [&] {
+    size_t result{0};
+    for (const auto *element: scr.zorder()) {
+      result += element->fragments().size();
+    }
+    return result;
+  };
+  size_t peak{0};
+  for (auto step = 1; step <= 4000; ++step) {
+    auto *block{pick()};
+    auto *other{pick()};
+    switch (number(0, 3)) {
+      case 0:
+      case 1:
+      block->move(area());
+      break;
+
+      case 2:
+      scr.above(block, other);
+      break;
+
+      default:
+      scr.below(block, other);
+    }
+    peak = std::max(peak, fragments());
+    if (step % 500 == 0) {
+      INFO("Step ", step);
+      CHECK_LE(fragments(), 3 * fragmentsFromScratch(scr) + 20);
+    }
+  }
+  MESSAGE("Peak ", peak, " fragments, from scratch now ", fragmentsFromScratch(scr), ", now ", fragments());
+  CHECK_LE(peak, 400); // without tidying up, this walk goes beyond 430
+  TestFragments(scr, 100, 60);
+}
+
+TEST_CASE("Surface model") {
+  // Random changes to a surface; after each of them the fragments have to be right and the device must have been
+  // told everything that changed on the screen
+  for (auto seed = 1U; seed <= 8; ++seed) {
+    INFO("Seed: ", seed);
+    PaintDevice dev;
+    Terminal term{dev};
+    Surface &scr{*term.surface()};
+    std::mt19937 random{seed};
+    auto number = [&random](int low, int high) {return std::uniform_int_distribution<int>{low, high}(random);};
+    vector<std::unique_ptr<jwezel::TextElement>> elements;
+    string letters{"abcdefghijklmnopqrstuvwxyz"};
+    auto area = [&] {
+      const auto x{number(0, 34)}, y{number(0, 18)};
+      return Rectangle{Dim(x), Dim(y), Dim(x + number(1, 40 - x)), Dim(y + number(1, 24 - y))};
+    };
+    auto pick = [&] {return elements[static_cast<size_t>(number(0, static_cast<int>(elements.size()) - 1))].get();};
+    size_t maxFragments{0};
+    double worstRatio{0.};
+    for (auto step = 0; step < 250; ++step) {
+      string operation;
+      const auto choice{number(0, 9)};
+      if (elements.size() < 3 or (choice < 3 and elements.size() < 16)) {
+        operation = "add";
+        const auto letter{letters.back()};
+        letters.pop_back();
+        auto *below{!elements.empty() and number(0, 2) == 0? pick(): nullptr};
+        elements.push_back(std::make_unique<jwezel::TextElement>(&scr, area(), Char(letter), below));
+      } else if (choice < 5) {
+        operation = "delete";
+        auto *element{pick()};
+        letters.push_back(static_cast<char>(element->text(Rectangle{0, 0, 1, 1}).data[0][0].rune));
+        std::erase_if(elements, [element](const auto &e) {return e.get() == element;});
+      } else if (choice < 8) {
+        operation = "move";
+        auto *element{pick()};
+        auto target{area()};
+        if (number(0, 2) == 0) { // move only
+          const auto current{element->area()};
+          const auto dx{Dim(number(-3, 3))}, dy{Dim(number(-2, 2))};
+          target = current + Vector{dx, dy};
+          if (target.x1() < 0 or target.y1() < 0 or target.x2() > 40 or target.y2() > 24) {
+            target = current;
+          }
+        }
+        element->move(target);
+      } else {
+        auto *element{pick()};
+        auto *other{pick()};
+        if (element != other) {
+          if (choice == 8) {
+            operation = "above";
+            scr.above(element, other);
+          } else {
+            operation = "below";
+            scr.below(element, other);
+          }
+        }
+      }
+      INFO("Step ", step, ": ", operation);
+      TestFragments(scr);
+      REQUIRE_EQ(dev.grid_, dev.expected(scr));
+      size_t fragments{0};
+      for (const auto *element: scr.zorder()) {
+        fragments += element->fragments().size();
+      }
+      maxFragments = std::max(maxFragments, fragments);
+      if (step % 5 == 0) {
+        worstRatio = std::max(worstRatio, static_cast<double>(fragments) / static_cast<double>(fragmentsFromScratch(scr)));
+      }
+    }
+    MESSAGE("seed ", seed, ": most fragments ", maxFragments, ", at worst ", worstRatio, " times those from scratch");
   }
 }
 

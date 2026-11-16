@@ -75,7 +75,6 @@ lib_incdir = include_directories([
 lib_dep = [
   dependency('utfcpp'),
   # dependency('tl-optional'),
-  dependency('boost'),
 ]
 
 shlib = shared_library(
