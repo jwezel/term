@@ -6,10 +6,12 @@
 
 #include <cstdio>
 #include <cstring>
+#include <regex>
 #include <doctest/doctest.h>
 #include <unistd.h>
 
 using
+  jwezel::Attributes,
   jwezel::blink,
   jwezel::bold,
   jwezel::Dim,
@@ -105,6 +107,37 @@ TEST_CASE("Display") {
       CHECK_EQ(fseek(output, 0, SEEK_SET), 0);
       CHECK_NE(fgets(buffer, sizeof buffer, output), nullptr);
       CHECK_EQ(string(buffer), "@\x1b[1;4;7;5m@\x1b[22;24;27;25m@");
+    }
+    SUBCASE("Attributes: any change is one well-formed sequence") {
+      // From every set of attributes to every other: one sequence that starts with the escape, or nothing
+      const std::regex wellFormed{"(\x1b\\[[0-9]+(;[0-9]+)*m)?"};
+      const auto fd{output->_fileno};
+      for (Attributes from = 0; from < 16; ++from) {
+        for (Attributes to = 0; to < 16; ++to) {
+          disp.attributes(from);
+          REQUIRE_EQ(ftruncate(fd, 0), 0);
+          REQUIRE_EQ(lseek(fd, 0, SEEK_SET), 0);
+          disp.attributes(to);
+          char buffer[BufferSize];
+          memset(buffer, 0, sizeof buffer);
+          REQUIRE_EQ(lseek(fd, 0, SEEK_SET), 0);
+          const auto length{read(fd, buffer, sizeof buffer - 1)};
+          INFO("from ", int(from), " to ", int(to), ": ", repr(buffer));
+          CHECK(std::regex_match(string(buffer, static_cast<size_t>(length)), wellFormed));
+          CHECK_EQ(length == 0, from == to);
+        }
+      }
+    }
+    SUBCASE("Attributes: reverse only") {
+      char buffer[BufferSize];
+      memset(buffer, 0, sizeof buffer);
+      disp.attributes(reverse); // used to be written without the escape: ";7m"
+      disp.attributes(0);
+      disp.attributes(underline | reverse);
+      disp.attributes(bold | underline);
+      CHECK_EQ(fseek(output, 0, SEEK_SET), 0);
+      CHECK_NE(fgets(buffer, sizeof buffer, output), nullptr);
+      CHECK_EQ(string(buffer), "\x1b[7m\x1b[27m\x1b[4;7m\x1b[1;27m");
     }
     SUBCASE("Updates") {
       disp.resize(Vector{10, 4});

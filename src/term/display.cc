@@ -176,14 +176,14 @@ void Display::attributes(const Attributes &attributes) {
     array<string, 2>{"27", "7"},
     array<string, 2>{"25", "5"}
   };
-  static const array<string, 2> sepString{"\x1b[", ";"};
   string output;
-  for (unsigned b = 0, sep = 0; b < sequence.size(); ++b, sep = 1) {
+  for (unsigned b = 0; b < sequence.size(); ++b) {
     const int
       nattr = (/*NOLINT*/attributes >> b) & 1,
       eattr = (/*NOLINT*/attributes_ >> b) & 1;
     if (nattr != eattr) {
-      output += sepString.at(sep) + sequence.at(b).at((nattr - eattr) + 1U >> 1U);
+      // The first of the changes starts the sequence, whichever attribute it is
+      output += (output.empty()? "\x1b[": ";") + sequence.at(b).at((nattr - eattr) + 1U >> 1U);
     }
   }
   if (!output.empty()) {
