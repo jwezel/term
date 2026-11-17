@@ -136,7 +136,7 @@ auto Display::cursor() -> Vector {
     Unicode key{0};
     do {
       key = keyboard_.key();
-      report += static_cast<string::value_type>(key);
+      report += key == Key::Escape? '\x1b': static_cast<string::value_type>(key); // the report is in the characters of a key
     } while (key != 'R');
     smatch subMatch;
     if (regex_match(report, subMatch, reportPattern)) {

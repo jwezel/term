@@ -5,10 +5,12 @@
 #include <term/text.hh>
 #include <util/basic.hh>
 
+#include <chrono>
 #include <deque>
 #include <map>
 #include <memory>
 #include <optional>
+#include <string_view>
 #include <termios.h>
 
 namespace jwezel {
@@ -30,6 +32,7 @@ enum Key: Unicode {
   Backspace,
   Enter,
   Tab,
+  Escape,
   System,
   F1,
   F2,
@@ -144,12 +147,24 @@ enum Key: Unicode {
   AltF10,
   AltF11,
   AltF12,
-  Mouse,
-  ///
-  /// The Escape key, which arrives as the control character (it has to stay at the end: it is not numbered
-  /// like the others)
-  Escape = 0x1b
+  Mouse
 };
+
+///
+/// Get a logical key by its name, like "Escape", "Enter", "CtrlShiftF5" or "AltLeft"
+///
+/// @param[in]  name  The name; it is the name of the constant in `Key`
+///
+/// @return     The key, nothing if there is no such key
+auto keyFromName(std::string_view name) -> std::optional<Unicode>;
+
+///
+/// Get the name of a logical key
+///
+/// @param[in]  key  The key
+///
+/// @return     The name, nothing if the key is not a logical key (but a character, say)
+auto nameOfKey(Unicode key) -> std::optional<std::string_view>;
 
 enum class EventType: u1 {
   Key,
@@ -299,7 +314,26 @@ struct Keyboard {
   }
 
   private:
-  std::deque<Unicode> keyBuffer_; //< Key buffer
+  ///
+  /// A byte of input and how long it took to arrive
+  struct Byte {
+    char value;
+    std::chrono::steady_clock::duration waited;
+  };
+
+  ///
+  /// Get the next byte of input
+  ///
+  /// Bytes that were put back are the first ones. If the input has to be waited for, the byte is waited for until
+  /// it comes; otherwise it is only waited for a moment, which is what a sequence of keys that is sent by the
+  /// terminal gets to arrive.
+  ///
+  /// @param[in]  wait  Whether to wait until there is a byte
+  ///
+  /// @return     The byte, nothing if there is none (in time or at all)
+  auto readByte(bool wait) -> std::optional<Byte>;
+
+  std::deque<char> pending_; //< Bytes that were read, but are not used yet
   PrefixNode keyPrefixes_; //< Key prefix tree
   int fd_; //< Terminal file descriptor
   std::optional<termios> originalState_; //< Original terminal state

@@ -50,6 +50,8 @@ const vector<pair<string, Unicode>> KeyFromName { // NOLINT(cert-err58-cpp)
   {"Backspace", Key::Backspace},
   {"Enter", Key::Enter},
   {"Tab", Key::Tab},
+  {"Escape", Key::Escape},
+  {"System", Key::System},
   {"F1", Key::F1},
   {"F2", Key::F2},
   {"F3", Key::F3},
@@ -150,6 +152,7 @@ const vector<pair<string, Unicode>> KeyFromName { // NOLINT(cert-err58-cpp)
   {"AltBackspace", Key::AltBackspace},
   {"AltEnter", Key::AltEnter},
   {"AltTab", Key::AltTab},
+  {"AltSystem", Key::AltSystem},
   {"AltF1", Key::AltF1},
   {"AltF2", Key::AltF2},
   {"AltF3", Key::AltF3},
@@ -161,7 +164,8 @@ const vector<pair<string, Unicode>> KeyFromName { // NOLINT(cert-err58-cpp)
   {"AltF9", Key::AltF9},
   {"AltF10", Key::AltF10},
   {"AltF11", Key::AltF11},
-  {"AltF12", Key::AltF12}
+  {"AltF12", Key::AltF12},
+  {"Mouse", Key::Mouse}
 };
 
 const std::vector<pair<std::string, Unicode>> keyTranslations { // NOLINT(cert-err58-cpp)
@@ -178,6 +182,7 @@ const std::vector<pair<std::string, Unicode>> keyTranslations { // NOLINT(cert-e
   {"\x7f", Key::Backspace},
   {"\x0d", Key::Enter},
   {"\x09", Key::Tab}, // not \x07, that is BEL
+  {"\x1b", Key::Escape}, // also the start of nearly all other sequences, see Keyboard::key
   // {"", Key::System},
   {"\x1bOP", Key::F1},
   {"\x1bOQ", Key::F2},
@@ -278,7 +283,7 @@ const std::vector<pair<std::string, Unicode>> keyTranslations { // NOLINT(cert-e
   {"\x1b\x1b[6~", Key::AltPageDown},
   {"\x1b\x7f", Key::AltBackspace},
   {"\x1b\x0d", Key::AltEnter},
-  {"\x1b\x07", Key::AltTab},
+  {"\x1b\x09", Key::AltTab},
   {"\x1b\x1bOP", Key::AltF1},
   {"\x1b\x1bOQ", Key::AltF2},
   {"\x1b\x1bOR", Key::AltF3},
@@ -326,6 +331,24 @@ auto loadKeyTranslations(const std::vector<pair<std::string, Unicode>> &translat
   return result;
 }
 } // namespace
+
+auto keyFromName(std::string_view name) -> std::optional<Unicode> {
+  for (const auto &[keyName, key]: KeyFromName) {
+    if (keyName == name) {
+      return key;
+    }
+  }
+  return std::nullopt;
+}
+
+auto nameOfKey(Unicode key) -> std::optional<std::string_view> {
+  for (const auto &[keyName, named]: KeyFromName) {
+    if (named == key) {
+      return keyName;
+    }
+  }
+  return std::nullopt;
+}
 
 //~Keyboard~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -384,76 +407,86 @@ void Keyboard::reset() {
   }
 }
 
-auto Keyboard::key() -> Unicode {
-  Unicode key{0};
-  if (!keyBuffer_.empty()) {
-    key = keyBuffer_.front();
-    keyBuffer_.pop_front();
-    return key;
+auto Keyboard::readByte(bool wait) -> std::optional<Byte> {
+  if (!pending_.empty()) {
+    const auto value{pending_.front()};
+    pending_.pop_front();
+    return Byte{value, {}};
   }
-  char inputKey = 0;
-  auto *node{&keyPrefixes_};
-  u32string inputBuffer;
+  const auto flags{fcntl(fd_, F_GETFL)};
+  if (!wait and fcntl(fd_, F_SETFL, flags | O_NONBLOCK) != 0) {
+    cerr << "fcntl(F_SETFL, O_NONBLOCK) failed\n";
+  }
+  const auto start{steady_clock::now()};
+  auto attempt{0};
+  std::optional<Byte> result;
+  char value{0};
+  // Handle reattempts and simulated delays
   while (true) {
-    ssize_t readLength = 0;
-    steady_clock::duration readTime;
-    auto onSublevel{node != &keyPrefixes_}; // If true expect more keys in quick succession
-    if (onSublevel) {
-      auto st{fcntl(fd_, F_SETFL, fcntl(0, F_GETFL) | O_NONBLOCK)/*NOLINT*/};
-      if (st != 0) {
-        cerr << format("fcntl(F_SETFL, O_NONBLOCK) returned {}\n", st);
+    const auto length{read(fd_, &value, 1)};
+    if (length < 0) {
+      if (errno != EAGAIN) {
+        throw std::system_error(errno, std::system_category(), format("Could not get key: {}", fd_, std::strerror(errno)/*NOLINT*/));
       }
-    }
-    auto start{steady_clock::now()};
-    auto attempt{0};
-    // Handle reattempts and simulated delays
-    while (true) {
-      readLength = read(fd_, &inputKey, 1);
-      if (readLength < 0) {
-        if (errno != EAGAIN) {
-          throw std::system_error(errno, std::system_category(), format("Could not get key: {}", fd_, std::strerror(errno)/*NOLINT*/));
-        }
-        // Wait twice for a key, then give up
-        if (attempt++ > 1) {
-          break;
-        }
-        sleep_for(1ms); // TODO(j): make this much smaller (based on 19200 cps) and configurable
-      } else if (readLength > 0 and inputKey == '\xff') {
-        // '\xff' simulates a delay
-        sleep_for(1ms);
-      } else {
+      // Without waiting, wait twice for a key, then give up
+      if (!wait and attempt++ > 1) {
         break;
       }
-    };
-    readTime = steady_clock::now() - start;
-    if (onSublevel) {
-      auto st{fcntl(fd_, F_SETFL, fcntl(0, F_GETFL) & ~O_NONBLOCK)/*NOLINT*/};
-      if (st != 0) {
-        cerr << format("fcntl(F_SETFL, 0) returned {}\n", st);
-      }
-    }
-    if (readLength == 0) {
-      inputKey = '\0';
+      sleep_for(1ms); // TODO(j): make this much smaller (based on 19200 cps) and configurable
+    } else if (length > 0 and value == '\xff') {
+      // '\xff' simulates a delay
+      sleep_for(1ms);
     } else {
-      inputBuffer.push_back(inputKey);
-    }
-    auto subnodeIt{node->nodes.find(inputKey)};
-    if (onSublevel and readTime > 2ms or subnodeIt == node->nodes.end()) {
-      copy(inputBuffer.begin(), inputBuffer.end(), back_inserter(keyBuffer_));
-      break;
-    }
-    node = subnodeIt->second.get();
-    if (node->key != Key::None) {
-      keyBuffer_.push_back(node->key);
-      break;
+      if (length > 0) {
+        result = Byte{value, steady_clock::now() - start};
+      }
+      break; // no byte at the end of the input
     }
   }
-  if (keyBuffer_.empty()) {
+  if (!wait and fcntl(fd_, F_SETFL, flags) != 0) {
+    cerr << "fcntl(F_SETFL, 0) failed\n";
+  }
+  return result;
+}
+
+auto Keyboard::key() -> Unicode {
+  // Follow the bytes down the tree of key sequences as far as they go, and remember the deepest key on the way.
+  // What comes after that key is not part of it, whether it is a different key or just a plain character, and
+  // is looked at again.
+  const PrefixNode *node{&keyPrefixes_};
+  const PrefixNode *found{nullptr};
+  size_t foundLength{0};
+  std::deque<char> consumed;
+  while (true) {
+    const auto byte{readByte(node == &keyPrefixes_)};
+    if (!byte) {
+      break; // nothing came in time, or there is no more input
+    }
+    consumed.push_back(byte->value);
+    if (node != &keyPrefixes_ and byte->waited > 2ms) {
+      break; // too late to be part of the sequence
+    }
+    const auto next{node->nodes.find(byte->value)};
+    if (next == node->nodes.end()) {
+      break;
+    }
+    node = next->second.get();
+    if (node->key != Key::None) {
+      found = node;
+      foundLength = consumed.size();
+    }
+    if (node->nodes.empty()) {
+      break; // nothing could continue it
+    }
+  }
+  if (consumed.empty()) {
     throw runtime_error("Key buffer is empty");
   }
-  key = keyBuffer_.front();
-  keyBuffer_.pop_front();
-  return key;
+  // A plain character if it is not the start of a key
+  const auto used{found? foundLength: 1};
+  const auto result{found? found->key: static_cast<Unicode>(consumed.front())};
+  pending_.insert(pending_.begin(), consumed.begin() + static_cast<std::ptrdiff_t>(used), consumed.end());
+  return result;
 }
 
 auto Keyboard::mouseReport() -> tuple<MouseButton, MouseModifiers, Vector, MouseAction> {
