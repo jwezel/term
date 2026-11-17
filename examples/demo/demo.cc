@@ -6,6 +6,9 @@
 ///
 /// Keys: Tab / Shift-Tab move the focus, Space / Enter / Down open the menu, Esc closes the dialog, Ctrl-C quits.
 /// The mouse works as well: click to focus, click a menu entry, drag from the menu to an entry and let go.
+///
+/// Like the other examples, the demo draws where the cursor is and leaves the screen to the shell afterwards.
+/// With --fullscreen it uses the alternate screen instead.
 
 #include <term/display.hh>
 #include <term/event.hh>
@@ -158,6 +161,15 @@ void focusRing(Window &window, const std::vector<Widget *> &ring, const std::fun
       }
     );
   }
+}
+
+/// Make room for the display below the cursor
+///
+/// The display grows downwards from the cursor, so if the cursor is near the bottom of the terminal, the
+/// terminal is scrolled up by as much as is missing, and the cursor is put back to the top of the room.
+void makeRoom(int rows) {
+  const auto text{std::format("\r{}\x1b[{}A", std::string(static_cast<size_t>(rows), '\n'), rows)};
+  (void)!::write(1, text.data(), text.size());
 }
 
 /// Switch the terminal to the alternate screen for as long as the object exists
@@ -411,7 +423,7 @@ struct Demo {
 
 auto main(int /*unused*/, char * /*unused*/[]) -> int {
   try {
-    const AlternateScreen screen;
+    // const AlternateScreen screen;
     Terminal terminal{desktopBackground, VectorMin, VectorMin, VectorMax, 1, 0, true, false};
     terminal.display().mouseMode(jwezel::Display::MouseMode::anything);
     const auto needed{Vector{Demo::width + 2 * Demo::margin, Demo::height + 2}};
