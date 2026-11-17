@@ -16,6 +16,11 @@ text_{text}
   render();
 }
 
+void Label::text(const Text &text) {
+  text_ = text;
+  render();
+}
+
 void Label::render() {
   if (area().size().x() <= 0 or area().size().y() <= 0) {
     return;

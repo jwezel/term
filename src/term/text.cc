@@ -746,10 +746,12 @@ void Text::patch(
     width_ = toDim(std::min(width() - xdest, other.width() - xbegin)),
     height_ = toDim(std::min(height() - ydest, other.height() - ybegin));
   for (Dim l = 0; l < height_; ++l) {
-    const Dim owidth = std::min(toDim(other.data[ybegin + l].size()), width_);
-    if (xdest + owidth > 0) {
+    const auto &sourceLine{other.data[ybegin + l]};
+    // What of the line is inside of the text: nothing if it is entirely off to the right or to the left
+    const Dim owidth = std::min(toDim(toDim(sourceLine.size()) - xbegin), width_);
+    if (owidth > 0) {
       auto dest = data[ydest + l].begin() + xdest;
-      auto source = other.data[ybegin + l].begin();
+      auto source = sourceLine.begin() + xbegin; // the part that is off to the left is not copied
       while (dest != data[ydest + l].begin() + xdest + owidth) {
         *dest++ = dest->combine(*source++, mixDefaultMode, overrideMixMode, resetMixMode);
       }

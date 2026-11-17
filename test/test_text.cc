@@ -329,6 +329,25 @@ TEST_CASE("Text") {
       t2.patch(Text("xx\nyy", attr), Vector(-2, -1));
       CHECK_EQ(t2, Text("line1\nline 2", attr));
     }
+    SUBCASE("Patch (partly off left)") {
+      auto t2 = text;
+      t2.patch(Text("abcd", attr), Vector(-2, 0)); // what is outside is not copied, the rest is the right part
+      CHECK_EQ(t2, Text("cdne1\nline 2", attr));
+    }
+    SUBCASE("Patch (partly off right)") {
+      auto t2 = text;
+      t2.patch(Text("abcd", attr), Vector(3, 0)); // the lines of the text are 6 wide
+      CHECK_EQ(t2, Text("linabc\nline 2", attr));
+    }
+    SUBCASE("Patch (at or beyond the right edge)") {
+      auto t2 = text;
+      t2.patch(Text("ab", attr), Vector(6, 0)); // used to run off the end of the line
+      CHECK_EQ(t2, text);
+      t2.patch(Text("ab", attr), Vector(8, 1));
+      CHECK_EQ(t2, text);
+      t2.patch(Text("ab", attr), Vector(5, 1)); // the last cell is inside
+      CHECK_EQ(t2, Text("line1\nline a", attr));
+    }
     SUBCASE("setAttr") {
       auto t2 = text;
       t2.setAttr(CharAttributes(RgbGreen, RgbYellow, jwezel::reverse, jwezel::AttributeMode::replace), Rectangle{0, 0, 2, 2});

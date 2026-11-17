@@ -45,6 +45,12 @@ struct Label: Widget {
 
   [[nodiscard]] auto content() const -> const Text & {return text_;}
 
+  ///
+  /// Change the text, which is displayed in the same area
+  ///
+  /// @param[in]  text  The text
+  void text(const Text &text);
+
   protected:
   void render() override;
 

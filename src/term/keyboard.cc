@@ -177,7 +177,7 @@ const std::vector<pair<std::string, Unicode>> keyTranslations { // NOLINT(cert-e
   {"\x1b[6~", Key::PageDown},
   {"\x7f", Key::Backspace},
   {"\x0d", Key::Enter},
-  {"\x07", Key::Tab},
+  {"\x09", Key::Tab}, // not \x07, that is BEL
   // {"", Key::System},
   {"\x1bOP", Key::F1},
   {"\x1bOQ", Key::F2},

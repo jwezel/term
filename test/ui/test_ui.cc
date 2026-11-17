@@ -270,6 +270,17 @@ TEST_CASE("UI Window") {
         test3.patch(Text{"Hello"}, Vector{2, 2});
         CHECK_EQ(term.display().text(), test3);
       }
+      SUBCASE("Change the text") {
+        label.text(Text{"Hi\nthere"});
+        CHECK_EQ(label.content(), Text{"Hi\nthere"});
+        auto test3{test};
+        test3.patch(Text{"Hi\nthere"}, Vector{1, 1});
+        CHECK_EQ(term.display().text(), test3); // nothing is left of "Hello"
+        label.text(Text{"x"});
+        auto test4{test};
+        test4.patch(Text{"x"}, Vector{1, 1});
+        CHECK_EQ(term.display().text(), test4); // nor of the second line
+      }
     }
     SUBCASE("Label in box") {
       auto box{jwezel::ui::VerticalBox(w1, Rectangle{1, 1, 19, 9})};
@@ -291,6 +302,16 @@ TEST_CASE("UI Window") {
       auto test2{test};
       test2.patch(Text{"< OK >"}, Vector{1, 1}); // it has the focus
       CHECK_EQ(term.display().text(), test2);
+      SUBCASE("Change the text") {
+        button.text(Text{"Cancel"});
+        auto test3{test};
+        test3.patch(Text{"< Cance"}, Vector{1, 1}); // the button has the focus; its area is 7 wide, the rest is clipped
+        CHECK_EQ(term.display().text(), test3);
+        button.text(Text{"No"});
+        auto test4{test};
+        test4.patch(Text{"< No >"}, Vector{1, 1}); // and nothing is left of the longer one
+        CHECK_EQ(term.display().text(), test4);
+      }
       SUBCASE("Press with space") {
         bool called{false};
         REQUIRE_NE(fputs(" ", inputWrite), EOF);

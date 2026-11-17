@@ -33,6 +33,17 @@ TEST_CASE("Keyboard") {
   (void)fclose(tmpFile);
 }
 
+TEST_CASE("Keyboard: Tab, Shift-Tab, Escape") {
+  auto *tmpFile{tmpfile()};
+  (void)fputs("\x09\x1b[Z\x1b", tmpFile); // Tab sends HT, Shift-Tab a sequence, and a lone ESC is Escape
+  (void)fseek(tmpFile, 0, SEEK_SET);
+  jwezel::Keyboard kb(tmpFile->_fileno);
+  CHECK_EQ(kb.key(), Key::Tab);
+  CHECK_EQ(kb.key(), Key::ShiftTab);
+  CHECK_EQ(kb.key(), '\x1b');
+  (void)fclose(tmpFile);
+}
+
 TEST_CASE("Real user-operated keyboard" * doctest::skip(true)) {
   jwezel::Keyboard kb;
   std::cout << "Press F1\n";
