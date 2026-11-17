@@ -118,7 +118,7 @@ const vector<pair<u4, QuadTuple>> _quadInitializer {
     {0x254B, {2, 2, 2, 2, 0}}, // ╋
     {0x254C, {0, 0, 1, 1, 2}}, // ╌
     {0x254D, {0, 0, 2, 2, 2}}, // ╍
-    {0x254E, {1, 0, 0, 0, 2}}, // ╎
+    {0x254E, {1, 1, 0, 0, 2}}, // ╎
     {0x254F, {2, 2, 0, 0, 2}}, // ╏
     {0x256D, {0, 1, 0, 1, 1}}, // ╭
     {0x256E, {0, 1, 1, 0, 1}}, // ╮
@@ -708,20 +708,22 @@ void Char::drawLineChar(const Segments &segments, u1 dash, bool roundedCorners) 
       }
     }
     if (
-      ((quad[north] == 1) == (quad[south] == 1)) and
-      ((quad[west] == 1) != (quad[east] == 1)) and roundedCorners
+      quad[north] + quad[south] == 1 and quad[west] + quad[east] == 1 and roundedCorners
     ) {
       // On corners of strength 1 lines, `roundedCorners` can be set
-      quad[mode] = 1;
+      quad[mode] = QuadModeRounded;
     } else if (
       quad[north] == quad[south] and quad[west] == quad[east] and
       (quad[north] != 0) != (quad[west] != 0) and dash >= MinDash and
       dash <= MaxDash
     ) {
-      // On straight lines, `dash`ing can be set
-      quad[mode] = dash;
+      // On straight lines, `dash`ing can be set. There is one dashed form of each line only.
+      quad[mode] = QuadModeDashed;
     }
-    rune = quad2Box[QuadTuple2Value_(quad)];
+    // Keep the character if there is no such line character, instead of ending up with none at all
+    if (const auto found{quad2Box.find(QuadTuple2Value_(quad))}; found != quad2Box.end()) {
+      rune = found->second;
+    }
   } catch (const out_of_range &) { // NOLINT(bugprone-empty-catch)
     // TODO(j) WTF
   }

@@ -4,6 +4,7 @@
 #include <doctest/doctest.h>
 
 using
+  jwezel::u1,
   jwezel::AttributeMode,
   jwezel::Attributes,
   jwezel::bold,
@@ -377,6 +378,34 @@ TEST_CASE("Text") {
     SUBCASE("Vertical line in box") {
       text.line(Line{Vector{0, 1}, DimHigh, jwezel::Horizontal, false, false});
       CHECK_EQ(string(text), "┏━━━┓\n┠───┨\n┃...┃\n┗━━━┛\n");
+    }
+  }
+  SUBCASE("Box styles") {
+    const auto drawn{
+      [](u1 strength, u1 dash, bool rounded) {
+        Text text(Char('.'), Vector(5, 4));
+        text.box(Box(Rectangle(0, 0, 5, 4), strength, dash, rounded));
+        return text;
+      }
+    };
+    CHECK_EQ(string(drawn(1, 0, false)), "┌───┐\n│...│\n│...│\n└───┘\n");
+    CHECK_EQ(string(drawn(2, 0, false)), "┏━━━┓\n┃...┃\n┃...┃\n┗━━━┛\n");
+    CHECK_EQ(string(drawn(1, 2, false)), "┌╌╌╌┐\n╎...╎\n╎...╎\n└╌╌╌┘\n"); // used to have no vertical lines
+    CHECK_EQ(string(drawn(1, 1, false)), "┌╌╌╌┐\n╎...╎\n╎...╎\n└╌╌╌┘\n"); // there is one dashed form
+    CHECK_EQ(string(drawn(2, 2, false)), "┏╍╍╍┓\n╏...╏\n╏...╏\n┗╍╍╍┛\n");
+    CHECK_EQ(string(drawn(1, 0, true)), "╭───╮\n│...│\n│...│\n╰───╯\n"); // used to damage the corners
+    CHECK_EQ(string(drawn(1, 2, true)), "╭╌╌╌╮\n╎...╎\n╎...╎\n╰╌╌╌╯\n");
+    CHECK_EQ(string(drawn(2, 0, true)), "┏━━━┓\n┃...┃\n┃...┃\n┗━━━┛\n"); // there are no heavy rounded corners
+    for (u1 strength = 1; strength <= 2; ++strength) {
+      for (u1 dash = 0; dash <= 2; ++dash) {
+        for (const auto rounded: {false, true}) {
+          for (const auto &line: drawn(strength, dash, rounded).data) {
+            for (const auto &ch: line) {
+              CHECK_NE(ch.rune, 0); // never a character that is not there
+            }
+          }
+        }
+      }
     }
   }
 }

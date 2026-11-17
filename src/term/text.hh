@@ -281,6 +281,13 @@ const unsigned
   QuadWestShift = 5U,
   QuadEasthShift = 3U;
 
+/// Modes of line characters
+const u1
+  QuadModeNormal = 0,
+  QuadModeRounded = 1,  ///< rounded corner
+  QuadModeDashed = 2;   ///< dashed straight line
+
+/// Valid values for the dash parameter of lines and boxes: 0 is a solid line, any other value a dashed line
 const u1
   MinDash = 1,
   MaxDash = 2;
