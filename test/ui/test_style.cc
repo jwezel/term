@@ -1,4 +1,5 @@
 #include <ui/color_style.hh>
+#include <ui/decoration.hh>
 
 #include <term/text.hh>
 
@@ -14,9 +15,21 @@ using
   jwezel::RgbNone,
   jwezel::RgbRed,
   jwezel::RgbYellow,
+  jwezel::ui::BorderStyle,
+  jwezel::ui::BoxDecoration,
   jwezel::ui::ColorRoles,
   jwezel::ui::ColorStyle,
-  jwezel::ui::defaultColorStyle;
+  jwezel::ui::DecorationState,
+  jwezel::ui::defaultColorStyle,
+  jwezel::ui::defaultDecoration,
+  jwezel::ui::Untouched,
+  jwezel::Alignment,
+  jwezel::Char,
+  jwezel::NoneRune,
+  jwezel::RgbGray5,
+  jwezel::Text,
+  jwezel::Vector,
+  jwezel::underline;
 
 // NOLINTBEGIN(readability-magic-numbers)
 // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
@@ -38,6 +51,26 @@ static_assert(testRoles.find("frame")->second.fg == RgbBlue);
 auto fg(const ColorStyle &style, std::string_view role) -> Rgb {
   return style[role].fg;
 }
+
+// A picture of text, with ~ for the cells a decoration leaves alone
+auto picture(const Text &text) -> std::string {
+  std::string result;
+  for (const auto &line: text.data) {
+    for (const auto &character: line) {
+      result += character.rune == NoneRune? "~": character.utf8();
+    }
+    result += "\n";
+  }
+  return result;
+}
+
+constexpr ColorRoles<4> paintRoles{
+  {"frame", CharAttributes{RgbBlue}},
+  {"frame.inactive", CharAttributes{RgbGray5}},
+  {"title", CharAttributes{RgbYellow, RgbNone, bold}},
+  {"title.inactive", CharAttributes{RgbGray5, RgbNone, underline}},
+};
+constexpr ColorStyle paint{paintRoles};
 
 } // namespace
 
@@ -89,12 +122,101 @@ TEST_CASE("Color style") {
   SUBCASE("Default style") {
     const auto &style{defaultColorStyle()};
     CHECK_EQ(&style, &defaultColorStyle());
-    CHECK_EQ(style["title.active"].attr, bold);
+    CHECK_EQ(style["title.active"], CharAttributes{}); // neutral
     CHECK_EQ(style["title.inactive"], CharAttributes{});
     CHECK_EQ(style["frame.active"], CharAttributes{});
     CHECK_EQ(style["frame.inactive"], CharAttributes{});
     CHECK_EQ(style["nonsense"], CharAttributes{});
     CHECK_NE(style.find("title"), nullptr);
+  }
+}
+
+TEST_CASE("Box decoration") {
+  const BoxDecoration box;
+  const Char blank{' '};
+  const auto draw{
+    [&](const BoxDecoration &decoration, Vector size, DecorationState state, const Text &title) {
+      return picture(decoration.draw(size, state, title, blank, defaultColorStyle()));
+    }
+  };
+  using enum DecorationState;
+  SUBCASE("Inset") {
+    CHECK_EQ(box.inset(), 1);
+  }
+  SUBCASE("The default is the default decoration") {
+    CHECK_EQ(&defaultDecoration(), &defaultDecoration());
+    CHECK_EQ(defaultDecoration().inset(), 1);
+    CHECK_EQ(
+      picture(defaultDecoration().draw(Vector{6, 3}, active, Text{"A"}, blank, defaultColorStyle())),
+      draw(box, Vector{6, 3}, active, Text{"A"})
+    );
+  }
+  SUBCASE("The states have their own border") {
+    CHECK_EQ(draw(box, Vector{8, 4}, active, Text{"Hi"}), "┌Hi────┐\n│~~~~~~│\n│~~~~~~│\n└──────┘\n");
+    CHECK_EQ(draw(box, Vector{8, 4}, inactive, Text{"Hi"}), "┌Hi╌╌╌╌┐\n╎~~~~~~╎\n╎~~~~~~╎\n└╌╌╌╌╌╌┘\n");
+    const BoxDecoration custom{BorderStyle{2, 0, false}, BorderStyle{1, 0, true}};
+    CHECK_EQ(draw(custom, Vector{8, 4}, active, Text{"Hi"}), "┏Hi━━━━┓\n┃~~~~~~┃\n┃~~~~~~┃\n┗━━━━━━┛\n");
+    CHECK_EQ(draw(custom, Vector{8, 4}, inactive, Text{"Hi"}), "╭Hi────╮\n│~~~~~~│\n│~~~~~~│\n╰──────╯\n");
+  }
+  SUBCASE("Title") {
+    CHECK_EQ(draw(box, Vector{10, 3}, active, Text{}), "┌────────┐\n│~~~~~~~~│\n└────────┘\n");
+    CHECK_EQ(draw(box, Vector{8, 3}, active, Text{"A very long title"}), "┌A very┐\n│~~~~~~│\n└──────┘\n"); // clipped
+    CHECK_EQ(draw(box, Vector{8, 3}, active, Text{"one\ntwo"}), "┌one───┐\n│~~~~~~│\n└──────┘\n"); // one line
+    const BoxDecoration centered{BorderStyle{}, BorderStyle{}, Alignment::center};
+    CHECK_EQ(draw(centered, Vector{10, 3}, active, Text{"Hi"}), "┌───Hi───┐\n│~~~~~~~~│\n└────────┘\n");
+    CHECK_EQ(draw(centered, Vector{10, 3}, active, Text{"Hey"}), "┌──Hey───┐\n│~~~~~~~~│\n└────────┘\n");
+    const BoxDecoration right{BorderStyle{}, BorderStyle{}, Alignment::right};
+    CHECK_EQ(draw(right, Vector{10, 3}, active, Text{"Hi"}), "┌──────Hi┐\n│~~~~~~~~│\n└────────┘\n");
+    CHECK_EQ(draw(right, Vector{10, 3}, active, Text{"long title text"}), "┌long tit┐\n│~~~~~~~~│\n└────────┘\n");
+  }
+  SUBCASE("Sizes") {
+    CHECK_EQ(draw(box, Vector{2, 2}, active, Text{"T"}), "┌┐\n└┘\n"); // there is no room for a title
+    CHECK_EQ(draw(box, Vector{3, 3}, active, Text{"T"}), "┌T┐\n│~│\n└─┘\n");
+    CHECK_EQ(draw(box, Vector{1, 4}, active, Text{"T"}), "~\n~\n~\n~\n"); // there is no room for a frame
+    CHECK_EQ(draw(box, Vector{5, 1}, active, Text{"T"}), "~~~~~\n");
+  }
+  SUBCASE("Colors") {
+    const Char background{' ', RgbNone, RgbGray5};
+    const auto drawn{[&](DecorationState state, const Text &title) {return box.draw(Vector{6, 3}, state, title, background, paint);}};
+    SUBCASE("The roles of the state apply to the frame and the title") {
+      const auto text{drawn(active, Text{"Hi"})};
+      CHECK_EQ(text.data[0][0].attributes.fg, RgbBlue); // "frame" is the role of the active frame
+      CHECK_EQ(text.data[2][5].attributes.fg, RgbBlue);
+      CHECK_EQ(text.data[1][0].attributes.fg, RgbBlue);
+      CHECK_EQ(text.data[0][1].attributes.fg, RgbYellow); // "title"
+      CHECK_EQ(text.data[0][1].attributes.attr, bold);
+      CHECK_EQ(text.data[0][3].attributes.fg, RgbBlue); // the rest of the top line is frame
+      CHECK_EQ(text.data[0][3].attributes.attr, 0);
+    }
+    SUBCASE("The background shines through where a role does not have one") {
+      const auto text{drawn(active, Text{"Hi"})};
+      CHECK_EQ(text.data[0][0].attributes.bg, RgbGray5);
+      CHECK_EQ(text.data[0][1].attributes.bg, RgbGray5);
+      CHECK_EQ(text.data[1][0].attributes.bg, RgbGray5);
+    }
+    SUBCASE("Inside is left alone") {
+      const auto text{drawn(active, Text{"Hi"})};
+      CHECK_EQ(text.data[1][2], Untouched);
+      CHECK_EQ(text.data[1][2].rune, NoneRune);
+    }
+    SUBCASE("The roles of the other state replace them, they do not add up") {
+      const auto text{drawn(inactive, Text{"Hi"})};
+      CHECK_EQ(text.data[0][0].attributes.fg, RgbGray5); // "frame.inactive"
+      CHECK_EQ(text.data[0][1].attributes.fg, RgbGray5); // "title.inactive"
+      CHECK_EQ(text.data[0][1].attributes.attr, underline); // and not bold anymore
+    }
+    SUBCASE("What the title says for itself wins") {
+      const auto text{drawn(active, Text{"Hi", RgbRed})};
+      CHECK_EQ(text.data[0][1].attributes.fg, RgbRed);
+      CHECK_EQ(text.data[0][1].attributes.attr, bold); // the role is still there
+      CHECK_EQ(text.data[0][1].rune, 'H');
+    }
+    SUBCASE("A style without roles changes nothing") {
+      const auto text{box.draw(Vector{6, 3}, active, Text{"Hi"}, background, defaultColorStyle())};
+      CHECK_EQ(text.data[0][0].attributes.fg, RgbNone);
+      CHECK_EQ(text.data[0][0].attributes.bg, RgbGray5);
+      CHECK_EQ(text.data[0][1].attributes.attr, 0);
+    }
   }
 }
 

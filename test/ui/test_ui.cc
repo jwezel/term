@@ -1,4 +1,7 @@
 #include "ui/button.hh"
+#include "ui/color_style.hh"
+#include "ui/decoration.hh"
+#include "ui/frame.hh"
 #include "ui/drop_down.hh"
 #include "ui/horizontal_box.hh"
 #include "ui/label.hh"
@@ -46,6 +49,51 @@ using
 // NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
 // NOLINTBEGIN(readability-magic-numbers)
 // NOLINTBEGIN(misc-use-anonymous-namespace)
+
+namespace {
+
+using jwezel::ui::ColorRoles, jwezel::ui::ColorStyle, jwezel::ui::DecorationState;
+
+// A decoration without any frame
+struct NoFrame: jwezel::ui::Decoration {
+  [[nodiscard]] auto inset() const -> jwezel::Dim override {return 0;}
+
+  [[nodiscard]] auto draw(
+    const Vector &size, DecorationState, const Text &, const Char &, const ColorStyle &
+  ) const -> Text override {
+    return Text{jwezel::ui::Untouched, size};
+  }
+};
+
+// A decoration that remembers the states it was asked to draw
+struct Recording: jwezel::ui::BoxDecoration {
+  [[nodiscard]] auto draw(
+    const Vector &size, DecorationState state, const Text &title, const Char &background, const ColorStyle &colors
+  ) const -> Text override {
+    states.push_back(state);
+    return BoxDecoration::draw(size, state, title, background, colors);
+  }
+
+  mutable std::vector<DecorationState> states;
+};
+
+constexpr ColorRoles<4> paintRoles{
+  {"frame", jwezel::CharAttributes{jwezel::RgbBlue}},
+  {"frame.inactive", jwezel::CharAttributes{jwezel::RgbGray5}},
+  {"title", jwezel::CharAttributes{jwezel::RgbYellow, jwezel::RgbNone, jwezel::bold}},
+  {"title.inactive", jwezel::CharAttributes{jwezel::RgbGray5, jwezel::RgbNone, jwezel::underline}},
+};
+constexpr ColorStyle paint{paintRoles};
+
+// What the frame of a window looks like on the display: the default decoration, solid or (inactive) dashed
+auto framed(const Vector &size, const Text &title, bool inactive = false) -> Text {
+  auto result{Text{' '_C, size}};
+  result.box(jwezel::Box{jwezel::RectangleMax, 1, inactive? jwezel::u1{1}: jwezel::u1{0}});
+  result.patch(title, Vector{1, 0});
+  return result;
+}
+
+} // namespace
 
 TEST_CASE("UI Window") {
   char tempFilename[TMP_MAX];
@@ -1163,6 +1211,155 @@ TEST_CASE("UI Window") {
       send(" ");
       CHECK(second.isOpen());
       CHECK_EQ(row(11), Text{padded(" Apple")}); // opens below the second one
+    }
+  }
+
+  SUBCASE("Window decoration") {
+    auto send{
+      [&](const char *input) {
+        REQUIRE_NE(fputs(input, inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+      }
+    };
+    auto shown{[&](const Rectangle &area) {return term.display().text()[area];}};
+    const Rectangle area1{0, 0, 20, 12}, area2{22, 0, 34, 6};
+    SUBCASE("The state follows the focus") {
+      Recording recording;
+      auto w1{jwezel::ui::Window(ui_, ' '_C, area1, Text{"One"}, &recording)};
+      CHECK_EQ(w1.state(), DecorationState::active); // a new window has the focus
+      CHECK_EQ(shown(area1), framed(Vector{20, 12}, Text{"One"}));
+      auto w2{jwezel::ui::Window(ui_, ' '_C, area2, Text{"Two"})};
+      CHECK_EQ(w2.state(), DecorationState::active);
+      CHECK_EQ(w1.state(), DecorationState::inactive); // and the one that had it has not anymore
+      CHECK_EQ(shown(area1), framed(Vector{20, 12}, Text{"One"}, true));
+      CHECK_EQ(shown(area2), framed(Vector{12, 6}, Text{"Two"}));
+      send("\x1b[<0;1;1M"); // click on the frame of the first
+      send("\x1b[<0;1;1m");
+      CHECK_EQ(w1.state(), DecorationState::active);
+      CHECK_EQ(w2.state(), DecorationState::inactive);
+      CHECK_EQ(shown(area1), framed(Vector{20, 12}, Text{"One"}));
+      CHECK_EQ(shown(area2), framed(Vector{12, 6}, Text{"Two"}, true));
+      // Only the changes were drawn: once for creation, once for losing the focus, once for getting it back
+      using enum DecorationState;
+      CHECK_EQ(recording.states, std::vector<DecorationState>{active, inactive, active});
+      send("\x1b[<0;2;2M"); // on the content of the focused window: nothing changes
+      send("\x1b[<0;2;2m");
+      CHECK_EQ(recording.states.size(), 3);
+    }
+    SUBCASE("The state is back when a window is destroyed and the focus goes to the desktop") {
+      auto w1{jwezel::ui::Window(ui_, ' '_C, area1, Text{"One"})};
+      {
+        auto w2{jwezel::ui::Window(ui_, ' '_C, area2, Text{"Two"})};
+        CHECK_EQ(w1.state(), DecorationState::inactive);
+      }
+      CHECK_EQ(term.focus(), &term.desktop()); // the desktop gets it, not the window below
+      CHECK_EQ(w1.state(), DecorationState::inactive);
+      send("\x1b[<0;2;2M"); // a click makes it active
+      send("\x1b[<0;2;2m");
+      CHECK_EQ(w1.state(), DecorationState::active);
+    }
+    SUBCASE("A decoration without a frame") {
+      NoFrame none;
+      auto w1{jwezel::ui::Window(ui_, ' '_C, area1, Text{"One"}, &none)};
+      CHECK_EQ(w1.content(), Rectangle{0, 0, 20, 12}); // the content has all the room
+      CHECK_EQ(shown(area1), Text{' '_C, Vector{20, 12}});
+      auto box{jwezel::ui::VerticalBox(w1, jwezel::RectangleDefault)};
+      auto label{jwezel::ui::Label(box, Text{"Hi"})};
+      CHECK_EQ(label.bounds(), Rectangle{0, 0, 20, 12});
+      SUBCASE("It can be changed while the window is there") {
+        w1.decoration(nullptr);
+        CHECK_EQ(&w1.decoration(), &jwezel::ui::defaultDecoration());
+        CHECK_EQ(w1.content(), Rectangle{1, 1, 19, 11}); // the content has made room
+        CHECK_EQ(label.bounds(), Rectangle{1, 1, 19, 11});
+        CHECK_EQ(w1.text(), framed(Vector{20, 12}, Text{"One"}));
+        w1.decoration(&none); // and back, which takes the frame away
+        CHECK_EQ(label.bounds(), Rectangle{0, 0, 20, 12});
+        CHECK_EQ(w1.text(), Text{' '_C, Vector{20, 12}});
+        auto top{Text{' '_C, Vector{20, 1}}};
+        top.patch(Text{"Hi"}, Vector{0, 0}); // only the label is in the top line now
+        CHECK_EQ(shown(area1)[Rectangle{0, 0, 20, 1}], top);
+      }
+    }
+    SUBCASE("A decoration chosen for the window") {
+      jwezel::ui::BoxDecoration heavy{jwezel::ui::BorderStyle{2, 0, false}, jwezel::ui::BorderStyle{2, 1, false}};
+      auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 8, 4}, Text{"Hi"}, &heavy)};
+      CHECK_EQ(std::string(shown(Rectangle{0, 0, 8, 4})), "┏Hi━━━━┓\n┃      ┃\n┃      ┃\n┗━━━━━━┛\n");
+      auto w2{jwezel::ui::Window(ui_, ' '_C, Rectangle{10, 0, 18, 4}, Text{"Yo"}, &heavy)};
+      CHECK_EQ(std::string(shown(Rectangle{0, 0, 8, 4})), "┏Hi╍╍╍╍┓\n╏      ╏\n╏      ╏\n┗╍╍╍╍╍╍┛\n");
+    }
+    SUBCASE("Title") {
+      auto w1{jwezel::ui::Window(ui_, ' '_C, area1, Text{"A long title"})};
+      CHECK_EQ(w1.title(), Text{"A long title"});
+      w1.title(Text{"Short"});
+      CHECK_EQ(w1.title(), Text{"Short"});
+      CHECK_EQ(shown(area1), framed(Vector{20, 12}, Text{"Short"})); // nothing remains of the old one
+      w1.title(Text{});
+      CHECK_EQ(shown(area1), framed(Vector{20, 12}, Text{}));
+    }
+    SUBCASE("Colors") {
+      const auto cell{[&](jwezel::Dim x, jwezel::Dim y) {return term.display().text().data[static_cast<size_t>(y)][static_cast<size_t>(x)];}};
+      auto w1{jwezel::ui::Window(ui_, ' '_C, area1, Text{"One"}, nullptr, &paint)};
+      CHECK_EQ(&w1.colors(), &paint);
+      CHECK_EQ(cell(0, 0).attributes.fg, jwezel::RgbBlue); // frame
+      CHECK_EQ(cell(5, 11).attributes.fg, jwezel::RgbBlue);
+      CHECK_EQ(cell(1, 0).attributes.fg, jwezel::RgbYellow); // title
+      CHECK_EQ(cell(1, 0).attributes.attr, jwezel::bold);
+      CHECK_EQ(cell(5, 0).attributes.attr, 0);
+      CHECK_EQ(cell(1, 0).rune, 'O');
+      CHECK_EQ(cell(5, 5).attributes.fg, jwezel::RgbNone); // content is not touched
+      auto w2{jwezel::ui::Window(ui_, ' '_C, area2, Text{"Two"}, nullptr, &paint)};
+      CHECK_EQ(cell(0, 0).attributes.fg, jwezel::RgbGray5); // inactive
+      CHECK_EQ(cell(1, 0).attributes.fg, jwezel::RgbGray5);
+      CHECK_EQ(cell(1, 0).attributes.attr, jwezel::underline); // the bold is gone
+      CHECK_EQ(cell(22, 0).attributes.fg, jwezel::RgbBlue); // the other window
+      send("\x1b[<0;1;1M"); // back to the first
+      send("\x1b[<0;1;1m");
+      CHECK_EQ(cell(0, 0).attributes.fg, jwezel::RgbBlue);
+      CHECK_EQ(cell(1, 0).attributes.attr, jwezel::bold);
+      CHECK_EQ(cell(22, 0).attributes.fg, jwezel::RgbGray5);
+      SUBCASE("The style can be changed") {
+        w1.colors(nullptr);
+        CHECK_EQ(&w1.colors(), &jwezel::ui::defaultColorStyle());
+        CHECK_EQ(cell(0, 0).attributes.fg, jwezel::RgbNone);
+        CHECK_EQ(cell(1, 0).attributes.attr, 0);
+        CHECK_EQ(shown(area1), framed(Vector{20, 12}, Text{"One"}));
+        w1.colors(&paint);
+        CHECK_EQ(cell(0, 0).attributes.fg, jwezel::RgbBlue);
+      }
+      SUBCASE("The background shows through the frame") {
+        auto w3{jwezel::ui::Window(ui_, Char{' ', jwezel::RgbNone, jwezel::RgbGray2}, Rectangle{22, 8, 34, 14}, Text{"Bg"}, nullptr, &paint)};
+        CHECK_EQ(cell(22, 8).attributes.fg, jwezel::RgbBlue);
+        CHECK_EQ(cell(22, 8).attributes.bg, jwezel::RgbGray2);
+        CHECK_EQ(cell(23, 8).attributes.bg, jwezel::RgbGray2); // title
+        CHECK_EQ(cell(25, 11).attributes.bg, jwezel::RgbGray2); // inside
+      }
+    }
+    SUBCASE("Resizing an inactive window") {
+      auto w1{jwezel::ui::Window(ui_, ' '_C, area1, Text{"One"})};
+      auto w2{jwezel::ui::Window(ui_, ' '_C, area2, Text{"Two"})};
+      REQUIRE_EQ(w1.state(), DecorationState::inactive);
+      w1.move(Rectangle{0, 0, 16, 9});
+      CHECK_EQ(shown(Rectangle{0, 0, 16, 9}), framed(Vector{16, 9}, Text{"One"}, true));
+      w1.move(Rectangle{0, 0, 21, 14});
+      CHECK_EQ(shown(Rectangle{0, 0, 21, 14}), framed(Vector{21, 14}, Text{"One"}, true));
+      CHECK_EQ(w1.text(), framed(Vector{21, 14}, Text{"One"}, true));
+    }
+    SUBCASE("Decorated windows and frames on the desktop") {
+      auto &desktop{ui_.desktop()};
+      auto frame{jwezel::ui::Frame(desktop, Rectangle{2, 1, 12, 5}, ' '_C, nullptr, nullptr, Text{"F"})};
+      CHECK_EQ(frame.state(), DecorationState::inactive);
+      CHECK_EQ(shown(Rectangle{2, 1, 12, 5}), framed(Vector{10, 4}, Text{"F"}, true));
+      frame.state(DecorationState::active);
+      CHECK_EQ(shown(Rectangle{2, 1, 12, 5}), framed(Vector{10, 4}, Text{"F"}));
+      frame.title(Text{"Frame"});
+      CHECK_EQ(shown(Rectangle{2, 1, 12, 5}), framed(Vector{10, 4}, Text{"Frame"}));
+      frame.move(Rectangle{3, 2, 9, 6}); // resized: nothing of the old frame remains
+      CHECK_EQ(shown(Rectangle{3, 2, 9, 6}), framed(Vector{6, 4}, Text{"Fram"})); // the title is clipped
+      CHECK_EQ(shown(Rectangle{9, 1, 12, 5}), Text{'.'_C, Vector{3, 4}}); // the desktop is back where the frame was
+      NoFrame none;
+      auto bare{jwezel::ui::Frame(desktop, Rectangle{14, 1, 20, 5}, 'x'_C, &none)};
+      CHECK_EQ(shown(Rectangle{14, 1, 20, 5}), Text{'x'_C, Vector{6, 4}});
     }
   }
   REQUIRE_FALSE(fclose(inputRead));

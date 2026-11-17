@@ -6,13 +6,14 @@ namespace {
 
 constexpr CharAttributes NoAttributes{};
 
-// Colors are left to the terminal; the active window is told apart by its bold title
+// The default style is neutral: colors and attributes are left to the terminal. The roles are listed to show what
+// a style can say something about; the states of a window are told apart by the style of its border.
 constexpr ColorRoles<6> defaultRoles{
   {"frame", CharAttributes{}},
   {"frame.active", CharAttributes{}},
   {"frame.inactive", CharAttributes{}},
   {"title", CharAttributes{}},
-  {"title.active", CharAttributes{RgbNone, RgbNone, bold}},
+  {"title.active", CharAttributes{}},
   {"title.inactive", CharAttributes{}},
 };
 

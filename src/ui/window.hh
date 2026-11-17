@@ -1,28 +1,34 @@
 #pragma once
 
-#include "frame_style.hh"
+#include "color_style.hh"
+#include "decoration.hh"
 #include "root.hh"
 
 #include <term/geometry.hh>
 #include <term/surface.hh>
 #include <term/window.hh>
 
-#include <memory>
-
 namespace jwezel::ui {
 
 ///
-/// A framed window that has a UI
+/// A decorated window that has a UI
 ///
-/// It is a window like any other on the terminal and the root of its UI at the
-/// same time. Applications that do not need windows place their UI on the
-/// desktop instead (see `Ui::desktop`).
+/// It is a window like any other on the terminal and the root of its UI at the same
+/// time. Its frame is drawn by a decoration, which looks different when the window has the
+/// focus and when it has not, and gets its colors from a color style. Applications that do not
+/// need windows place their UI on the desktop instead (see `Ui::desktop`).
+///
+/// The decoration and the color style are optional weak references that must outlive the window.
+/// Those that are not given are the defaults of `defaultDecoration()` and `defaultColorStyle()`,
+/// which are consulted whenever the window is drawn.
 struct Window: jwezel::Window, Root {
   explicit Window(
     struct Ui &ui,
     const Char &background = Space,
     const Rectangle &area = RectangleDefault,
-    const Text& title={}
+    const Text &title = {},
+    const Decoration *decoration = nullptr,
+    const ColorStyle *colors = nullptr
   );
 
   Window(const Window &) = delete;
@@ -44,11 +50,45 @@ struct Window: jwezel::Window, Root {
   /// The area inside the frame
   [[nodiscard]] auto content() const -> Rectangle override;
 
+  [[nodiscard]] auto title() const -> const Text & {return title_;}
+
+  void title(const Text &title);
+
+  ///
+  /// Get the decoration that draws the frame
+  [[nodiscard]] auto decoration() const -> const Decoration &;
+
+  ///
+  /// Set the decoration (weak reference, nullptr for the default); the content is laid out again
+  void decoration(const Decoration *decoration);
+
+  ///
+  /// Get the colors of the frame
+  [[nodiscard]] auto colors() const -> const ColorStyle &;
+
+  ///
+  /// Set the color style (weak reference, nullptr for the default)
+  void colors(const ColorStyle *colors);
+
+  ///
+  /// Get the state, which is active while the window has the focus
+  [[nodiscard]] auto state() const -> DecorationState {return state_;}
+
   void handleGeometry(const Rectangle &previous) override;
 
+  void handleFocus() override;
+
+  void handleBlur() override;
+
   private:
-  std::unique_ptr<FrameStyle> style_; // internal, never visible in the public API
+  void state(DecorationState state);
+
+  void decorate();
+
   Text title_;
+  const Decoration *decoration_; // weak reference, nullptr for the default
+  const ColorStyle *colors_;     // weak reference, nullptr for the default
+  DecorationState state_;
 };
 
 } // namespace jwezel::ui
