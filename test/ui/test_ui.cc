@@ -115,6 +115,10 @@ constexpr jwezel::ui::UiStyle wideStyle{
   .popup = Brackets{"<<", ">>>"},
 };
 
+// Colors without any role: for tests of what is where, not of how it looks
+constexpr ColorRoles<1> noRoles{{"nothing", jwezel::CharAttributes{}}};
+constexpr ColorStyle plain{noRoles};
+
 // What the frame of a window looks like on the display: the default decoration, solid or (inactive) dashed
 auto framed(const Vector &size, const Text &title, bool inactive = false) -> Text {
   auto result{Text{' '_C, size}};
@@ -144,7 +148,7 @@ TEST_CASE("UI Window") {
   jwezel::ui::Ui ui_{term};
 
   SUBCASE("Window") {
-    auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 20, 12}, Text{"Title"})};
+    auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 20, 12}, Text{"Title"}, nullptr, &plain)};
     auto test{Text{' '_C, Vector{20, 12}}};
     test.box();
     test.patch(Text{"Title"}, Vector{1, 0});
@@ -489,7 +493,7 @@ TEST_CASE("UI Window") {
 
   SUBCASE("Offset window") {
     const Rectangle placement{4, 3, 24, 15};
-    auto w1{jwezel::ui::Window(ui_, ' '_C, placement, Text{"Title"})};
+    auto w1{jwezel::ui::Window(ui_, ' '_C, placement, Text{"Title"}, nullptr, &plain)};
     auto test{Text{' '_C, Vector{20, 12}}};
     test.box();
     test.patch(Text{"Title"}, Vector{1, 0});
@@ -765,6 +769,7 @@ TEST_CASE("UI Window") {
 
   SUBCASE("Desktop") {
     auto &desktop{ui_.desktop()};
+    desktop.colors(&plain);
     auto input{jwezel::ui::LineEdit(desktop, Rectangle{2, 1, 12, 2}, Text{"Hi"})};
     auto button{jwezel::ui::Button(desktop, Rectangle{2, 3, 12, 4}, Text{"Go"})};
     int clicks{0};
@@ -1611,6 +1616,88 @@ TEST_CASE("UI Window") {
         CHECK_EQ(w1.text(), framed(Vector{8, 4}, Text{"Hi"}));
       }
     }
+  }
+
+  SUBCASE("Focus tint of input fields") {
+    auto send{
+      [&](const char *input) {
+        REQUIRE_NE(fputs(input, inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+      }
+    };
+    const auto cell{
+      [&](jwezel::Dim x, jwezel::Dim y) {return term.display().text().data[static_cast<size_t>(y)][static_cast<size_t>(x)];}
+    };
+    auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 24, 12}, Text{"T"})}; // the default colors
+    auto input1{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, Text{"One"})};
+    auto input2{jwezel::ui::TextArea(w1, Rectangle{1, 3, 19, 5}, Text{"Two"})};
+    auto button{jwezel::ui::Button(w1, Rectangle{1, 6, 9, 7}, Text{"OK"})};
+    auto drop{jwezel::ui::DropDown(w1, Rectangle{1, 8, 19, 9}, std::vector<Text>{Text{"Apple"}})};
+    REQUIRE_EQ(w1.focus(), &input1);
+    SUBCASE("The field with the focus is tinted all over") {
+      CHECK_EQ(cell(1, 1).attributes.bg, jwezel::RgbGray5); // under the text
+      CHECK_EQ(cell(1, 1).rune, 'O');
+      CHECK_EQ(cell(18, 1).attributes.bg, jwezel::RgbGray5); // and where there is none
+      CHECK_EQ(cell(1, 1).attributes.fg, jwezel::RgbNone); // nothing but the background changes
+      CHECK_EQ(cell(1, 1).attributes.attr, 0);
+      CHECK_EQ(cell(1, 3).attributes.bg, jwezel::RgbNone); // other fields are not
+      CHECK_EQ(cell(18, 4).attributes.bg, jwezel::RgbNone);
+      CHECK_EQ(cell(20, 1).attributes.bg, jwezel::RgbNone); // nor is what is next to it
+    }
+    SUBCASE("It goes where the focus goes") {
+      send("\x1b[<0;3;4M"); // down on the text area
+      send("\x1b[<0;3;4m");
+      REQUIRE_EQ(w1.focus(), &input2);
+      CHECK_EQ(cell(1, 3).attributes.bg, jwezel::RgbGray5);
+      CHECK_EQ(cell(18, 4).attributes.bg, jwezel::RgbGray5); // all lines of it
+      CHECK_EQ(cell(1, 1).attributes.bg, jwezel::RgbNone);
+      send("X");
+      CHECK_EQ(cell(4, 3).rune, 'X');
+      CHECK_EQ(cell(4, 3).attributes.bg, jwezel::RgbGray5); // typed characters are in the tinted field
+    }
+    SUBCASE("Widgets that can show the focus themselves are not tinted") {
+      send("\x1b[<0;3;7M"); // down on the button
+      send("\x1b[<0;3;7m");
+      REQUIRE_EQ(w1.focus(), &button);
+      CHECK_EQ(cell(1, 6).attributes.bg, jwezel::RgbNone);
+      CHECK_EQ(cell(1, 6).attributes.fg, jwezel::RgbNone);
+      CHECK_EQ(cell(1, 1).attributes.bg, jwezel::RgbNone); // and the field is not anymore
+      send("\x1b[<0;3;9M");
+      send("\x1b[<0;3;9m");
+      REQUIRE_EQ(w1.focus(), &drop);
+      CHECK_EQ(cell(2, 8).attributes.bg, jwezel::RgbNone);
+    }
+    SUBCASE("A window without the focus does not advertise one") {
+      auto w2{jwezel::ui::Window(ui_, ' '_C, Rectangle{26, 0, 38, 6}, Text{"B"})};
+      REQUIRE_EQ(w1.focus(), &input1); // still the focused field of its window
+      CHECK_EQ(cell(1, 1).attributes.bg, jwezel::RgbNone);
+      CHECK_EQ(cell(18, 1).attributes.bg, jwezel::RgbNone);
+      send("\x1b[<0;1;1M"); // back to the first window
+      send("\x1b[<0;1;1m");
+      CHECK_EQ(cell(1, 1).attributes.bg, jwezel::RgbGray5);
+    }
+    SUBCASE("A theme decides") {
+      w1.colors(&plain); // without a role for it
+      CHECK_EQ(cell(1, 1).attributes.bg, jwezel::RgbNone);
+      w1.colors(&widgetColors); // with its own
+      CHECK_EQ(cell(1, 1).attributes.bg, jwezel::RgbGray5);
+      CHECK_EQ(cell(18, 1).attributes.bg, jwezel::RgbGray5);
+    }
+  }
+
+  SUBCASE("Focus tint on a window with colors") {
+    const auto cell{
+      [&](jwezel::Dim x, jwezel::Dim y) {return term.display().text().data[static_cast<size_t>(y)][static_cast<size_t>(x)];}
+    };
+    // The tint is mixed into the background: it makes it lighter, it does not replace it
+    const Char blue{' ', jwezel::RgbNone, jwezel::RgbBlue5};
+    auto w1{jwezel::ui::Window(ui_, blue, Rectangle{0, 0, 24, 8}, Text{"T"})};
+    auto input1{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, Text{"One"}, blue)};
+    auto input2{jwezel::ui::LineEdit(w1, Rectangle{1, 3, 19, 4}, Text{"Two"}, blue)};
+    CHECK_EQ(cell(18, 1).attributes.bg, jwezel::Rgb(0.25, 0.25, 0.5)); // between blue and gray
+    CHECK_EQ(cell(18, 3).attributes.bg, jwezel::RgbBlue5);
+    CHECK_EQ(cell(5, 5).attributes.bg, jwezel::RgbBlue5); // the window
   }
   REQUIRE_FALSE(fclose(inputRead));
   REQUIRE_FALSE(fclose(inputWrite));

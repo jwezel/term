@@ -15,7 +15,9 @@ namespace jwezel::ui {
 /// It renders the visible content and places the terminal's hardware cursor
 /// (the caret) at the editing position while it has the focus. The whole
 /// widget gets the colors of the role `input`, or `input.focus` while it gets
-/// the keyboard input, so the field can be seen where it is empty.
+/// the keyboard input, so the field can be seen where it is empty. There are no
+/// glyphs that could show which field has the focus, so by default the role
+/// `input.focus` tints the background.
 /// Subclasses supply the policy: LineEdit accepts on Enter and scrolls one
 /// row; TextArea inserts a newline on Enter and scrolls vertically.
 struct TextInput: Widget {

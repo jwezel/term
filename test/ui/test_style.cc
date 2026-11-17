@@ -253,10 +253,10 @@ TEST_CASE("UI style") {
     CHECK_EQ(copy.popup.left, "|");
     CHECK_EQ(style.popup.left, " ");
   }
-  SUBCASE("The default colors do not say anything, except what is needed to see the highlight of a list") {
+  SUBCASE("The default colors do not say anything, except what is needed to see anything") {
     const auto &colors{defaultColorStyle()};
     for (const auto *role: {
-      "label", "button", "button.focus", "button.active", "input", "input.focus",
+      "label", "button", "button.focus", "button.active", "input",
       "dropdown", "dropdown.focus", "dropdown.active", "popup"
     }) {
       INFO("Role: ", role);
@@ -266,6 +266,11 @@ TEST_CASE("UI style") {
     CHECK_EQ(colors["popup.highlight"].attr, reverse);
     CHECK_EQ(colors["popup.highlight"].fg, RgbNone);
     CHECK_EQ(colors["popup.highlight"].bg, RgbNone);
+    // the input field that gets the keyboard input has no glyph to show that, so it is tinted
+    CHECK_EQ(colors["input.focus"].fg, RgbNone);
+    CHECK_EQ(colors["input.focus"].bg, RgbGray5);
+    CHECK_EQ(colors["input.focus"].attr, 0);
+    CHECK_EQ(colors["input.focus"].mix, AttributeMode::mix); // into the background that is there
     CHECK_EQ(colors["button.pressed"], CharAttributes{}); // a role nobody knows: nothing
   }
 }
