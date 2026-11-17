@@ -1,0 +1,2 @@
+echo unset PKG_CONFIG_PATH
+echo unset LD_LIBRARY_PATH
