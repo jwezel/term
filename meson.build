@@ -22,6 +22,7 @@ sources = [
   'src/term/window.cc',
   'src/ui/box.cc',
   'src/ui/button.cc',
+  'src/ui/color_style.cc',
   'src/ui/container.cc',
   'src/ui/drop_down.cc',
   'src/ui/element.cc',
@@ -47,6 +48,7 @@ headers = [
   'src/term/window.hh',
   'src/ui/box.hh',
   'src/ui/button.hh',
+  'src/ui/color_style.hh',
   'src/ui/container.hh',
   'src/ui/drop_down.hh',
   'src/ui/element.hh',
@@ -74,6 +76,7 @@ lib_incdir = include_directories([
 
 lib_dep = [
   dependency('utfcpp'),
+  dependency('frozen', include_type: 'system'),
   # dependency('tl-optional'),
 ]
 
@@ -100,6 +103,7 @@ test_exe = executable(
   'test/test_term.cc',
   'test/test_text.cc',
   'test/test_window.cc',
+  'test/ui/test_style.cc',
   'test/ui/test_ui.cc',
   link_with: shlib,
   dependencies: [test_dep, lib_dep],

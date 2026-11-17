@@ -28,9 +28,9 @@ const Unicode NoneRune = 0xffffffff;
 struct Rgb {
   ///
   /// Create RgbNone (no color specified)
-  Rgb() noexcept;
+  constexpr Rgb() noexcept: r(-1.), g(-1.), b(-1.) {}
 
-  explicit Rgb(f4 r, f4 g=0., f4 b=0.) noexcept;
+  explicit constexpr Rgb(f4 r, f4 g=0., f4 b=0.) noexcept: r(r), g(g), b(b) {}
 
   ~Rgb() = default;
 
@@ -54,9 +54,9 @@ struct Rgb {
   /// @return     @a other, unless it is unspecified (RgbNone) or RgbTransparent, then this color
   auto operator |(const Rgb &other) const -> Rgb;
 
-  auto operator ==(const Rgb &other) const -> bool;
+  constexpr auto operator ==(const Rgb &other) const -> bool {return r == other.r and g == other.g and b == other.b;}
 
-  auto operator !=(const Rgb &other) const -> bool;
+  constexpr auto operator !=(const Rgb &other) const -> bool {return r != other.r or g != other.g or b != other.b;}
 
   auto operator +(const Rgb &color2) const -> Rgb;
 
@@ -89,7 +89,7 @@ struct Hsv {
   // NOLINTEND(misc-non-private-member-variables-in-classes)
 };
 
-const Rgb
+constexpr Rgb
   RgbTransparent =  Rgb{-2.0, -2.0, -2.0},
   RgbNone =         Rgb{-1.0, -1.0, -1.0},
   RgbWhite =        Rgb{1.0, 1.0, 1.0},
@@ -214,12 +214,14 @@ struct CharAttributes {
   /// @param[in]  bg    The background
   /// @param[in]  attr  The attribute
   /// @param[in]  mix   The mix
-  explicit CharAttributes(
+  explicit constexpr CharAttributes(
     const Rgb &fg=RgbNone,
     const Rgb &bg=RgbNone,
     const Attributes &attr={},
     const AttributeMode &mix=AttributeMode::default_
-  );
+  ) noexcept:
+  fg(fg), bg(bg), attr(attr), mix(mix)
+  {}
 
   ///
   /// String conversion operator.

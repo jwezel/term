@@ -139,14 +139,6 @@ const vector<pair<u4, QuadTuple>> _quadInitializer {
   }
 };
 
-Rgb::Rgb() noexcept:
-r(-1.), g(-1.), b(-1.)
-{}
-
-Rgb::Rgb(f4 r, f4 g, f4 b) noexcept:
-r(r), g(g), b(b)
-{}
-
 Rgb::operator string() const {
   if (r == -1 && g == -1 && b == -1) {
     return "RgbNone";
@@ -285,14 +277,6 @@ auto Rgb::operator |(const Rgb &other) const -> Rgb {
   return Rgb{specified(other)? other: *this};
 }
 
-auto Rgb::operator ==(const Rgb &other) const -> bool {
-  return r == other.r and g == other.g and b == other.b;
-}
-
-auto Rgb::operator !=(const Rgb &other) const -> bool {
-  return r != other.r or g != other.g or b != other.b;
-}
-
 auto Hsv::operator ==(const Hsv &other) const -> bool {
   return h == other.h and s == other.s and v == other.v;
 }
@@ -347,10 +331,6 @@ auto attrToString(Attributes attr) -> string {
 }
 
 } // namespace
-
-CharAttributes::CharAttributes(const Rgb &fg, const Rgb &bg, const Attributes &attr, const AttributeMode &mix):
-fg(fg), bg(bg), attr(attr), mix(mix)
-{}
 
 // NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables,cert-err58-cpp)
 const vector<string> AttributeMode2String {
