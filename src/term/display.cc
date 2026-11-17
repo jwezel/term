@@ -22,6 +22,7 @@ using
   std::basic_regex,
   std::cerr,
   std::exception,
+  std::invalid_argument,
   std::runtime_error,
   std::smatch,
   std::system_category,
@@ -32,26 +33,64 @@ Display::Display(
   int output,
   const Vector &position,
   const Vector &size,
-  const Vector &expandTo
+  const Vector &expandTo,
+  Screen screen
 ):
 keyboard_(keyboard),
 output_{output},
-cursor_(cursor()),
+screen_{screen},
+cursor_(enter(position)),
 terminalSize_{terminalSize()},
 foreground_{RgbWhite},
 background_{RgbNone},
 attributes_{},
 position_{
-  position == VectorMin?
-    cursor_
+  screen == Screen::alternate?
+    Vector{0, 0}
   :
-    position
+    position == VectorMin?
+      cursor_
+    :
+      position
 },
-maxSize_{min(expandTo == VectorMax? terminalSize_: expandTo, terminalSize_ - position_)},
+// Wide as the terminal is from the left edge of the display; high as the terminal is, because it scrolls
+maxSize_{
+  min(
+    expandTo == VectorMax? terminalSize_: expandTo,
+    screen == Screen::alternate? terminalSize_: Vector{toDim(terminalSize_.x() - position_.x()), terminalSize_.y()}
+  )
+},
 text_(Null, size == VectorMin? Vector{1, 1}: min(size, maxSize_))
 {
   cursor(false);
+  makeRoom(text_.height());
   keyboard.displayOffset(position_);
+}
+
+auto Display::enter(const Vector &position) -> Vector {
+  if (screen_ == Screen::alternate) {
+    // Check before anything has been written, as the destructor does not run if the constructor throws
+    if (position != VectorMin and position != Vector{0, 0}) {
+      throw invalid_argument(format("The display on the alternate screen is in the top left corner, not at {}", string(position)));
+    }
+    write("\x1b[?1049h\x1b[2J\x1b[H"); // switch, which saves the cursor of the main screen; clear; home
+  }
+  return cursor();
+}
+
+void Display::makeRoom(Dim height) {
+  if (screen_ == Screen::alternate) {
+    return;
+  }
+  const auto missing{toDim(position_.y() + height - terminalSize_.y())};
+  if (missing <= 0) {
+    return;
+  }
+  // A line feed in the last line of the terminal scrolls everything up, whatever the terminal has set otherwise
+  cursor(cursor_.x(), toDim(terminalSize_.y() - 1));
+  write(string(static_cast<size_t>(missing), '\n'));
+  position_ = Vector{position_.x(), toDim(position_.y() - missing)};
+  keyboard_.displayOffset(position_);
 }
 
 Display::~Display() {
@@ -60,8 +99,13 @@ Display::~Display() {
     foreground(RgbNone);
     background(RgbNone);
     attributes({});
-    cursor(0, toDim(size().y() + position_.y() - 1));
-    write("\x1b[?9l\x1b[?1000l\x1b[?1002l\x1b[?1003l\n");
+    if (screen_ == Screen::alternate) {
+      // The cursor is back where it was on the main screen
+      write("\x1b[?9l\x1b[?1000l\x1b[?1002l\x1b[?1003l\x1b[?1049l");
+    } else {
+      cursor(0, toDim(size().y() + position_.y() - 1));
+      write("\x1b[?9l\x1b[?1000l\x1b[?1002l\x1b[?1003l\n");
+    }
   } catch (exception & error) {
     cerr << "Error: " << error.what() << "\n";
   }
@@ -257,7 +301,9 @@ auto Display::size() const -> Vector {
 }
 
 void Display::resize(const Vector &size) {
-  text_.resize(min(maxSize_, size), Null);
+  const auto newSize{min(maxSize_, size)};
+  makeRoom(newSize.y());
+  text_.resize(newSize, Null);
 }
 
 void Display::mouseMode(MouseMode mode) const {

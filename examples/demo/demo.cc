@@ -7,8 +7,8 @@
 /// Keys: Tab / Shift-Tab move the focus, Space / Enter / Down open the menu, Esc closes the dialog, Ctrl-C quits.
 /// The mouse works as well: click to focus, click a menu entry, drag from the menu to an entry and let go.
 ///
-/// Like the other examples, the demo draws where the cursor is and leaves the screen to the shell afterwards.
-/// With --fullscreen it uses the alternate screen instead.
+/// Like the other examples, the demo draws where the cursor is, scrolls the terminal if there is not enough room below
+/// it, and leaves the screen to the shell afterwards. With --fullscreen it uses the alternate screen instead.
 
 #include <term/display.hh>
 #include <term/event.hh>
@@ -32,7 +32,7 @@
 #include <iostream>
 #include <optional>
 #include <string>
-#include <unistd.h>
+#include <string_view>
 #include <vector>
 
 using
@@ -162,34 +162,6 @@ void focusRing(Window &window, const std::vector<Widget *> &ring, const std::fun
     );
   }
 }
-
-/// Make room for the display below the cursor
-///
-/// The display grows downwards from the cursor, so if the cursor is near the bottom of the terminal, the
-/// terminal is scrolled up by as much as is missing, and the cursor is put back to the top of the room.
-void makeRoom(int rows) {
-  const auto text{std::format("\r{}\x1b[{}A", std::string(static_cast<size_t>(rows), '\n'), rows)};
-  (void)!::write(1, text.data(), text.size());
-}
-
-/// Switch the terminal to the alternate screen for as long as the object exists
-struct AlternateScreen {
-  AlternateScreen() {
-    (void)!::write(1, "\x1b[?1049h\x1b[2J\x1b[H", 15);
-  }
-
-  AlternateScreen(const AlternateScreen &) = delete;
-
-  AlternateScreen(AlternateScreen &&) = delete;
-
-  auto operator=(const AlternateScreen &) -> AlternateScreen & = delete;
-
-  auto operator=(AlternateScreen &&) -> AlternateScreen & = delete;
-
-  ~AlternateScreen() {
-    (void)!::write(1, "\x1b[?1049l", 8);
-  }
-};
 
 //~Dialog~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -421,10 +393,13 @@ struct Demo {
 
 } // namespace
 
-auto main(int /*unused*/, char * /*unused*/[]) -> int {
+auto main(int argc, char *argv[]) -> int {
   try {
-    // const AlternateScreen screen;
-    Terminal terminal{desktopBackground, VectorMin, VectorMin, VectorMax, 1, 0, true, false};
+    const auto fullscreen{argc > 1 and std::string_view{argv[1]} == "--fullscreen"};
+    Terminal terminal{
+      desktopBackground, VectorMin, VectorMin, VectorMax, 1, 0, true, false,
+      fullscreen? jwezel::Display::Screen::alternate: jwezel::Display::Screen::main
+    };
     terminal.display().mouseMode(jwezel::Display::MouseMode::anything);
     const auto needed{Vector{Demo::width + 2 * Demo::margin, Demo::height + 2}};
     if (terminal.display().maxSize().x() < needed.x() or terminal.display().maxSize().y() < needed.y()) {

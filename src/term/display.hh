@@ -25,20 +25,40 @@ struct Display: Device {
     anything
   };
   ///
+  /// The screen that the display is on
+  ///
+  /// The main screen is the one of the shell. The display is a rectangle on it, with its top left corner where the
+  /// cursor was (or where it is told to be), growing downwards: if there is no more room below it, the terminal is
+  /// scrolled up, so the display can grow to the height of the terminal, and what was on the screen before stays
+  /// above it. It can be as wide as the terminal is from its left edge.
+  ///
+  /// The alternate screen is a separate screen of the size of the terminal, which is given up again when the
+  /// display ends, leaving the shell screen as it was. It is fixed: there is nothing to scroll and nothing to
+  /// stay clear of, so the display is in the top left corner and can be as large as the terminal.
+  enum class Screen: u1 {
+    main,
+    alternate
+  };
+
+  ///
   /// Create Display
   ///
   /// @param      keyboard  The keyboard
   /// @param[in]  output    Output file descriptor
-  /// @param[in]  position  The position (VectorMin=current)
+  /// @param[in]  position  The position (VectorMin=current); on the alternate screen it can only be the top left
+  ///                       corner, and anything else is an error
   /// @param[in]  size      Start size
-  /// @param[in]  expandTo  Max size (VectorMin=start size, VectorMax=screen
-  /// size)
+  /// @param[in]  expandTo  Max size (VectorMin=start size, VectorMax=screen size)
+  /// @param[in]  screen    The screen to use
+  ///
+  /// @throws     std::invalid_argument if the position is not possible on the screen
   explicit Display(
     Keyboard &keyboard,
     int output=1,
     const Vector &position=VectorMin,
     const Vector &size=VectorMin,
-    const Vector &expandTo=VectorMax
+    const Vector &expandTo=VectorMax,
+    Screen screen=Screen::main
   );
 
   Display(const Display &) = default;
@@ -132,7 +152,11 @@ struct Display: Device {
   [[nodiscard]] auto size() const -> Vector;
 
   ///
-  /// Set terminal size
+  /// Set display size
+  ///
+  /// The size is limited to the maximum size. A display on the main screen that gets higher than there is room
+  /// for below it scrolls the terminal up by as much as is missing, so that it moves up on the screen: its position
+  /// changes, and so does the offset of mouse reports, but nothing on the display moves relative to it.
   ///
   /// @param[in]  size  The size
   void resize(const Vector &size);
@@ -145,11 +169,26 @@ struct Display: Device {
 
   [[nodiscard]] auto maxSize() const {return maxSize_;}
 
+  ///
+  /// Get the position of the display on the screen
+  [[nodiscard]] auto position() const -> const Vector & {return position_;}
+
+  [[nodiscard]] auto screen() const -> Screen {return screen_;}
+
   [[nodiscard]] auto text() const {return text_;}
 
   private:
+  ///
+  /// Switch to the screen and get the cursor position
+  auto enter(const Vector &position) -> Vector;
+
+  ///
+  /// Scroll the terminal up if the display would not fit on the screen with a height
+  void makeRoom(Dim height);
+
   Keyboard &keyboard_;                //< Keyboard
   int output_;                        //< Output file descriptor
+  Screen screen_;                     //< Screen
   Vector cursor_;                     //< Current cursor position
   bool cursorVisible_{true};          //< Whether the hardware cursor is shown
   std::optional<Vector> caret_;       //< Requested caret position

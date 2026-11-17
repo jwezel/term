@@ -19,13 +19,14 @@ Terminal::Terminal(
   int terminalFd,
   int keyboardFd,
   bool expand,
-  bool contract
+  bool contract,
+  Display::Screen screen
 ):
 Surface{&display_},
 expand_{expand},
 contract_{contract},
 keyboard_{keyboardFd == -1? terminalFd: keyboardFd},
-display_{keyboard_, terminalFd, initialPosition, initialSize == VectorMin? Vector{1, 1}: initialSize, maxSize},
+display_{keyboard_, terminalFd, initialPosition, initialSize == VectorMin? Vector{1, 1}: initialSize, maxSize, screen},
 backdrop_{this},
 desktop_{this, Rectangle{Vector{0, 0}, display_.size()}, background},
 minimumSize_{display_.size()},

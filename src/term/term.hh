@@ -36,6 +36,9 @@ struct Terminal: Surface, TerminalInterface {
   /// @param[in]  keyboardFd       The keyboard fd (default stdin)
   /// @param[in]  expand           Whether terminal can expand (default true)
   /// @param[in]  contract         Whether terminal can contract (default true)
+  /// @param[in]  screen           The screen to use: the main screen, on which the display makes room for itself
+  ///                              below the cursor by scrolling the terminal, or the alternate screen, which is
+  ///                              given up again at the end
   explicit Terminal(
     const Char &background=Space,
     const Vector &initialPosition=VectorMin,
@@ -44,7 +47,8 @@ struct Terminal: Surface, TerminalInterface {
     int terminalFd=1,
     int keyboardFd=0,
     bool expand=true,
-    bool contract=true
+    bool contract=true,
+    Display::Screen screen=Display::Screen::main
   );
 
   void addElement(Surface::Element *element, Surface::Element * below) override;
@@ -98,6 +102,9 @@ struct Terminal: Surface, TerminalInterface {
 
   ///
   /// Possibly expand display and screen
+  ///
+  /// The display grows to at least the size, up to its maximum size. On the main screen it scrolls the terminal
+  /// up if there is not enough room below it.
   ///
   /// @param[in]  size  The size
   auto expand(const Vector &size) -> bool override;

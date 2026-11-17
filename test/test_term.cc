@@ -1,11 +1,16 @@
+#include "fake_terminal.hh"
+
 #include <term/geometry.hh>
 #include <term/term.hh>
 #include <term/text.hh>
 
 #include <cstdio>
+#include <string>
 #include <doctest/doctest.h>
 
 using
+  jwezel::Display,
+  jwezel::MouseButtonEvent,
   jwezel::operator""_C,
   jwezel::Rectangle,
   jwezel::string,
@@ -65,6 +70,76 @@ TEST_CASE("Terminal") {
       CHECK_EQ(term.display().text().repr(), Text("1111111111\n1111111111\n1111111111\n1111111111").repr()); // display contracted
     }
   }
+}
+
+TEST_CASE("Terminal makes room for its display by scrolling") {
+  // The terminal is 20 wide and 10 high, and the cursor is in line 8, so there are three lines left
+  const std::string replies{"\x1b[8;1R\x1b[8;1R\x1b[10;20R"};
+  FakeTerminal fake{replies};
+  Terminal term('.'_C, VectorMin, VectorMin, VectorMax, fake.output(), fake.input());
+  CHECK_EQ(term.display().position(), Vector{0, 7});
+  CHECK_EQ(term.display().maxSize(), Vector{20, 10}); // the whole terminal can be used, not just what is below the cursor
+  fake.clear();
+  SUBCASE("Expanding for a window that does not fit scrolls the terminal") {
+    Window w1(&term, Rectangle{0, 0, 10, 4}, '1'_C);
+    CHECK_EQ(term.display().size(), Vector{10, 4});
+    CHECK_EQ(term.display().position(), Vector{0, 6}); // 7 + 4 = 11: one line too many
+    CHECK_EQ(fake.written().substr(0, 8), "\x1b[10;2H\n"); // the last line, in the column where the cursor is, and a line feed
+    CHECK_EQ(term.display().text().repr(), Text("1111111111\n1111111111\n1111111111\n1111111111").repr());
+    CHECK_EQ(term.desktop().text().size(), Vector{10, 4});
+    SUBCASE("and so does another one") {
+      Window w2{&term, Rectangle{2, 2, 8, 9}, '2'_C};
+      CHECK_EQ(term.display().size(), Vector{10, 9});
+      CHECK_EQ(term.display().position(), Vector{0, 1}); // 6 + 9 = 15: five more lines
+      CHECK_EQ(
+        term.display().text().repr(),
+        Text("1111111111\n1111111111\n1122222211\n1122222211\n..222222..\n..222222..\n..222222..\n..222222..\n..222222..").repr()
+      );
+      SUBCASE("Mouse reports are relative to where the display is") {
+        fake.feed("\x1b[<0;4;4M"); // column 4, line 4 of the terminal: column 3, line 2 of the display
+        auto event{term.event()};
+        REQUIRE_EQ(event.type(), MouseButtonEvent::type_);
+        CHECK_EQ(dynamic_cast<MouseButtonEvent *>(event())->position(), Vector{3, 2});
+      }
+      SUBCASE("The display stays where it is when it contracts") {
+        fake.clear();
+        w2.move(Rectangle{2, 2, 8, 5});
+        CHECK_EQ(term.display().position(), Vector{0, 1});
+      }
+    }
+  }
+  SUBCASE("A window that fits does not scroll anything") {
+    Window w1(&term, Rectangle{0, 0, 10, 3}, '1'_C);
+    CHECK_EQ(term.display().position(), Vector{0, 7});
+    CHECK_EQ(fake.written().find('\n'), std::string::npos);
+  }
+  SUBCASE("A window is not larger than the terminal") {
+    Window w1(&term, Rectangle{0, 0, 30, 15}, '1'_C);
+    CHECK_EQ(term.display().size(), Vector{20, 10});
+    CHECK_EQ(term.display().position(), Vector{0, 0});
+  }
+}
+
+TEST_CASE("Terminal on the alternate screen") {
+  FakeTerminal fake{"\x1b[5;5R\x1b[5;5R\x1b[10;20R"}; // the cursor is somewhere, the terminal is 20 x 10
+  {
+    Terminal term('.'_C, VectorMin, VectorMin, VectorMax, fake.output(), fake.input(), true, true, Display::Screen::alternate);
+    CHECK_EQ(term.display().screen(), Display::Screen::alternate);
+    CHECK_EQ(term.display().position(), Vector{0, 0});
+    fake.clear();
+    Window w1(&term, Rectangle{0, 0, 20, 10}, '1'_C);
+    CHECK_EQ(term.display().size(), Vector{20, 10});
+    CHECK_EQ(term.display().position(), Vector{0, 0}); // fixed: nothing to scroll
+    CHECK_EQ(fake.written().find('\n'), std::string::npos);
+    CHECK_THROWS_AS(
+      Terminal(
+        '.'_C, Vector{2, 2}, VectorMin, VectorMax, fake.output(), fake.input(), true, true, Display::Screen::alternate
+      ),
+      std::invalid_argument
+    );
+    fake.feed("\x1b[1;1R\x1b[1;1R\x1b[10;20R"); // for the one that could not be created
+  }
+  CHECK_EQ(fake.written().substr(fake.written().size() - 8), "\x1b[?1049l");
 }
 
 // NOLINTEND(readability-magic-numbers)
