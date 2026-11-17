@@ -289,7 +289,7 @@ TEST_CASE("UI Window") {
     SUBCASE("Button") {
       auto button{jwezel::ui::Button(w1, Rectangle{1, 1, 8, 2}, Text{"OK"})};
       auto test2{test};
-      test2.patch(Text{"[ OK ]"}, Vector{1, 1});
+      test2.patch(Text{"< OK >"}, Vector{1, 1}); // it has the focus
       CHECK_EQ(term.display().text(), test2);
       SUBCASE("Press with space") {
         bool called{false};
@@ -973,10 +973,10 @@ TEST_CASE("UI Window") {
     auto padded{[](const std::string &text) {return text + std::string(18 - text.size(), ' ');}};
     auto closed{[&](const std::string &item) {return "[ " + item + std::string(12 - item.size(), ' ') + " ▼ ]";}};
     auto row{
-      [&](int line) { // the content of a row; the highlight is checked separately
+      [&](int line) { // the characters of a row; how it looks is checked separately
         auto result{term.display().text()[Rectangle{1, jwezel::toDim(line), 19, jwezel::toDim(line + 1)}]};
         for (auto &cell: result.data.at(0)) {
-          cell.attributes.attr = static_cast<jwezel::Attributes>(cell.attributes.attr & ~jwezel::reverse);
+          cell.attributes = jwezel::CharAttributes{}; // the content, not how it looks: the highlight, the tint
         }
         return result;
       }
@@ -1508,7 +1508,7 @@ TEST_CASE("UI Window") {
         CHECK_EQ(cell(18, 5).attributes.bg, jwezel::RgbNone);
         CHECK_EQ(cell(1, 7).attributes.fg, jwezel::RgbNone);
         CHECK_EQ(cell(1, 9).attributes.fg, jwezel::RgbNone);
-        CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), Text{"[ OK ]"});
+        CHECK_EQ(std::string(shown(Rectangle{1, 1, 7, 2})), "< OK >\n"); // the glyphs are not colors
         w1.colors(&widgetColors);
         CHECK_EQ(cell(1, 1).attributes.fg, jwezel::RgbGreen);
         CHECK_EQ(cell(1, 3).attributes.fg, jwezel::RgbBlue);
@@ -1536,7 +1536,7 @@ TEST_CASE("UI Window") {
       CHECK_EQ(cell(2, 1).attributes.fg, jwezel::RgbBlue); // the desktop has not the focus now
     }
     SUBCASE("Glyphs") {
-      auto w1{jwezel::ui::Window(ui_, ' '_C, area1, Text{"T"}, nullptr, nullptr, &roundStyle)};
+      auto w1{jwezel::ui::Window(ui_, ' '_C, area1, Text{"T"}, nullptr, &plain, &roundStyle)};
       auto button1{jwezel::ui::Button(w1, Rectangle{1, 1, 9, 2}, Text{"OK"})};
       auto button2{jwezel::ui::Button(w1, Rectangle{1, 3, 9, 4}, Text{"No"})};
       auto drop{jwezel::ui::DropDown(w1, Rectangle{1, 9, 19, 10}, fruit, 1)};
@@ -1580,7 +1580,7 @@ TEST_CASE("UI Window") {
       SUBCASE("The style can be changed") {
         w1.style(nullptr);
         CHECK_EQ(&w1.style(), &jwezel::ui::defaultUiStyle());
-        CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), Text{"[ OK ]"});
+        CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), Text{"< OK >"}); // the default glyph of a focused button
         CHECK_EQ(shown(Rectangle{1, 3, 7, 4}), Text{"[ No ]"});
         CHECK_EQ(shown(Rectangle{1, 9, 19, 10}), Text{"[ Banana       ▼ ]"});
         w1.style(&roundStyle);
@@ -1618,7 +1618,7 @@ TEST_CASE("UI Window") {
     }
   }
 
-  SUBCASE("Focus tint of input fields") {
+  SUBCASE("Focus tint") {
     auto send{
       [&](const char *input) {
         REQUIRE_NE(fputs(input, inputWrite), EOF);
@@ -1656,17 +1656,46 @@ TEST_CASE("UI Window") {
       CHECK_EQ(cell(4, 3).rune, 'X');
       CHECK_EQ(cell(4, 3).attributes.bg, jwezel::RgbGray5); // typed characters are in the tinted field
     }
-    SUBCASE("Widgets that can show the focus themselves are not tinted") {
-      send("\x1b[<0;3;7M"); // down on the button
-      send("\x1b[<0;3;7m");
-      REQUIRE_EQ(w1.focus(), &button);
+    SUBCASE("A button shows the focus in its brackets and is tinted as well") {
+      CHECK_EQ(cell(1, 6).rune, '['); // not the focused widget
       CHECK_EQ(cell(1, 6).attributes.bg, jwezel::RgbNone);
+      send("\x1b[<0;3;7M"); // down on the button
+      REQUIRE_EQ(w1.focus(), &button);
+      CHECK_EQ(cell(1, 6).rune, '<'); // pressed, which is the focused widget as well
+      CHECK_EQ(cell(6, 6).rune, '>');
+      CHECK_EQ(cell(1, 6).attributes.bg, jwezel::RgbGray5);
+      send("\x1b[<0;3;7m");
+      CHECK_EQ(std::string(term.display().text()[Rectangle{1, 6, 7, 7}]), "< OK >\n");
+      for (jwezel::Dim x = 1; x < 9; ++x) { // the whole button, and nothing else
+        CHECK_EQ(cell(x, 6).attributes.bg, jwezel::RgbGray5);
+      }
+      CHECK_EQ(cell(9, 6).attributes.bg, jwezel::RgbNone);
       CHECK_EQ(cell(1, 6).attributes.fg, jwezel::RgbNone);
       CHECK_EQ(cell(1, 1).attributes.bg, jwezel::RgbNone); // and the field is not anymore
-      send("\x1b[<0;3;9M");
-      send("\x1b[<0;3;9m");
+      CHECK_EQ(cell(1, 1).rune, 'O');
+      send("\x1b[<0;3;2M"); // the focus goes back to the field
+      send("\x1b[<0;3;2m");
+      CHECK_EQ(std::string(term.display().text()[Rectangle{1, 6, 7, 7}]), "[ OK ]\n");
+      CHECK_EQ(cell(1, 6).attributes.bg, jwezel::RgbNone);
+    }
+    SUBCASE("A drop down is tinted") {
+      send("\x1b[<0;3;9M"); // down on it: opens
       REQUIRE_EQ(w1.focus(), &drop);
-      CHECK_EQ(cell(2, 8).attributes.bg, jwezel::RgbNone);
+      REQUIRE(drop.isOpen());
+      CHECK_EQ(cell(1, 8).rune, '['); // there is no other glyph for the focus
+      for (jwezel::Dim x = 1; x < 19; ++x) { // also while it is open
+        CHECK_EQ(cell(x, 8).attributes.bg, jwezel::RgbGray5);
+      }
+      CHECK_EQ(cell(10, 9).attributes.bg, jwezel::RgbNone); // but not the list
+      send("\x1b[<0;3;9m");
+      send("\x1b"); // closed
+      REQUIRE_FALSE(drop.isOpen());
+      CHECK_EQ(cell(1, 8).attributes.bg, jwezel::RgbGray5);
+      CHECK_EQ(cell(18, 8).attributes.bg, jwezel::RgbGray5);
+      CHECK_EQ(cell(1, 1).attributes.bg, jwezel::RgbNone);
+      send("\x1b[<0;3;2M"); // the field has the focus
+      send("\x1b[<0;3;2m");
+      CHECK_EQ(cell(1, 8).attributes.bg, jwezel::RgbNone);
     }
     SUBCASE("A window without the focus does not advertise one") {
       auto w2{jwezel::ui::Window(ui_, ' '_C, Rectangle{26, 0, 38, 6}, Text{"B"})};

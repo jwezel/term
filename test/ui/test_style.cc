@@ -229,9 +229,11 @@ TEST_CASE("UI style") {
   SUBCASE("The default style is the look the widgets always had") {
     const auto &style{defaultUiStyle()};
     CHECK_EQ(&style, &defaultUiStyle());
-    for (const auto &brackets: style.button) {
-      CHECK_EQ(brackets.left, "[ ");
-      CHECK_EQ(brackets.right, " ]");
+    CHECK_EQ(style.button[static_cast<std::size_t>(WidgetState::normal)].left, "[ ");
+    CHECK_EQ(style.button[static_cast<std::size_t>(WidgetState::normal)].right, " ]");
+    for (const auto state: {WidgetState::focus, WidgetState::active}) { // angle brackets show the focus
+      CHECK_EQ(style.button[static_cast<std::size_t>(state)].left, "< ");
+      CHECK_EQ(style.button[static_cast<std::size_t>(state)].right, " >");
     }
     for (const auto &brackets: style.dropDown) {
       CHECK_EQ(brackets.left, "[ ");
@@ -255,10 +257,7 @@ TEST_CASE("UI style") {
   }
   SUBCASE("The default colors do not say anything, except what is needed to see anything") {
     const auto &colors{defaultColorStyle()};
-    for (const auto *role: {
-      "label", "button", "button.focus", "button.active", "input",
-      "dropdown", "dropdown.focus", "dropdown.active", "popup"
-    }) {
+    for (const auto *role: {"label", "button", "input", "dropdown", "popup"}) {
       INFO("Role: ", role);
       CHECK_NE(colors.find(role), nullptr);
       CHECK_EQ(colors[role], CharAttributes{});
@@ -266,11 +265,14 @@ TEST_CASE("UI style") {
     CHECK_EQ(colors["popup.highlight"].attr, reverse);
     CHECK_EQ(colors["popup.highlight"].fg, RgbNone);
     CHECK_EQ(colors["popup.highlight"].bg, RgbNone);
-    // the input field that gets the keyboard input has no glyph to show that, so it is tinted
-    CHECK_EQ(colors["input.focus"].fg, RgbNone);
-    CHECK_EQ(colors["input.focus"].bg, RgbGray5);
-    CHECK_EQ(colors["input.focus"].attr, 0);
-    CHECK_EQ(colors["input.focus"].mix, AttributeMode::mix); // into the background that is there
+    // the widget that gets the keyboard input is tinted; a pressed button and an open drop down have it
+    for (const auto *role: {"input.focus", "button.focus", "button.active", "dropdown.focus", "dropdown.active"}) {
+      INFO("Role: ", role);
+      CHECK_EQ(colors[role].fg, RgbNone);
+      CHECK_EQ(colors[role].bg, RgbGray5);
+      CHECK_EQ(colors[role].attr, 0);
+      CHECK_EQ(colors[role].mix, AttributeMode::mix); // into the background that is there
+    }
     CHECK_EQ(colors["button.pressed"], CharAttributes{}); // a role nobody knows: nothing
   }
 }

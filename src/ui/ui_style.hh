@@ -36,15 +36,16 @@ using BracketsByState = std::array<Brackets, WidgetStates>;
 ///
 /// The style says what the elements of the UI look like: glyphs, and the decoration of windows. It is a plain
 /// value that is meant to be constant. Colors are a matter of the `ColorStyle`, which has a role for every
-/// widget and state. The default style looks like this:
+/// widget and state. The default style looks like this, where the button has the focus
+/// when it is in angle brackets:
 ///
 /// @code
-/// [ Button ]   [ Drop down ▼ ]    ╭─ List ─╮
+/// [ Button ]   < Button >   [ Drop down ▼ ]    ╭─ List ─╮
 /// @endcode
 struct UiStyle {
   const Decoration *decoration{nullptr}; ///< Decoration of windows, nullptr for `defaultDecoration()` (weak reference)
-  BracketsByState button{
-    Brackets{"[ ", " ]"}, Brackets{"[ ", " ]"}, Brackets{"[ ", " ]"}
+  BracketsByState button{ ///< Angle brackets show the focus, also while the button is pressed, which needs it
+    Brackets{"[ ", " ]"}, Brackets{"< ", " >"}, Brackets{"< ", " >"}
   };
   BracketsByState dropDown{ ///< The right glyph includes the arrow
     Brackets{"[ ", " ▼ ]"}, Brackets{"[ ", " ▼ ]"}, Brackets{"[ ", " ▼ ]"}

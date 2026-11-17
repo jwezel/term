@@ -7,12 +7,15 @@ namespace {
 constexpr CharAttributes NoAttributes{};
 
 // The default style is neutral: colors and attributes are left to the terminal, except for what is needed to see
-// anything: the item of a list that is highlighted, and the input field that gets the keyboard input, which has no
-// glyphs to show that with. The roles are listed to show what a style can say something about; the states of a
-// window are told apart by the style of its border, and those of buttons and drop downs by their glyphs.
+// anything: the item of a list that is highlighted, and the widget that gets the keyboard input, which is tinted.
+// The roles are listed to show what a style can say something about; the states of a window are told apart by the
+// style of its border.
 //
-// The tint of the focused input field is mixed into the background that is there, so it lightens the field of a
-// window with colors, and is a plain gray on the background of the terminal, on which any default text is readable.
+// The tint is mixed into the background that is there, so it lightens the widget of a window with colors, and is a
+// plain gray on the background of the terminal, on which any default text is readable. A pressed button and an open
+// drop down are the focused widget, so they have it as well.
+constexpr CharAttributes focusTint{RgbNone, RgbGray5, {}, AttributeMode::mix};
+
 constexpr ColorRoles<17> defaultRoles{
   {"frame", CharAttributes{}},
   {"frame.active", CharAttributes{}},
@@ -22,13 +25,13 @@ constexpr ColorRoles<17> defaultRoles{
   {"title.inactive", CharAttributes{}},
   {"label", CharAttributes{}},
   {"button", CharAttributes{}},
-  {"button.focus", CharAttributes{}},
-  {"button.active", CharAttributes{}},
+  {"button.focus", focusTint},
+  {"button.active", focusTint},
   {"input", CharAttributes{}},
-  {"input.focus", CharAttributes{RgbNone, RgbGray5, {}, AttributeMode::mix}},
+  {"input.focus", focusTint},
   {"dropdown", CharAttributes{}},
-  {"dropdown.focus", CharAttributes{}},
-  {"dropdown.active", CharAttributes{}},
+  {"dropdown.focus", focusTint},
+  {"dropdown.active", focusTint},
   {"popup", CharAttributes{}},
   {"popup.highlight", CharAttributes{RgbNone, RgbNone, reverse}},
 };

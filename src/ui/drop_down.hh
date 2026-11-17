@@ -23,7 +23,8 @@ namespace jwezel::ui {
 ///
 /// The glyphs around the selected item come from the UI style (by state: normal,
 /// focus, and active while the list is open), and so do the colors of the roles
-/// `dropdown`, `dropdown.focus` and `dropdown.active`.
+/// `dropdown`, `dropdown.focus` and `dropdown.active`, which are tinted by default
+/// when the drop down has the focus.
 ///
 /// The list is a popup in front of all other elements, which only exists while it
 /// is open. Only the first row of the items is shown.
