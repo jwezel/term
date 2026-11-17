@@ -49,7 +49,7 @@ struct Label: Widget {
   /// Change the text, which is displayed in the same area
   ///
   /// @param[in]  text  The text
-  void text(const Text &text);
+  void content(const Text &text);
 
   protected:
   void render() override;

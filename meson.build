@@ -123,6 +123,14 @@ example_exe = executable(
   include_directories: lib_incdir
 )
 
+demo_exe = executable(
+  'demo',
+  'examples/demo/demo.cc',
+  link_with: shlib,
+  dependencies: [lib_dep],
+  include_directories: lib_incdir
+)
+
 # Make this library usable as a Meson subproject.
 term_dep = declare_dependency(
   include_directories: include_directories('.'),

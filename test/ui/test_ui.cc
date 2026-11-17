@@ -271,12 +271,12 @@ TEST_CASE("UI Window") {
         CHECK_EQ(term.display().text(), test3);
       }
       SUBCASE("Change the text") {
-        label.text(Text{"Hi\nthere"});
+        label.content(Text{"Hi\nthere"});
         CHECK_EQ(label.content(), Text{"Hi\nthere"});
         auto test3{test};
         test3.patch(Text{"Hi\nthere"}, Vector{1, 1});
         CHECK_EQ(term.display().text(), test3); // nothing is left of "Hello"
-        label.text(Text{"x"});
+        label.content(Text{"x"});
         auto test4{test};
         test4.patch(Text{"x"}, Vector{1, 1});
         CHECK_EQ(term.display().text(), test4); // nor of the second line
@@ -303,11 +303,11 @@ TEST_CASE("UI Window") {
       test2.patch(Text{"< OK >"}, Vector{1, 1}); // it has the focus
       CHECK_EQ(term.display().text(), test2);
       SUBCASE("Change the text") {
-        button.text(Text{"Cancel"});
+        button.content(Text{"Cancel"});
         auto test3{test};
         test3.patch(Text{"< Cance"}, Vector{1, 1}); // the button has the focus; its area is 7 wide, the rest is clipped
         CHECK_EQ(term.display().text(), test3);
-        button.text(Text{"No"});
+        button.content(Text{"No"});
         auto test4{test};
         test4.patch(Text{"< No >"}, Vector{1, 1}); // and nothing is left of the longer one
         CHECK_EQ(term.display().text(), test4);

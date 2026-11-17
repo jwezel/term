@@ -16,7 +16,7 @@ text_{text}
   render();
 }
 
-void Label::text(const Text &text) {
+void Label::content(const Text &text) {
   text_ = text;
   render();
 }
