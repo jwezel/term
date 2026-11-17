@@ -1,5 +1,6 @@
 #pragma once
 
+#include "action.hh"
 #include "color_style.hh"
 #include "container.hh"
 #include "ui_style.hh"
@@ -7,6 +8,8 @@
 #include <term/geometry.hh>
 #include <term/mouse_capture.hh>
 #include <term/window.hh>
+
+#include <vector>
 
 namespace jwezel::ui {
 
@@ -26,12 +29,17 @@ struct Widget;
 /// elements are owned by whoever created them, and must be destroyed before
 /// the root.
 ///
+/// Keys that no widget has made use of are for the window: first the actions that were added to the focused widget,
+/// then the actions that were added to the window, and then Tab and Shift-Tab, which move the focus to the next or
+/// previous widget that can have it (see `FocusPolicy`). The order is the one in which the widgets were created,
+/// which `tabOrder` can change.
+///
 /// All areas of the elements in a root are relative to the host window. The
 /// root always follows the size and position of the host window: when it
 /// changes, the elements are laid out again. Elements that were created
 /// without an area fill the content area of the root, the others keep their
 /// area.
-struct Root: Container, InputHandler {
+struct Root: Container, InputHandler, ActionHost {
   ///
   /// Create Root
   ///
@@ -101,6 +109,35 @@ struct Root: Container, InputHandler {
   [[nodiscard]] auto focus() const -> Widget * {return focus_;}
 
   ///
+  /// Move the focus to the next widget that can have it with Tab, wrapping around at the end
+  void focusNext();
+
+  ///
+  /// Move the focus to the previous widget that can have it with Tab, wrapping around at the beginning
+  void focusPrevious();
+
+  ///
+  /// Get the widgets in the order the focus moves through them
+  [[nodiscard]] auto tabChain() const -> const std::vector<Widget *> & {return chain_;}
+
+  ///
+  /// Change the order of the focus: the second widget is moved to come right after the first one
+  ///
+  /// Chaining the widgets of a window two by two defines the whole order, like in Qt.
+  ///
+  /// @throws     std::invalid_argument if one of them is not in this root
+  void tabOrder(Widget &first, Widget &second);
+
+  ///
+  /// Change the order of the focus: the widgets come one after the other, in this order, the first of them
+  /// staying where it is
+  void tabOrder(const std::vector<Widget *> &order);
+
+  ///
+  /// Add a widget to the order of the focus, after all others; called when a widget is created
+  void enroll(Widget &widget);
+
+  ///
   /// Tell the terminal where the caret of the focused widget is (or hide it)
   void updateCaret();
 
@@ -128,6 +165,11 @@ struct Root: Container, InputHandler {
   void handleGeometry(const Rectangle &previous) override;
 
   private:
+  void step(int direction);
+
+  auto handleKey(const Event &event) -> bool;
+
+  std::vector<Widget *> chain_; // weak references, in order of the focus
   jwezel::Window &host_;
   const ColorStyle *colors_;  // weak reference, nullptr for the default
   const UiStyle *style_;      // weak reference, nullptr for the default

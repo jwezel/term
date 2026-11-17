@@ -1,3 +1,4 @@
+#include "ui/action.hh"
 #include "ui/button.hh"
 #include "ui/color_style.hh"
 #include "ui/decoration.hh"
@@ -1748,6 +1749,386 @@ TEST_CASE("UI Window") {
     CHECK_EQ(cell(18, 1).attributes.bg, jwezel::Rgb(0.25, 0.25, 0.5)); // between blue and gray
     CHECK_EQ(cell(18, 3).attributes.bg, jwezel::RgbBlue5);
     CHECK_EQ(cell(5, 5).attributes.bg, jwezel::RgbBlue5); // the window
+  }
+
+  SUBCASE("Keyboard navigation") {
+    auto send{
+      [&](const char *input) {
+        REQUIRE_NE(fputs(input, inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+      }
+    };
+    auto click{
+      [&](int x, int y) {
+        send(std::format("\x1b[<0;{};{}M", x + 1, y + 1).c_str());
+        send(std::format("\x1b[<0;{};{}m", x + 1, y + 1).c_str());
+      }
+    };
+    const std::string tab{"\t"}, shiftTab{"\x1b[Z"}, enter{"\r"}, escape{"\x1b"};
+    const std::vector<Text> fruit{Text{"Apple"}, Text{"Banana"}};
+    auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 34, 14}, Text{"T"}, nullptr, &plain)};
+    auto label{jwezel::ui::Label(w1, Rectangle{1, 1, 10, 2}, Text{"Name"})};
+    auto entry{jwezel::ui::LineEdit(w1, Rectangle{1, 2, 20, 3}, Text{"a"})};
+    auto button1{jwezel::ui::Button(w1, Rectangle{1, 4, 8, 5}, Text{"OK"})};
+    auto area{jwezel::ui::TextArea(w1, Rectangle{1, 6, 20, 8}, Text{"x"})};
+    auto drop{jwezel::ui::DropDown(w1, Rectangle{1, 9, 20, 10}, fruit)};
+    auto label2{jwezel::ui::Label(w1, Rectangle{22, 1, 30, 2}, Text{"Hi"})};
+    auto button2{jwezel::ui::Button(w1, Rectangle{22, 4, 30, 5}, Text{"No"})};
+    using jwezel::ui::FocusPolicy;
+    using jwezel::ui::Widget;
+    SUBCASE("The first widget that can have the focus has it") {
+      CHECK_EQ(w1.focus(), &entry); // not the label that was created before it
+      CHECK_EQ(label.focusPolicy(), FocusPolicy::none);
+      CHECK_EQ(entry.focusPolicy(), FocusPolicy::strong);
+      CHECK_EQ(w1.tabChain(), std::vector<Widget *>{&label, &entry, &button1, &area, &drop, &label2, &button2});
+    }
+    SUBCASE("Tab goes through the widgets in the order they were created") {
+      for (Widget *expected: std::vector<Widget *>{&button1, &area, &drop, &button2, &entry, &button1}) { // wraps around
+        send(tab.c_str());
+        CHECK_EQ(w1.focus(), expected);
+      }
+    }
+    SUBCASE("Shift-Tab goes the other way") {
+      for (Widget *expected: std::vector<Widget *>{&button2, &drop, &area, &button1, &entry, &button2}) {
+        send(shiftTab.c_str());
+        CHECK_EQ(w1.focus(), expected);
+      }
+    }
+    SUBCASE("Tab is not used up by the widgets that have text") {
+      send(tab.c_str()); // button
+      send(tab.c_str()); // the text area
+      REQUIRE_EQ(w1.focus(), &area);
+      send(tab.c_str());
+      CHECK_EQ(w1.focus(), &drop);
+      CHECK_EQ(area.content().data[0].size(), 1); // no Tab character was typed
+      CHECK_EQ(entry.content().data[0].size(), 1);
+    }
+    SUBCASE("Moving the focus closes the list of a drop down") {
+      click(2, 9);
+      REQUIRE(drop.isOpen());
+      send(tab.c_str());
+      CHECK_FALSE(drop.isOpen());
+      CHECK_EQ(w1.focus(), &button2);
+    }
+    SUBCASE("Labels do not get the focus by a click either") {
+      click(2, 1);
+      CHECK_EQ(w1.focus(), &entry);
+      click(23, 4); // a button does
+      CHECK_EQ(w1.focus(), &button2);
+      click(2, 1);
+      CHECK_EQ(w1.focus(), &button2);
+      CHECK_EQ(term.focus(), &w1); // the window has it anyway
+    }
+    SUBCASE("Focus policy") {
+      SUBCASE("Click only") {
+        button1.focusPolicy(FocusPolicy::click);
+        send(tab.c_str());
+        CHECK_EQ(w1.focus(), &area); // skipped
+        click(2, 4);
+        CHECK_EQ(w1.focus(), &button1); // but a click gets there
+        send(tab.c_str());
+        CHECK_EQ(w1.focus(), &area);
+      }
+      SUBCASE("Tab only") {
+        area.focusPolicy(FocusPolicy::tab);
+        click(2, 6);
+        CHECK_EQ(w1.focus(), &entry); // a click does not
+        send(tab.c_str());
+        send(tab.c_str());
+        CHECK_EQ(w1.focus(), &area); // Tab does
+      }
+      SUBCASE("None") {
+        area.focusPolicy(FocusPolicy::none);
+        click(2, 6);
+        CHECK_EQ(w1.focus(), &entry); // a click does not give it the focus
+        for (Widget *expected: std::vector<Widget *>{&button1, &drop, &button2, &entry}) { // and Tab skips it
+          send(tab.c_str());
+          CHECK_EQ(w1.focus(), expected);
+        }
+      }
+      SUBCASE("The policy is about the focus, a widget can still be clicked") {
+        drop.focusPolicy(FocusPolicy::none);
+        click(2, 9);
+        CHECK_EQ(w1.focus(), &entry);
+        CHECK(drop.isOpen());
+        send(tab.c_str()); // the focus moves on, and the list stays: nothing tells the drop down
+        CHECK_EQ(w1.focus(), &button1);
+      }
+      SUBCASE("A widget that cannot have the focus anymore loses it") {
+        entry.focusPolicy(FocusPolicy::none);
+        CHECK_EQ(w1.focus(), nullptr);
+        send(tab.c_str()); // from nowhere to the first
+        CHECK_EQ(w1.focus(), &button1);
+        entry.focusPolicy(FocusPolicy::strong); // does not take the focus away
+        CHECK_EQ(w1.focus(), &button1);
+      }
+      SUBCASE("A widget that can have the focus gets it if there is none") {
+        entry.focusPolicy(FocusPolicy::none);
+        REQUIRE_EQ(w1.focus(), nullptr);
+        entry.focusPolicy(FocusPolicy::tab);
+        CHECK_EQ(w1.focus(), &entry);
+      }
+      SUBCASE("Nothing that can have the focus") {
+        for (Widget *widget: std::vector<Widget *>{&entry, &button1, &area, &drop, &button2}) {
+          widget->focusPolicy(FocusPolicy::none);
+        }
+        CHECK_EQ(w1.focus(), nullptr);
+        send(tab.c_str()); // nothing to do, and nothing breaks
+        send(shiftTab.c_str());
+        CHECK_EQ(w1.focus(), nullptr);
+      }
+    }
+    SUBCASE("Order") {
+      SUBCASE("Two widgets") {
+        w1.tabOrder(button2, entry); // the entry comes after the second button now
+        CHECK_EQ(w1.tabChain(), std::vector<Widget *>{&label, &button1, &area, &drop, &label2, &button2, &entry});
+        send(tab.c_str()); // from the entry, which is last now, to the first
+        CHECK_EQ(w1.focus(), &button1);
+        send(shiftTab.c_str());
+        send(shiftTab.c_str());
+        CHECK_EQ(w1.focus(), &button2);
+      }
+      SUBCASE("A sequence is chained like in Qt") {
+        w1.tabOrder({&button2, &drop, &area});
+        // the first stays where it is, the others come right after it, one after the other
+        CHECK_EQ(w1.tabChain(), std::vector<Widget *>{&label, &entry, &button1, &label2, &button2, &drop, &area});
+        send(tab.c_str());
+        for (Widget *expected: std::vector<Widget *>{&button1, &button2, &drop, &area, &entry}) {
+          CHECK_EQ(w1.focus(), expected);
+          send(tab.c_str());
+        }
+      }
+      SUBCASE("It stays as it is") {
+        w1.tabOrder(entry, entry);
+        w1.tabOrder(button1, button1);
+        w1.tabOrder({});
+        w1.tabOrder({&entry});
+        CHECK_EQ(w1.tabChain(), std::vector<Widget *>{&label, &entry, &button1, &area, &drop, &label2, &button2});
+      }
+      SUBCASE("Only widgets of this window") {
+        auto w2{jwezel::ui::Window(ui_, ' '_C, Rectangle{36, 0, 50, 6}, Text{"B"}, nullptr, &plain)};
+        auto stranger{jwezel::ui::Button(w2, Rectangle{1, 1, 8, 2}, Text{"x"})};
+        CHECK_THROWS_AS(w1.tabOrder(entry, stranger), std::invalid_argument);
+        CHECK_THROWS_AS(w1.tabOrder(stranger, entry), std::invalid_argument);
+        CHECK_THROWS_AS(w1.tabOrder({&entry, &stranger}), std::invalid_argument);
+        CHECK_EQ(w1.tabChain().size(), 7);
+      }
+      SUBCASE("Widgets in boxes are where they were created") {
+        auto box{jwezel::ui::VerticalBox(w1, Rectangle{22, 6, 33, 12})};
+        auto in1{jwezel::ui::Button(box, Text{"in1"})};
+        auto in2{jwezel::ui::Button(box, Text{"in2"})};
+        CHECK_EQ(w1.tabChain().size(), 9);
+        CHECK_EQ(w1.tabChain()[7], &in1);
+        CHECK_EQ(w1.tabChain()[8], &in2);
+        w1.focus(&button2);
+        send(tab.c_str());
+        CHECK_EQ(w1.focus(), &in1);
+        send(tab.c_str());
+        CHECK_EQ(w1.focus(), &in2);
+        send(tab.c_str());
+        CHECK_EQ(w1.focus(), &entry);
+      }
+      SUBCASE("A widget that is destroyed is not in it anymore") {
+        {
+          auto temporary{jwezel::ui::Button(w1, Rectangle{22, 6, 30, 7}, Text{"tmp"})};
+          CHECK_EQ(w1.tabChain().size(), 8);
+          w1.focus(&temporary);
+        }
+        CHECK_EQ(w1.tabChain().size(), 7);
+        CHECK_EQ(w1.focus(), nullptr);
+        send(tab.c_str());
+        CHECK_EQ(w1.focus(), &entry);
+      }
+    }
+    SUBCASE("A widget that is covered completely is skipped") {
+      Window cover{&term, Rectangle{1, 9, 20, 10}, '#'_C}; // over the drop down
+      term.focus(&w1);
+      REQUIRE(drop.fragments().empty());
+      w1.focus(&area);
+      send(tab.c_str());
+      CHECK_EQ(w1.focus(), &button2);
+      send(shiftTab.c_str());
+      CHECK_EQ(w1.focus(), &area);
+    }
+    SUBCASE("A widget that is covered in part is not") {
+      Window cover{&term, Rectangle{10, 9, 20, 10}, '#'_C};
+      term.focus(&w1);
+      w1.focus(&area);
+      send(tab.c_str());
+      CHECK_EQ(w1.focus(), &drop);
+    }
+    SUBCASE("Enter and Space press the focused button") {
+      auto pressed{0};
+      button1.onPress([&pressed](const jwezel::ui::Element &, const jwezel::Event &) {++pressed; return true;});
+      send(tab.c_str());
+      REQUIRE_EQ(w1.focus(), &button1);
+      send(enter.c_str());
+      CHECK_EQ(pressed, 1);
+      send(" ");
+      CHECK_EQ(pressed, 2);
+      send("x");
+      send(escape.c_str());
+      CHECK_EQ(pressed, 2);
+    }
+  }
+
+  SUBCASE("Actions") {
+    auto send{
+      [&](const char *input) {
+        REQUIRE_NE(fputs(input, inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+      }
+    };
+    auto click{
+      [&](int x, int y) {
+        send(std::format("\x1b[<0;{};{}M", x + 1, y + 1).c_str());
+        send(std::format("\x1b[<0;{};{}m", x + 1, y + 1).c_str());
+      }
+    };
+    using jwezel::Key;
+    using jwezel::ui::Action;
+    const std::vector<Text> fruit{Text{"Apple"}, Text{"Banana"}};
+    auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 34, 12}, Text{"T"}, nullptr, &plain)};
+    auto entry{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 20, 2}, Text{"a"})};
+    auto area{jwezel::ui::TextArea(w1, Rectangle{1, 3, 20, 5}, Text{"x"})};
+    auto button{jwezel::ui::Button(w1, Rectangle{1, 6, 8, 7}, Text{"OK"})};
+    auto drop{jwezel::ui::DropDown(w1, Rectangle{1, 8, 20, 9}, fruit)};
+    std::string log;
+    Action accept{[&log] {log += "accept;";}, {Key::Enter}};
+    Action cancel{[&log] {log += "cancel;";}, {Key::Escape}};
+    SUBCASE("A hidden action of the window: a default action and a cancel action") {
+      w1.addAction(accept);
+      w1.addAction(cancel);
+      REQUIRE_EQ(w1.focus(), &entry);
+      send("\r"); // an entry that does nothing with Enter lets the window have it
+      CHECK_EQ(log, "accept;");
+      send("\x1b");
+      CHECK_EQ(log, "accept;cancel;");
+      CHECK_EQ(entry.content().data[0].size(), 1); // nothing was typed
+    }
+    SUBCASE("From any widget that does not use the key") {
+      w1.addAction(accept);
+      w1.addAction(cancel);
+      w1.focus(&button);
+      send("\x1b");
+      CHECK_EQ(log, "cancel;");
+      w1.focus(&drop);
+      send("\x1b[A"); // up in a closed drop down: nothing, and no action either
+      CHECK_EQ(log, "cancel;");
+    }
+    SUBCASE("What the widget has made use of is not for the window") {
+      w1.addAction(accept);
+      w1.addAction(cancel);
+      w1.focus(&drop);
+      send("\r"); // opens the list
+      REQUIRE(drop.isOpen());
+      send("\x1b"); // closes it
+      CHECK_FALSE(drop.isOpen());
+      CHECK_EQ(log, "");
+      send("\x1b"); // nothing is open anymore
+      CHECK_EQ(log, "cancel;");
+      w1.focus(&area);
+      send("\r"); // a new line
+      CHECK_EQ(area.content().data.size(), 2);
+      CHECK_EQ(log, "cancel;");
+    }
+    SUBCASE("An accept handler of an entry that is for it") {
+      w1.addAction(accept);
+      auto handled{true};
+      entry.onAccept([&log, &handled](const jwezel::ui::Element &, const jwezel::Event &) {log += "entry;"; return handled;});
+      send("\r");
+      CHECK_EQ(log, "entry;"); // used up
+      handled = false;
+      send("\r");
+      CHECK_EQ(log, "entry;entry;accept;"); // it did not take care of it, so the window does as well
+    }
+    SUBCASE("Actions of the widget while it has the focus") {
+      Action local{[&log] {log += "local;";}, {Key::F5}};
+      Action everywhere{[&log] {log += "window;";}, {Key::F5, Key::F6}};
+      entry.addAction(local);
+      w1.addAction(everywhere);
+      send("\x1b[15~"); // F5, in the entry
+      CHECK_EQ(log, "local;"); // the widget comes first
+      send("\x1b[17~"); // F6
+      CHECK_EQ(log, "local;window;");
+      w1.focus(&button);
+      send("\x1b[15~");
+      CHECK_EQ(log, "local;window;window;"); // not in the button
+    }
+    SUBCASE("A disabled action is passed over") {
+      Action second{[&log] {log += "second;";}, {Key::Enter}};
+      w1.addAction(accept);
+      w1.addAction(second);
+      accept.enabled(false);
+      send("\r");
+      CHECK_EQ(log, "second;");
+      second.enabled(false);
+      send("\r");
+      CHECK_EQ(log, "second;");
+    }
+    SUBCASE("The window can have Tab") {
+      Action own{[&log] {log += "tab;";}, {Key::Tab}};
+      w1.addAction(own);
+      send("\t");
+      CHECK_EQ(log, "tab;");
+      CHECK_EQ(w1.focus(), &entry); // it is not for the focus then
+      own.enabled(false);
+      send("\t");
+      CHECK_EQ(w1.focus(), &area);
+    }
+    SUBCASE("A button triggers its actions when it is pressed") {
+      Action press{[&log] {log += "press;";}};
+      button.addAction(press);
+      click(2, 6);
+      CHECK_EQ(log, "press;");
+      send("\r"); // the button has the focus now
+      CHECK_EQ(log, "press;press;"); // once for the key, not twice
+      send(" ");
+      CHECK_EQ(log, "press;press;press;");
+      press.enabled(false);
+      send("\r");
+      CHECK_EQ(log, "press;press;press;");
+    }
+    SUBCASE("A button and a key are the same action") {
+      w1.addAction(accept);
+      button.addAction(accept);
+      click(2, 6);
+      CHECK_EQ(log, "accept;");
+      w1.focus(&entry);
+      send("\r");
+      CHECK_EQ(log, "accept;accept;");
+    }
+    SUBCASE("An action that is destroyed is gone") {
+      {
+        Action temporary{[&log] {log += "temporary;";}, {Key::F5}};
+        w1.addAction(temporary);
+        send("\x1b[15~");
+        CHECK_EQ(log, "temporary;");
+      }
+      send("\x1b[15~"); // nothing there anymore, and nothing breaks
+      CHECK_EQ(log, "temporary;");
+    }
+    SUBCASE("A window that is destroyed lets go of its actions") {
+      {
+        auto w2{jwezel::ui::Window(ui_, ' '_C, Rectangle{36, 0, 50, 6}, Text{"B"}, nullptr, &plain)};
+        w2.addAction(accept);
+        CHECK_EQ(accept.trigger(), true);
+      }
+      CHECK(accept.trigger()); // fine
+      CHECK_EQ(log, "accept;accept;");
+    }
+    SUBCASE("The desktop is a window like any other") {
+      // nothing has the focus on a desktop without widgets, and the actions are there all the same
+      auto &desktop{ui_.desktop()};
+      Action quit{[&log] {log += "quit;";}, {'\x03'}};
+      desktop.addAction(quit);
+      term.focus(&term.desktop());
+      REQUIRE_EQ(term.focus(), &term.desktop());
+      send("\x03");
+      CHECK_EQ(log, "quit;");
+    }
   }
   REQUIRE_FALSE(fclose(inputRead));
   REQUIRE_FALSE(fclose(inputWrite));

@@ -17,6 +17,7 @@ colors_(colors),
 content_(content),
 title_(title)
 {
+  focusPolicy(FocusPolicy::none);
   render();
 }
 

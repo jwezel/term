@@ -30,7 +30,9 @@ bounds_{area}
 {
   layoutManaged(area == RectangleDefault);
   parent.add(*this);
-  if (auto *root{parent.root()}; !root->focus()) {
+  auto *root{parent.root()};
+  root->enroll(*this);
+  if (!root->focus()) {
     root->focus(this);
   }
 }
@@ -48,6 +50,16 @@ void Widget::move(const Rectangle &area) {
 
 auto Widget::inputWindow() -> jwezel::Window * {
   return &root()->host();
+}
+
+void Widget::focusPolicy(FocusPolicy policy) {
+  focusPolicy_ = policy;
+  auto *root{this->root()};
+  if (policy == FocusPolicy::none and root->focus() == this) {
+    root->focus(nullptr);
+  } else if ((policy == FocusPolicy::tab or policy == FocusPolicy::strong) and !root->focus()) {
+    root->focus(this);
+  }
 }
 
 auto Widget::focused() -> bool {

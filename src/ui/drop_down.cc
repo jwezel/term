@@ -10,8 +10,6 @@ namespace jwezel::ui {
 
 namespace {
 
-const Unicode Escape{0x1b};
-
 auto limit(Dim index, const std::vector<Text> &items) -> Dim {
   return items.empty()? Dim{-1}: std::clamp(index, Dim{0}, toDim(items.size() - 1));
 }
@@ -164,7 +162,7 @@ auto DropDown::handleKey(const Event &event) -> bool {
     choose(current, event);
     break;
 
-    case Escape:
+    case Key::Escape:
     close();
     break;
 

@@ -17,6 +17,7 @@ items_{items},
 highlighted_{0},
 owner_{owner}
 {
+  focusPolicy(FocusPolicy::none); // the drop down it belongs to has the focus
   highlight(highlighted);
 }
 

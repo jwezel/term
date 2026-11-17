@@ -57,6 +57,9 @@ struct TextInput: Widget {
   ///
   /// Register an accept handler (invoked on Enter when Enter is not inserted)
   ///
+  /// If no handler returns true the Enter key is not used up, so it goes on to the actions of the widget and of
+  /// the window: an entry without handlers lets the default action of its window happen.
+  ///
   /// @param[in]  handler  The handler
   ///
   /// @return     Index of the handler
@@ -90,7 +93,7 @@ struct TextInput: Widget {
 
   void moveDown();
 
-  void accept(const Event &event);
+  auto accept(const Event &event) -> bool;
 
   void scrollIntoView();
 

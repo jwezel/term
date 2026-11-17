@@ -5,6 +5,7 @@
 #include <term/surface.hh>
 #include <term/term_interface.hh>
 
+#include <algorithm>
 #include <optional>
 #include <stdexcept>
 #include <utility>
@@ -82,7 +83,62 @@ void Root::updateCaret() {
   host_.terminal()->caret(host_, focus_, focus_? focus_->caret(): std::nullopt);
 }
 
+void Root::enroll(Widget &widget) {
+  chain_.push_back(&widget);
+}
+
+void Root::step(int direction) {
+  const auto count{chain_.size()};
+  if (count == 0) {
+    return;
+  }
+  const auto current{std::ranges::find(chain_, focus_)};
+  // From nowhere, the next one is the first and the previous one the last
+  const auto start{
+    current == chain_.end()?
+      (direction > 0? count - 1: 0)
+    :
+      static_cast<std::size_t>(current - chain_.begin())
+  };
+  for (std::size_t distance = 1; distance <= count; ++distance) {
+    const auto index{(start + (direction > 0? distance: count - distance)) % count};
+    if (auto *candidate{chain_[index]}; candidate->tabbable()) {
+      if (candidate != focus_) {
+        focus(candidate);
+      }
+      return;
+    }
+  }
+}
+
+void Root::focusNext() {
+  step(1);
+}
+
+void Root::focusPrevious() {
+  step(-1);
+}
+
+void Root::tabOrder(Widget &first, Widget &second) {
+  const auto from{std::ranges::find(chain_, &second)};
+  if (std::ranges::find(chain_, &first) == chain_.end() or from == chain_.end()) {
+    throw std::invalid_argument("A widget that is not in the window cannot be put in order");
+  }
+  if (&first == &second) {
+    return;
+  }
+  chain_.erase(from);
+  chain_.insert(std::ranges::find(chain_, &first) + 1, &second);
+}
+
+void Root::tabOrder(const std::vector<Widget *> &order) {
+  for (std::size_t index = 1; index < order.size(); ++index) {
+    tabOrder(*order[index - 1], *order[index]);
+  }
+}
+
 void Root::forget(Widget &widget) {
+  std::erase(chain_, &widget);
   if (grab_ == &widget) {
     grab_ = nullptr;
   }
@@ -165,7 +221,7 @@ auto Root::handleEvent(const Event &event) -> bool {
         if (focus_ and target != focus_) {
           focus_->pressedElsewhere();
         }
-        if (target) {
+        if (target and target->clickable()) {
           focus(target);
         }
         host_.terminal()->focus(&host_);
@@ -178,8 +234,32 @@ auto Root::handleEvent(const Event &event) -> bool {
     return handled;
   }
   // Other input goes to the focused widget, unless it is completely covered
+  auto handled{false};
   if (focus_ and !focus_->fragments().empty()) {
-    return focus_->event(event);
+    handled = focus_->event(event);
+  }
+  if (!handled and event.type() == KeyEvent::type_) {
+    handled = handleKey(event);
+  }
+  return handled;
+}
+
+auto Root::handleKey(const Event &event) -> bool {
+  const auto key{dynamic_cast<KeyEvent *>(event())->key()};
+  // What the focused widget offers, then what the window offers, then what is always there
+  if (focus_ and focus_->triggerShortcut(key)) {
+    return true;
+  }
+  if (triggerShortcut(key)) {
+    return true;
+  }
+  if (key == Key::Tab) {
+    focusNext();
+    return true;
+  }
+  if (key == Key::ShiftTab) {
+    focusPrevious();
+    return true;
   }
   return false;
 }

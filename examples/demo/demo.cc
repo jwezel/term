@@ -16,6 +16,7 @@
 #include <term/keyboard.hh>
 #include <term/term.hh>
 #include <term/text.hh>
+#include <ui/action.hh>
 #include <ui/button.hh>
 #include <ui/color_style.hh>
 #include <ui/drop_down.hh>
@@ -67,6 +68,7 @@ using
   jwezel::VectorMax,
   jwezel::VectorMin,
   jwezel::bold,
+  jwezel::ui::Action,
   jwezel::ui::Button,
   jwezel::ui::ColorRoles,
   jwezel::ui::ColorStyle,
@@ -75,7 +77,6 @@ using
   jwezel::ui::LineEdit,
   jwezel::ui::TextArea,
   jwezel::ui::Ui,
-  jwezel::ui::Widget,
   jwezel::ui::Window;
 
 namespace {
@@ -138,31 +139,6 @@ auto plain(const Text &text) -> std::string {
   return result;
 }
 
-///
-/// Let Tab and Shift-Tab move the focus around a ring of widgets of a window, and Ctrl-C quit
-///
-/// TODO(feature): focus traversal belongs to the library: a window knows its widgets and their order.
-void focusRing(Window &window, const std::vector<Widget *> &ring, const std::function<void()> &quit) {
-  const auto count{ring.size()};
-  for (size_t index = 0; index < count; ++index) {
-    ring[index]->onKey(
-      [&window, ring, index, count, quit](const jwezel::ui::Element &, const Event &event) {
-        const auto key{dynamic_cast<KeyEvent *>(event())->key()};
-        if (key == Key::Tab) {
-          window.focus(ring[(index + 1) % count]);
-        } else if (key == Key::ShiftTab) {
-          window.focus(ring[(index + count - 1) % count]);
-        } else if (key == '\x03') { // Ctrl-C, the terminal is in raw mode
-          quit();
-        } else {
-          return false;
-        }
-        return true;
-      }
-    );
-  }
-}
-
 //~Dialog~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ///
@@ -186,46 +162,17 @@ struct Dialog {
   entry_{window_, Rectangle{3, 3, 43, 4}, Text{}, dialogBackground},
   hint_{window_, Rectangle{3, 5, 43, 6}, Text{"Enter accepts, Esc cancels, Tab moves on"}, dialogBackground},
   ok_{window_, Rectangle{24, 8, 30, 9}, Text{"OK"}, dialogBackground},
-  cancel_{window_, Rectangle{32, 8, 42, 9}, Text{"Cancel"}, dialogBackground}
+  cancel_{window_, Rectangle{32, 8, 42, 9}, Text{"Cancel"}, dialogBackground},
+  accept_{[this, done] {done(true, plain(entry_.content()));}, {Key::Enter}},
+  reject_{[done] {done(false, {});}, {Key::Escape, '\x03'}} // Ctrl-C comes as a key as well, the terminal is in raw mode
   {
-    const auto accept{[this, done] {done(true, plain(entry_.content()));}};
-    const auto cancel{[done] {done(false, {});}};
-    entry_.onAccept([accept](const jwezel::ui::Element &, const Event &) {accept(); return true;});
-    ok_.onPress([accept](const jwezel::ui::Element &, const Event &) {accept(); return true;});
-    cancel_.onPress([cancel](const jwezel::ui::Element &, const Event &) {cancel(); return true;});
-    // Enter presses a button, Escape cancels from everywhere.
-    // TODO(feature): Button should react to Enter itself, and a window should have a default and a cancel action.
-    ok_.onKey(
-      [accept](const jwezel::ui::Element &, const Event &event) {
-        if (dynamic_cast<KeyEvent *>(event())->key() != Key::Enter) {
-          return false;
-        }
-        accept();
-        return true;
-      }
-    );
-    cancel_.onKey(
-      [cancel](const jwezel::ui::Element &, const Event &event) {
-        if (dynamic_cast<KeyEvent *>(event())->key() != Key::Enter) {
-          return false;
-        }
-        cancel();
-        return true;
-      }
-    );
-    for (auto *widget: std::vector<Widget *>{&entry_, &ok_, &cancel_}) {
-      widget->onKey(
-        [cancel](const jwezel::ui::Element &, const Event &event) {
-          if (dynamic_cast<KeyEvent *>(event())->key() != '\x1b') {
-            return false;
-          }
-          cancel();
-          return true;
-        }
-      );
-    }
-    focusRing(window_, {&entry_, &ok_, &cancel_}, [done] {done(false, {});});
-    window_.focus(&entry_); // the first widget that is created has the focus, but that is the prompt
+    // Enter and Escape are actions of the whole window. Nothing has to be said about them in the widgets: an entry
+    // that has no use for Enter leaves it to the window, and the buttons trigger the very same actions when they
+    // are pressed. The order of the focus is the order in which the widgets were created.
+    window_.addAction(accept_);
+    window_.addAction(reject_);
+    ok_.addAction(accept_);
+    cancel_.addAction(reject_);
   }
 
   Dialog(const Dialog &) = delete;
@@ -247,6 +194,8 @@ struct Dialog {
   Label hint_;
   Button ok_;
   Button cancel_;
+  Action accept_; // the default action
+  Action reject_; // the cancel action
 };
 
 //~Demo~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -271,7 +220,8 @@ struct Demo {
   },
   eventsLabel_{window_, Rectangle{2, 11, 62, 12}, Text{"Events"}, mainBackground},
   events_{window_, Rectangle{2, 12, 62, 17}, Text{}, mainBackground},
-  hint_{window_, Rectangle{2, 18, 62, 19}, Text{"Tab: next  Space: menu  Esc: close dialog  Ctrl-C: quit"}, mainBackground}
+  hint_{window_, Rectangle{2, 18, 62, 19}, Text{"Tab: next  Space: menu  Esc: close dialog  Ctrl-C: quit"}, mainBackground},
+  quit_{[this] {done_ = true;}, {'\x03'}} // Ctrl-C comes as a key, the terminal is in raw mode
   {
     // The menu is an ordinary drop down. Choosing an entry emits a select event; the event itself does not say
     // which entry, the handler has to ask the widget.
@@ -282,8 +232,7 @@ struct Demo {
         return true;
       }
     );
-    focusRing(window_, {&menu_, &notes_}, [this] {done_ = true;});
-    window_.focus(&menu_);
+    window_.addAction(quit_); // Tab and Shift-Tab go from the menu to the notes and back, without anybody saying so
     log("started");
   }
 
@@ -384,6 +333,7 @@ struct Demo {
   Label eventsLabel_;
   Label events_;
   Label hint_;
+  Action quit_;
   std::deque<std::string> lines_;
   bool colored_{true};
   bool done_{false};

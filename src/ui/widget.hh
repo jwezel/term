@@ -1,5 +1,6 @@
 #pragma once
 
+#include "action.hh"
 #include "color_style.hh"
 #include "ui/element.hh"
 #include "ui_style.hh"
@@ -11,7 +12,24 @@
 
 namespace jwezel::ui {
 
-struct Widget: TextElement, ui::Element
+///
+/// How a widget can get the focus
+///
+/// The focus policy says whether a widget is a stop on the way when the focus is moved with Tab and Shift-Tab, and
+/// whether a click on the widget gives it the focus. Widgets that do nothing, like labels, have none; the others
+/// have both, which is the default.
+enum class FocusPolicy: u1 {
+  none,   ///< The widget never gets the focus
+  click,  ///< Only a click on the widget gives it the focus
+  tab,    ///< Only Tab and Shift-Tab give it the focus
+  strong  ///< Both
+};
+
+///
+/// Base class of all widgets
+///
+/// A widget can host actions, which have their shortcuts work while the widget has the focus.
+struct Widget: TextElement, ui::Element, ActionHost
 {
   explicit Widget(const Rectangle &area, const Char &background, Container &parent);
 
@@ -68,6 +86,27 @@ struct Widget: TextElement, ui::Element
   /// the root has the focus
   [[nodiscard]] auto focused() -> bool;
 
+  [[nodiscard]] auto focusPolicy() const -> FocusPolicy {return focusPolicy_;}
+
+  ///
+  /// Set the focus policy
+  ///
+  /// A widget that has the focus and cannot have it anymore loses it. A widget that can get the focus gets it if
+  /// there is no focused widget in its window.
+  void focusPolicy(FocusPolicy policy);
+
+  ///
+  /// Whether the focus can be moved to the widget with Tab: its policy says so, and it is not covered completely
+  [[nodiscard]] auto tabbable() const -> bool {
+    return (focusPolicy_ == FocusPolicy::tab or focusPolicy_ == FocusPolicy::strong) and !fragments().empty();
+  }
+
+  ///
+  /// Whether a click on the widget gives it the focus
+  [[nodiscard]] auto clickable() const -> bool {
+    return focusPolicy_ == FocusPolicy::click or focusPolicy_ == FocusPolicy::strong;
+  }
+
   ///
   /// A mouse button went down somewhere else than on this widget, while it has the focus
   virtual void pressedElsewhere() {}
@@ -112,6 +151,7 @@ struct Widget: TextElement, ui::Element
 
   private:
   Rectangle bounds_; // area relative to the root
+  FocusPolicy focusPolicy_{FocusPolicy::strong};
 };
 
 } // namespace jwezel::ui

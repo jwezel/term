@@ -10,6 +10,7 @@ Label{parent, area, text, background}
 {
   render();
   registerHandlers();
+  focusPolicy(FocusPolicy::strong); // unlike a label, a button gets the focus
 }
 
 Button::Button(Container &parent, const Text &text, const Char &background):
@@ -17,12 +18,13 @@ Label{parent, text, background}
 {
   render();
   registerHandlers();
+  focusPolicy(FocusPolicy::strong);
 }
 
 void Button::registerHandlers() {
   onKey(
     [this](const ui::Element &, const Event &event) {
-      if (dynamic_cast<KeyEvent *>(event())->key() == ' ') {
+      if (const auto key{dynamic_cast<KeyEvent *>(event())->key()}; key == ' ' or key == Key::Enter) {
         press(event);
         return true;
       }
@@ -80,6 +82,7 @@ void Button::press(const Event &event) {
   for (const auto &handler : pressHandlers_) {
     handler(*this, event);
   }
+  triggerActions();
 }
 
 auto Button::onPress(const Handler &handler) -> int {

@@ -13,7 +13,7 @@ namespace jwezel::ui {
 /// clipped to the widget area. When the widget is moved (e.g. positioned by
 /// a Box), the text is rendered again into the new area. The colors of the
 /// role `label` are applied to the whole widget, and what the text says for
-/// itself comes on top of that.
+/// itself comes on top of that. A label does nothing, so it does not get the focus.
 struct Label: Widget {
 
   ///

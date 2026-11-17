@@ -75,11 +75,10 @@ auto TextInput::handleKey(const Event &event) -> bool {
     break;
 
     case Key::Enter:
-    if (acceptsEnter()) {
-      insertNewline();
-    } else {
-      accept(event);
+    if (!acceptsEnter()) {
+      return accept(event); // nothing has changed; and if nobody is interested, the window may be
     }
+    insertNewline();
     break;
 
     default:
@@ -166,10 +165,12 @@ void TextInput::moveDown() {
   }
 }
 
-void TextInput::accept(const Event &event) {
+auto TextInput::accept(const Event &event) -> bool {
+  auto handled{false};
   for (const auto &handler : acceptHandlers_) {
-    handler(*this, event);
+    handled = handler(*this, event) or handled;
   }
+  return handled;
 }
 
 auto TextInput::onAccept(const Handler &handler) -> int {

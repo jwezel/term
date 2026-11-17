@@ -6,6 +6,7 @@ Label::Label(Container &parent, const Rectangle &area, const Text &text, const C
 Widget{area, background, parent},
 text_{text}
 {
+  focusPolicy(FocusPolicy::none);
   render();
 }
 
@@ -13,6 +14,7 @@ Label::Label(Container &parent, const Text &text, const Char &background):
 Widget{RectangleDefault, background, parent},
 text_{text}
 {
+  focusPolicy(FocusPolicy::none);
   render();
 }
 

@@ -144,7 +144,11 @@ enum Key: Unicode {
   AltF10,
   AltF11,
   AltF12,
-  Mouse
+  Mouse,
+  ///
+  /// The Escape key, which arrives as the control character (it has to stay at the end: it is not numbered
+  /// like the others)
+  Escape = 0x1b
 };
 
 enum class EventType: u1 {
