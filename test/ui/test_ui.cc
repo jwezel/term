@@ -401,7 +401,7 @@ TEST_CASE("UI Window") {
       }
     }
     SUBCASE("Text input") {
-      auto input{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, Text{"Hello"})};
+      auto input{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, "Hello")};
       auto test2{test};
       test2.patch(Text{"Hello"}, Vector{1, 1});
       CHECK_EQ(term.display().text(), test2);
@@ -413,7 +413,7 @@ TEST_CASE("UI Window") {
         auto test3{test};
         test3.patch(Text{"HelloX"}, Vector{1, 1});
         CHECK_EQ(term.display().text(), test3);
-        CHECK_EQ(input.content().data[0][5].rune, 'X');
+        CHECK_EQ(input.lines()[0][5], 'X');
         CHECK_EQ(term.display().caret(), Vector{7, 1});
       }
       SUBCASE("Arrow left and type") {
@@ -426,7 +426,7 @@ TEST_CASE("UI Window") {
         auto test3{test};
         test3.patch(Text{"HeXllo"}, Vector{1, 1});
         CHECK_EQ(term.display().text(), test3);
-        CHECK_EQ(input.content().data[0][2].rune, 'X');
+        CHECK_EQ(input.lines()[0][2], 'X');
         CHECK_EQ(term.display().caret(), Vector{4, 1});
       }
       SUBCASE("Backspace") {
@@ -449,11 +449,11 @@ TEST_CASE("UI Window") {
         );
         term.runEvent();
         CHECK(called);
-        CHECK_EQ(input.content().data.size(), 1);
+        CHECK_EQ(input.lines().size(), 1);
       }
     }
     SUBCASE("Scrolling input") {
-      auto input{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 7, 2}, Text{"HelloWorld"})};
+      auto input{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 7, 2}, "HelloWorld")};
       auto test2{test};
       test2.patch(Text{"World"}, Vector{1, 1});
       CHECK_EQ(term.display().text(), test2);
@@ -465,7 +465,7 @@ TEST_CASE("UI Window") {
       CHECK_EQ(term.display().text(), test3);
     }
     SUBCASE("Text area") {
-      auto area{jwezel::ui::TextArea(w1, Rectangle{1, 1, 19, 4}, Text{"Hello"})};
+      auto area{jwezel::ui::TextArea(w1, Rectangle{1, 1, 19, 4}, "Hello")};
       auto test2{test};
       test2.patch(Text{"Hello"}, Vector{1, 1});
       CHECK_EQ(term.display().text(), test2);
@@ -482,20 +482,20 @@ TEST_CASE("UI Window") {
         test3.patch(Text{"Hello"}, Vector{1, 1});
         test3.patch(Text{"World"}, Vector{1, 2});
         CHECK_EQ(term.display().text(), test3);
-        CHECK_EQ(area.content().data.size(), 2);
+        CHECK_EQ(area.lines().size(), 2);
       }
       SUBCASE("Backspace joins lines") {
         REQUIRE_NE(fputs("\x0d\x7f", inputWrite), EOF);
         REQUIRE_FALSE(fflush(inputWrite));
         term.runEvent();
         term.runEvent();
-        CHECK_EQ(area.content().data.size(), 1);
-        CHECK_EQ(area.content().data[0].size(), 5);
+        CHECK_EQ(area.lines().size(), 1);
+        CHECK_EQ(area.lines()[0].size(), 5);
       }
     }
     SUBCASE("Click to focus") {
-      auto input1{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, Text{"One"})};
-      auto input2{jwezel::ui::LineEdit(w1, Rectangle{1, 3, 19, 4}, Text{"Two"})};
+      auto input1{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, "One")};
+      auto input2{jwezel::ui::LineEdit(w1, Rectangle{1, 3, 19, 4}, "Two")};
       REQUIRE_NE(fputs("\x1b[<0;3;4M", inputWrite), EOF);
       REQUIRE_FALSE(fflush(inputWrite));
       term.runEvent();
@@ -506,8 +506,8 @@ TEST_CASE("UI Window") {
       test2.patch(Text{"One"}, Vector{1, 1});
       test2.patch(Text{"TwoX"}, Vector{1, 3});
       CHECK_EQ(term.display().text(), test2);
-      CHECK_EQ(input2.content().data[0][3].rune, 'X');
-      CHECK_EQ(input1.content().data[0].size(), 3);
+      CHECK_EQ(input2.lines()[0][3], 'X');
+      CHECK_EQ(input1.lines()[0].size(), 3);
       CHECK_EQ(term.display().caret(), Vector{5, 3});
     }
     CHECK_EQ(term.display().text(), test);
@@ -519,8 +519,8 @@ TEST_CASE("UI Window") {
     auto test{Text{' '_C, Vector{20, 12}}};
     test.box();
     test.patch(Text{"Title"}, Vector{1, 0});
-    auto input1{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, Text{"One"})};
-    auto input2{jwezel::ui::LineEdit(w1, Rectangle{1, 3, 19, 4}, Text{"Two"})};
+    auto input1{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, "One")};
+    auto input2{jwezel::ui::LineEdit(w1, Rectangle{1, 3, 19, 4}, "Two")};
     auto button{jwezel::ui::Button(w1, Rectangle{1, 5, 19, 6}, Text{"Ok"})};
     test.patch(Text{"One"}, Vector{1, 1});
     test.patch(Text{"Two"}, Vector{1, 3});
@@ -537,8 +537,8 @@ TEST_CASE("UI Window") {
       term.runEvent();
       test.patch(Text{"TwoX"}, Vector{1, 3});
       CHECK_EQ(term.display().text()[placement], test);
-      CHECK_EQ(input1.content().data[0].size(), 3);
-      CHECK_EQ(input2.content().data[0].size(), 4);
+      CHECK_EQ(input1.lines()[0].size(), 3);
+      CHECK_EQ(input2.lines()[0].size(), 4);
       CHECK_EQ(term.display().caret(), Vector{9, 6});
       std::ifstream written{outputFilename};
       const std::string output_{std::istreambuf_iterator<char>{written}, {}};
@@ -570,7 +570,7 @@ TEST_CASE("UI Window") {
       REQUIRE_NE(fputs("X", inputWrite), EOF);
       REQUIRE_FALSE(fflush(inputWrite));
       term.runEvent();
-      CHECK_EQ(input1.content().data[0].size(), 4);
+      CHECK_EQ(input1.lines()[0].size(), 4);
     }
     auto send{
       [&](const char *input) {
@@ -582,8 +582,8 @@ TEST_CASE("UI Window") {
     SUBCASE("Click on frame is ignored") {
       send("\x1b[<0;5;4M"); // display (4, 3): top left corner of the window frame
       send("X");
-      CHECK_EQ(input1.content().data[0].size(), 4); // focus unchanged
-      CHECK_EQ(input2.content().data[0].size(), 3);
+      CHECK_EQ(input1.lines()[0].size(), 4); // focus unchanged
+      CHECK_EQ(input2.lines()[0].size(), 3);
     }
     SUBCASE("Covered widget") {
       // Display areas: input1 {5, 4, 23, 5}, input2 {5, 6, 23, 7}
@@ -593,11 +593,11 @@ TEST_CASE("UI Window") {
           term.focus(&w1);
           CHECK_FALSE(term.display().caret()); // the caret is hidden as well
           send("X");
-          CHECK_EQ(input1.content().data[0].size(), 3);
+          CHECK_EQ(input1.lines()[0].size(), 3);
         }
         CHECK_EQ(term.display().caret(), Vector{8, 4}); // uncovered: caret is back
         send("X");
-        CHECK_EQ(input1.content().data[0].size(), 4);
+        CHECK_EQ(input1.lines()[0].size(), 4);
         CHECK_EQ(term.display().caret(), Vector{9, 4});
       }
       SUBCASE("Partly covered still gets keyboard input") {
@@ -605,7 +605,7 @@ TEST_CASE("UI Window") {
         term.focus(&w1);
         CHECK_EQ(term.display().caret(), Vector{8, 4}); // caret cell itself is visible
         send("X");
-        CHECK_EQ(input1.content().data[0].size(), 4);
+        CHECK_EQ(input1.lines()[0].size(), 4);
         CHECK_EQ(term.display().caret(), Vector{9, 4});
       }
       SUBCASE("Caret cell covered") {
@@ -613,7 +613,7 @@ TEST_CASE("UI Window") {
         term.focus(&w1);
         CHECK_FALSE(term.display().caret());
         send("X"); // the widget is still partly visible
-        CHECK_EQ(input1.content().data[0].size(), 4);
+        CHECK_EQ(input1.lines()[0].size(), 4);
         CHECK_FALSE(term.display().caret());
       }
       SUBCASE("Click on covered widget is ignored") {
@@ -621,21 +621,21 @@ TEST_CASE("UI Window") {
         term.focus(&w1);
         send("\x1b[<0;7;7M"); // display (6, 6): input2, covered
         send("X");
-        CHECK_EQ(input1.content().data[0].size(), 4); // focus did not move
-        CHECK_EQ(input2.content().data[0].size(), 3);
+        CHECK_EQ(input1.lines()[0].size(), 4); // focus did not move
+        CHECK_EQ(input2.lines()[0].size(), 3);
       }
       SUBCASE("Click on uncovered part of a widget still focuses it") {
         Window cover{&term, Rectangle{15, 6, 23, 7}, '#'_C};
         term.focus(&w1);
         send("\x1b[<0;7;7M"); // display (6, 6): input2, visible
         send("X");
-        CHECK_EQ(input2.content().data[0].size(), 4);
-        CHECK_EQ(input1.content().data[0].size(), 3);
+        CHECK_EQ(input2.lines()[0].size(), 4);
+        CHECK_EQ(input1.lines()[0].size(), 3);
       }
     }
     SUBCASE("Two windows") {
       auto w2{jwezel::ui::Window(ui_, ' '_C, Rectangle{26, 3, 40, 10}, Text{"Other"})};
-      auto other{jwezel::ui::LineEdit(w2, Rectangle{1, 1, 13, 2}, Text{"AB"})};
+      auto other{jwezel::ui::LineEdit(w2, Rectangle{1, 1, 13, 2}, "AB")};
       CHECK_EQ(term.focus(), &w2); // the newest window has the focus
       CHECK_EQ(term.display().caret(), Vector{29, 4});
       SUBCASE("Click on widget of another window focuses it") {
@@ -644,8 +644,8 @@ TEST_CASE("UI Window") {
         CHECK_EQ(w1.focus(), &input2);
         CHECK_EQ(term.display().caret(), Vector{8, 6}); // w2's caret is gone, w1's is shown
         send("X");
-        CHECK_EQ(input2.content().data[0].size(), 4);
-        CHECK_EQ(other.content().data[0].size(), 2);
+        CHECK_EQ(input2.lines()[0].size(), 4);
+        CHECK_EQ(other.lines()[0].size(), 2);
         CHECK_EQ(term.display().caret(), Vector{9, 6});
       }
       SUBCASE("Click on frame of another window focuses it") {
@@ -654,8 +654,8 @@ TEST_CASE("UI Window") {
         CHECK_EQ(w1.focus(), &input1); // the focused widget of w1 is unchanged
         CHECK_EQ(term.display().caret(), Vector{8, 4});
         send("X");
-        CHECK_EQ(input1.content().data[0].size(), 4);
-        CHECK_EQ(other.content().data[0].size(), 2);
+        CHECK_EQ(input1.lines()[0].size(), 4);
+        CHECK_EQ(other.lines()[0].size(), 2);
       }
       SUBCASE("Click back") {
         send("\x1b[<0;7;7M");
@@ -664,16 +664,16 @@ TEST_CASE("UI Window") {
         CHECK_EQ(term.focus(), &w2);
         CHECK_EQ(term.display().caret(), Vector{29, 4});
         send("X");
-        CHECK_EQ(other.content().data[0].size(), 3);
-        CHECK_EQ(input2.content().data[0].size(), 3);
+        CHECK_EQ(other.lines()[0].size(), 3);
+        CHECK_EQ(input2.lines()[0].size(), 3);
       }
       SUBCASE("Click on desktop focuses it") {
         send("\x1b[<0;31;13M"); // display (30, 12): bare desktop
         CHECK_EQ(term.focus(), &term.desktop());
         CHECK_FALSE(term.display().caret()); // nothing on the desktop has a caret
         send("X"); // the desktop has no widget to type into
-        CHECK_EQ(other.content().data[0].size(), 2);
-        CHECK_EQ(input1.content().data[0].size(), 3);
+        CHECK_EQ(other.lines()[0].size(), 2);
+        CHECK_EQ(input1.lines()[0].size(), 3);
         send("\x1b[<0;30;5M"); // and clicking another window takes the focus away from it
         CHECK_EQ(term.focus(), &w2);
         CHECK_EQ(term.display().caret(), Vector{29, 4});
@@ -763,11 +763,11 @@ TEST_CASE("UI Window") {
       }
       CHECK_EQ(term.focus(), &term.desktop());
       send("X"); // goes nowhere, but must not crash
-      CHECK_EQ(input1.content().data[0].size(), 3);
+      CHECK_EQ(input1.lines()[0].size(), 3);
       send("\x1b[<0;7;7M"); // click on input2 of w1 gets the focus back
       CHECK_EQ(term.focus(), &w1);
       send("X");
-      CHECK_EQ(input2.content().data[0].size(), 4);
+      CHECK_EQ(input2.lines()[0].size(), 4);
     }
     SUBCASE("Move window") {
       const Rectangle moved{10, 6, 30, 18};
@@ -780,7 +780,7 @@ TEST_CASE("UI Window") {
       REQUIRE_NE(fputs("X", inputWrite), EOF);
       REQUIRE_FALSE(fflush(inputWrite));
       term.runEvent();
-      CHECK_EQ(input2.content().data[0].size(), 4);
+      CHECK_EQ(input2.lines()[0].size(), 4);
       CHECK_EQ(term.display().caret(), Vector{15, 9});
     }
     SUBCASE("Move window carries caret") {
@@ -792,7 +792,7 @@ TEST_CASE("UI Window") {
   SUBCASE("Desktop") {
     auto &desktop{ui_.desktop()};
     desktop.colors(&plain);
-    auto input{jwezel::ui::LineEdit(desktop, Rectangle{2, 1, 12, 2}, Text{"Hi"})};
+    auto input{jwezel::ui::LineEdit(desktop, Rectangle{2, 1, 12, 2}, "Hi")};
     auto button{jwezel::ui::Button(desktop, Rectangle{2, 3, 12, 4}, Text{"Go"})};
     int clicks{0};
     button.onPress(
@@ -815,7 +815,7 @@ TEST_CASE("UI Window") {
     CHECK_EQ(term.display().text()[Rectangle{2, 3, 8, 4}], Text{"[ Go ]"});
     SUBCASE("Type") {
       send("X");
-      CHECK_EQ(input.content().data[0].size(), 3);
+      CHECK_EQ(input.lines()[0].size(), 3);
       CHECK_EQ(term.display().text()[Rectangle{2, 1, 5, 2}], Text{"HiX"});
       CHECK_EQ(term.display().caret(), Vector{5, 1});
     }
@@ -836,41 +836,41 @@ TEST_CASE("UI Window") {
       CHECK_EQ(desktop.focus(), &input);
       CHECK_EQ(term.display().caret(), Vector{4, 1});
       send("X");
-      CHECK_EQ(input.content().data[0].size(), 3);
+      CHECK_EQ(input.lines()[0].size(), 3);
     }
     SUBCASE("Box") {
       auto box{jwezel::ui::VerticalBox(desktop, Rectangle{0, 5, 10, 9})};
-      auto top{jwezel::ui::LineEdit(box, Text{"A"})};
-      auto bottom{jwezel::ui::LineEdit(box, Text{"B"})};
+      auto top{jwezel::ui::LineEdit(box, "A")};
+      auto bottom{jwezel::ui::LineEdit(box, "B")};
       CHECK_EQ(top.bounds(), Rectangle{0, 5, 10, 7});
       CHECK_EQ(bottom.bounds(), Rectangle{0, 7, 10, 9});
       CHECK_EQ(term.display().text()[Rectangle{0, 7, 1, 8}], Text{"B"});
       send("\x1b[<0;3;8M"); // display (2, 7): bottom
       CHECK_EQ(desktop.focus(), &bottom);
       send("X");
-      CHECK_EQ(bottom.content().data[0].size(), 2);
-      CHECK_EQ(top.content().data[0].size(), 1);
+      CHECK_EQ(bottom.lines()[0].size(), 2);
+      CHECK_EQ(top.lines()[0].size(), 1);
       CHECK_EQ(term.display().caret(), Vector{2, 7});
     }
     SUBCASE("Window over the desktop") {
       auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{6, 0, 20, 6}, Text{"Title"})};
-      auto inner{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 13, 2}, Text{"In"})};
+      auto inner{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 13, 2}, "In")};
       CHECK_EQ(term.focus(), &w1);
       CHECK_EQ(term.display().caret(), Vector{9, 1});
       send("X");
-      CHECK_EQ(inner.content().data[0].size(), 3);
-      CHECK_EQ(input.content().data[0].size(), 2);
+      CHECK_EQ(inner.lines()[0].size(), 3);
+      CHECK_EQ(input.lines()[0].size(), 2);
       send("\x1b[<0;4;2M"); // display (3, 1): the input on the desktop, not covered by the window
       send("\x1b[<0;4;2m");
       CHECK_EQ(term.focus(), &term.desktop());
       CHECK_EQ(term.display().caret(), Vector{4, 1});
       send("Y");
-      CHECK_EQ(input.content().data[0].size(), 3);
-      CHECK_EQ(inner.content().data[0].size(), 3);
+      CHECK_EQ(input.lines()[0].size(), 3);
+      CHECK_EQ(inner.lines()[0].size(), 3);
     }
     SUBCASE("Widgets leave when destroyed") {
       {
-        auto extra{jwezel::ui::LineEdit(desktop, Rectangle{2, 5, 12, 6}, Text{"Tmp"})};
+        auto extra{jwezel::ui::LineEdit(desktop, Rectangle{2, 5, 12, 6}, "Tmp")};
         send("\x1b[<0;4;6M"); // display (3, 5)
         send("\x1b[<0;4;6m");
         CHECK_EQ(desktop.focus(), &extra);
@@ -883,7 +883,7 @@ TEST_CASE("UI Window") {
       send("X"); // nowhere to go, must not crash
       send("\x1b[<0;4;6M"); // nor a click where the widget was
       send("\x1b[<0;4;6m");
-      CHECK_EQ(input.content().data[0].size(), 2);
+      CHECK_EQ(input.lines()[0].size(), 2);
     }
   }
 
@@ -892,8 +892,8 @@ TEST_CASE("UI Window") {
     auto &desktop{ui_.desktop()};
     CHECK_EQ(desktop.bounds(), Rectangle{0, 0, 20, 12});
     auto box{jwezel::ui::VerticalBox(desktop, jwezel::RectangleDefault)};
-    auto top{jwezel::ui::LineEdit(box, Text{"A"})};
-    auto bottom{jwezel::ui::LineEdit(box, Text{"B"})};
+    auto top{jwezel::ui::LineEdit(box, "A")};
+    auto bottom{jwezel::ui::LineEdit(box, "B")};
     auto fixed{jwezel::ui::Label(desktop, Rectangle{2, 2, 6, 3}, Text{"ok"})};
     CHECK_EQ(box.bounds(), Rectangle{0, 0, 20, 12});
     CHECK_EQ(top.bounds(), Rectangle{0, 0, 20, 6});
@@ -918,7 +918,7 @@ TEST_CASE("UI Window") {
   SUBCASE("Window resize") {
     auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{2, 1, 22, 13}, Text{"T"})};
     auto box{jwezel::ui::VerticalBox(w1, jwezel::RectangleDefault)};
-    auto input{jwezel::ui::LineEdit(box, Text{"Hi"})};
+    auto input{jwezel::ui::LineEdit(box, "Hi")};
     auto fixed{jwezel::ui::Label(w1, Rectangle{1, 1, 3, 2}, Text{"ok"})};
     auto framed{
       [](const Vector &size) {
@@ -976,8 +976,8 @@ TEST_CASE("UI Window") {
     auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 20, 12}, Text{"Title"})};
     const std::vector<Text> fruit{Text{"Apple"}, Text{"Banana"}, Text{"Cherry"}};
     auto drop{jwezel::ui::DropDown(w1, Rectangle{1, 1, 19, 2}, fruit, 1)};
-    auto field{jwezel::ui::LineEdit(w1, Rectangle{1, 3, 19, 4}, Text{"x"})};
-    auto field2{jwezel::ui::LineEdit(w1, Rectangle{1, 6, 19, 7}, Text{"y"})};
+    auto field{jwezel::ui::LineEdit(w1, Rectangle{1, 3, 19, 4}, "x")};
+    auto field2{jwezel::ui::LineEdit(w1, Rectangle{1, 6, 19, 7}, "y")};
     int chosen{0};
     drop.onSelect(
       [&chosen](const jwezel::ui::Element &, const jwezel::Event &) {
@@ -1064,7 +1064,7 @@ TEST_CASE("UI Window") {
       SUBCASE("Other keys are not for the list") {
         send("X");
         CHECK(drop.isOpen());
-        CHECK_EQ(field.content().data[0].size(), 1);
+        CHECK_EQ(field.lines()[0].size(), 1);
       }
       SUBCASE("Choosing the selected item is a choice too") {
         send("\x0d");
@@ -1080,7 +1080,7 @@ TEST_CASE("UI Window") {
       send("X");
       send("\x1b[A");
       CHECK_FALSE(drop.isOpen());
-      CHECK_EQ(field.content().data[0].size(), 1);
+      CHECK_EQ(field.lines()[0].size(), 1);
     }
     SUBCASE("Mouse") {
       SUBCASE("Click opens, click on an item chooses") {
@@ -1095,7 +1095,7 @@ TEST_CASE("UI Window") {
         send("\x1b[<0;4;5m"); // the release goes nowhere
         CHECK_EQ(chosen, 1);
         CHECK_EQ(row(1), Text{closed("Cherry")});
-        CHECK_EQ(field.content().data[0].size(), 1); // nothing has been typed into the field
+        CHECK_EQ(field.lines()[0].size(), 1); // nothing has been typed into the field
       }
       SUBCASE("Clicking the drop down again closes") {
         send("\x1b[<0;4;2M");
@@ -1169,7 +1169,7 @@ TEST_CASE("UI Window") {
         CHECK_EQ(drop.selected(), 1);
         CHECK_EQ(chosen, 0);
         send("Z");
-        CHECK_EQ(field2.content().data[0].size(), 2);
+        CHECK_EQ(field2.lines()[0].size(), 2);
       }
     }
     SUBCASE("Scrolling") {
@@ -1444,7 +1444,7 @@ TEST_CASE("UI Window") {
       auto w1{jwezel::ui::Window(ui_, ' '_C, area1, Text{"T"}, nullptr, &widgetColors)};
       auto button1{jwezel::ui::Button(w1, Rectangle{1, 1, 9, 2}, Text{"OK"})};
       auto button2{jwezel::ui::Button(w1, Rectangle{1, 3, 9, 4}, Text{"No"})};
-      auto input{jwezel::ui::LineEdit(w1, Rectangle{1, 5, 19, 6}, Text{"ab"})};
+      auto input{jwezel::ui::LineEdit(w1, Rectangle{1, 5, 19, 6}, "ab")};
       auto label{jwezel::ui::Label(w1, Rectangle{1, 7, 10, 8}, Text{"Hi"})};
       auto drop{jwezel::ui::DropDown(w1, Rectangle{1, 9, 19, 10}, fruit)};
       REQUIRE_EQ(w1.focus(), &button1);
@@ -1652,8 +1652,8 @@ TEST_CASE("UI Window") {
       [&](jwezel::Dim x, jwezel::Dim y) {return term.display().text().data[static_cast<size_t>(y)][static_cast<size_t>(x)];}
     };
     auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 24, 12}, Text{"T"})}; // the default colors
-    auto input1{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, Text{"One"})};
-    auto input2{jwezel::ui::TextArea(w1, Rectangle{1, 3, 19, 5}, Text{"Two"})};
+    auto input1{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, "One")};
+    auto input2{jwezel::ui::TextArea(w1, Rectangle{1, 3, 19, 5}, "Two")};
     auto button{jwezel::ui::Button(w1, Rectangle{1, 6, 9, 7}, Text{"OK"})};
     auto drop{jwezel::ui::DropDown(w1, Rectangle{1, 8, 19, 9}, std::vector<Text>{Text{"Apple"}})};
     REQUIRE_EQ(w1.focus(), &input1);
@@ -1744,8 +1744,8 @@ TEST_CASE("UI Window") {
     // The tint is mixed into the background: it makes it lighter, it does not replace it
     const Char blue{' ', jwezel::RgbNone, jwezel::RgbBlue5};
     auto w1{jwezel::ui::Window(ui_, blue, Rectangle{0, 0, 24, 8}, Text{"T"})};
-    auto input1{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, Text{"One"}, blue)};
-    auto input2{jwezel::ui::LineEdit(w1, Rectangle{1, 3, 19, 4}, Text{"Two"}, blue)};
+    auto input1{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, "One", blue)};
+    auto input2{jwezel::ui::LineEdit(w1, Rectangle{1, 3, 19, 4}, "Two", blue)};
     CHECK_EQ(cell(18, 1).attributes.bg, jwezel::Rgb(0.25, 0.25, 0.5)); // between blue and gray
     CHECK_EQ(cell(18, 3).attributes.bg, jwezel::RgbBlue5);
     CHECK_EQ(cell(5, 5).attributes.bg, jwezel::RgbBlue5); // the window
@@ -1769,9 +1769,9 @@ TEST_CASE("UI Window") {
     const std::vector<Text> fruit{Text{"Apple"}, Text{"Banana"}};
     auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 34, 14}, Text{"T"}, nullptr, &plain)};
     auto label{jwezel::ui::Label(w1, Rectangle{1, 1, 10, 2}, Text{"Name"})};
-    auto entry{jwezel::ui::LineEdit(w1, Rectangle{1, 2, 20, 3}, Text{"a"})};
+    auto entry{jwezel::ui::LineEdit(w1, Rectangle{1, 2, 20, 3}, "a")};
     auto button1{jwezel::ui::Button(w1, Rectangle{1, 4, 8, 5}, Text{"OK"})};
-    auto area{jwezel::ui::TextArea(w1, Rectangle{1, 6, 20, 8}, Text{"x"})};
+    auto area{jwezel::ui::TextArea(w1, Rectangle{1, 6, 20, 8}, "x")};
     auto drop{jwezel::ui::DropDown(w1, Rectangle{1, 9, 20, 10}, fruit)};
     auto label2{jwezel::ui::Label(w1, Rectangle{22, 1, 30, 2}, Text{"Hi"})};
     auto button2{jwezel::ui::Button(w1, Rectangle{22, 4, 30, 5}, Text{"No"})};
@@ -1801,8 +1801,8 @@ TEST_CASE("UI Window") {
       REQUIRE_EQ(w1.focus(), &area);
       send(tab.c_str());
       CHECK_EQ(w1.focus(), &drop);
-      CHECK_EQ(area.content().data[0].size(), 1); // no Tab character was typed
-      CHECK_EQ(entry.content().data[0].size(), 1);
+      CHECK_EQ(area.lines()[0].size(), 1); // no Tab character was typed
+      CHECK_EQ(entry.lines()[0].size(), 1);
     }
     SUBCASE("Moving the focus closes the list of a drop down") {
       click(2, 9);
@@ -1991,8 +1991,8 @@ TEST_CASE("UI Window") {
     using jwezel::ui::Action;
     const std::vector<Text> fruit{Text{"Apple"}, Text{"Banana"}};
     auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 34, 12}, Text{"T"}, nullptr, &plain)};
-    auto entry{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 20, 2}, Text{"a"})};
-    auto area{jwezel::ui::TextArea(w1, Rectangle{1, 3, 20, 5}, Text{"x"})};
+    auto entry{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 20, 2}, "a")};
+    auto area{jwezel::ui::TextArea(w1, Rectangle{1, 3, 20, 5}, "x")};
     auto button{jwezel::ui::Button(w1, Rectangle{1, 6, 8, 7}, Text{"OK"})};
     auto drop{jwezel::ui::DropDown(w1, Rectangle{1, 8, 20, 9}, fruit)};
     std::string log;
@@ -2006,7 +2006,7 @@ TEST_CASE("UI Window") {
       CHECK_EQ(log, "accept;");
       send("\x1b");
       CHECK_EQ(log, "accept;cancel;");
-      CHECK_EQ(entry.content().data[0].size(), 1); // nothing was typed
+      CHECK_EQ(entry.lines()[0].size(), 1); // nothing was typed
     }
     SUBCASE("From any widget that does not use the key") {
       w1.addAction(accept);
@@ -2031,7 +2031,7 @@ TEST_CASE("UI Window") {
       CHECK_EQ(log, "cancel;");
       w1.focus(&area);
       send("\r"); // a new line
-      CHECK_EQ(area.content().data.size(), 2);
+      CHECK_EQ(area.lines().size(), 2);
       CHECK_EQ(log, "cancel;");
     }
     SUBCASE("An accept handler of an entry that is for it") {
@@ -2128,6 +2128,192 @@ TEST_CASE("UI Window") {
       REQUIRE_EQ(term.focus(), &term.desktop());
       send("\x03");
       CHECK_EQ(log, "quit;");
+    }
+  }
+
+  SUBCASE("Text of input widgets") {
+    auto send{
+      [&](const char *input) {
+        REQUIRE_NE(fputs(input, inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+      }
+    };
+    const auto cell{
+      [&](jwezel::Dim x, jwezel::Dim y) {return term.display().text().data[static_cast<size_t>(y)][static_cast<size_t>(x)];}
+    };
+    const auto shown{[&](const Rectangle &area) {return std::string(term.display().text()[area]);}};
+    auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 24, 12}, Text{"T"}, nullptr, &plain)};
+    SUBCASE("The text is the model, in UTF-8") {
+      auto area{jwezel::ui::TextArea(w1, Rectangle{1, 1, 19, 5}, "caf\xc3\xa9 \xe2\x82\xac\nsecond")};
+      CHECK_EQ(area.text(), "caf\xc3\xa9 \xe2\x82\xac\nsecond");
+      CHECK_EQ(area.lines().size(), 2);
+      CHECK_EQ(area.lines()[0].size(), 6); // characters, not bytes
+      CHECK_EQ(area.lines()[0][3], U'\u00e9');
+      CHECK_EQ(area.cursor(), Vector{6, 1}); // behind the text
+      CHECK_EQ(cell(4, 1).rune, U'\u00e9'); // what is on the display is made from it
+      CHECK_EQ(cell(6, 1).rune, U'\u20ac');
+      send("\x1b[A"); // up, to the first line
+      send("\x1b[F"); // End
+      CHECK_EQ(area.cursor(), Vector{6, 0}); // one step for a character that is more than one byte
+      send("\x7f"); // Backspace
+      CHECK_EQ(area.text(), "caf\xc3\xa9 \nsecond"); // the euro sign is gone, as a whole
+      send("\x1b[D");
+      send("\x1b[D");
+      send("\x7f"); // before the é: the f
+      CHECK_EQ(area.text(), "ca\xc3\xa9 \nsecond");
+    }
+    SUBCASE("Editing changes the text, and it is the text that is edited") {
+      auto area{jwezel::ui::TextArea(w1, Rectangle{1, 1, 19, 5}, "ab")};
+      send("X");
+      CHECK_EQ(area.text(), "abX");
+      send("\r");
+      CHECK_EQ(area.text(), "abX\n");
+      CHECK_EQ(area.lines().size(), 2);
+      send("y");
+      CHECK_EQ(area.text(), "abX\ny");
+      send("\x1b[H"); // Home
+      send("\x7f"); // Backspace at the beginning: the lines are one again
+      CHECK_EQ(area.text(), "abXy");
+      CHECK_EQ(area.cursor(), Vector{3, 0});
+      send("\x1b[3~"); // Delete
+      CHECK_EQ(area.text(), "abX");
+      send("\r");
+      send("\r");
+      send("\x1b[A");
+      send("\x1b[3~"); // at the end of a line, the next is joined
+      CHECK_EQ(area.text(), "abX\n");
+    }
+    SUBCASE("Nothing is read from what is shown: the text does not have to fit") {
+      auto input{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 7, 2}, "HelloWorld")}; // 6 wide
+      CHECK_EQ(input.text(), "HelloWorld");
+      CHECK_EQ(input.lines()[0].size(), 10);
+      CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), "World \n"); // the end, with room for the cursor
+      CHECK_EQ(input.scroll(), Vector{5, 0});
+      send("\x1b[H");
+      CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), "HelloW\n");
+      CHECK_EQ(input.text(), "HelloWorld");
+    }
+    SUBCASE("Replacing the text") {
+      auto input{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 7, 2}, "HelloWorld")};
+      input.text("Hi");
+      CHECK_EQ(input.text(), "Hi");
+      CHECK_EQ(input.cursor(), Vector{2, 0}); // behind it
+      CHECK_EQ(input.scroll(), Vector{0, 0}); // and the widget has been scrolled back
+      CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), "Hi    \n"); // nothing of the old text is left
+      input.text("");
+      CHECK_EQ(input.lines().size(), 1);
+      CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), "      \n");
+      CHECK_EQ(term.display().caret(), Vector{1, 1});
+      send("x");
+      CHECK_EQ(input.text(), "x");
+      auto area{jwezel::ui::TextArea(w1, Rectangle{1, 3, 19, 5}, "a")};
+      area.text("one\ntwo\nthree\nfour"); // more lines than there are rows
+      CHECK_EQ(area.cursor(), Vector{4, 3});
+      CHECK_EQ(area.scroll(), Vector{0, 2});
+      CHECK_EQ(shown(Rectangle{1, 3, 19, 5}), "three             \nfour              \n");
+    }
+    SUBCASE("Page Up and Page Down") {
+      std::string document;
+      for (auto i = 0; i < 20; ++i) {
+        document += (i? "\n": "") + std::format("line {:02}", i) + (i % 5 == 0? " and a longer tail": "");
+      }
+      auto area{jwezel::ui::TextArea(w1, Rectangle{1, 1, 19, 5}, document)}; // 4 rows, 20 lines
+      auto rows{
+        [&] { // the lines that are shown, the first ones of them
+          std::vector<std::string> result;
+          for (jwezel::Dim row = 1; row < 5; ++row) {
+            result.push_back(shown(Rectangle{1, row, 8, jwezel::toDim(row + 1)}));
+          }
+          return result;
+        }
+      };
+      using Rows = std::vector<std::string>;
+      const std::string pageUp{"\x1b[5~"}, pageDown{"\x1b[6~"};
+      CHECK_EQ(area.cursor(), Vector{7, 19}); // at the end of the text
+      CHECK_EQ(area.scroll(), Vector{0, 16});
+      CHECK_EQ(rows(), Rows{"line 16\n", "line 17\n", "line 18\n", "line 19\n"});
+      send(pageUp.c_str());
+      CHECK_EQ(area.cursor(), Vector{7, 15}); // a page up: it is in the same row of the area
+      CHECK_EQ(area.scroll(), Vector{0, 12});
+      CHECK_EQ(rows(), Rows{"line 12\n", "line 13\n", "line 14\n", "line 15\n"});
+      CHECK_EQ(term.display().caret(), Vector{8, 4});
+      send(pageUp.c_str());
+      send(pageUp.c_str());
+      send(pageUp.c_str());
+      CHECK_EQ(area.cursor(), Vector{7, 3});
+      CHECK_EQ(area.scroll(), Vector{0, 0});
+      CHECK_EQ(rows(), Rows{"line 00\n", "line 01\n", "line 02\n", "line 03\n"});
+      send(pageUp.c_str()); // not beyond the beginning
+      CHECK_EQ(area.cursor(), Vector{7, 0});
+      CHECK_EQ(area.scroll(), Vector{0, 0});
+      send(pageUp.c_str());
+      CHECK_EQ(area.cursor(), Vector{7, 0});
+      send(pageDown.c_str());
+      CHECK_EQ(area.cursor(), Vector{7, 4});
+      CHECK_EQ(area.scroll(), Vector{0, 4}); // the cursor is in the first row, as it was
+      CHECK_EQ(rows(), Rows{"line 04\n", "line 05\n", "line 06\n", "line 07\n"});
+      for (auto i = 0; i < 3; ++i) {
+        send(pageDown.c_str());
+      }
+      CHECK_EQ(area.cursor(), Vector{7, 16});
+      CHECK_EQ(area.scroll(), Vector{0, 16});
+      send(pageDown.c_str()); // the last page: to the last line, and the area shows the last lines
+      CHECK_EQ(area.cursor(), Vector{7, 19});
+      CHECK_EQ(area.scroll(), Vector{0, 16});
+      CHECK_EQ(rows(), Rows{"line 16\n", "line 17\n", "line 18\n", "line 19\n"});
+      send(pageDown.c_str());
+      CHECK_EQ(area.cursor(), Vector{7, 19});
+      CHECK_EQ(area.text().substr(0, 7), "line 00"); // nothing was typed or deleted by all that
+      CHECK_EQ(area.lines().size(), 20);
+    }
+    SUBCASE("The column does not go beyond the end of the line") {
+      auto area{jwezel::ui::TextArea(w1, Rectangle{1, 1, 19, 3}, "a long first line\nb\nlong again, the third\nd")};
+      send("\x1b[A"); // the third line
+      send("\x1b[F"); // its end
+      CHECK_EQ(area.cursor(), Vector{21, 2});
+      send("\x1b[5~"); // a page is two lines here: the first line, which is shorter
+      CHECK_EQ(area.cursor(), Vector{17, 0});
+      send("\x1b[6~"); // and back to a longer one: the column stays where it was
+      CHECK_EQ(area.cursor(), Vector{17, 2});
+      send("\x1b[B"); // the last line is "d"
+      send("\x1b[6~");
+      CHECK_EQ(area.cursor(), Vector{1, 3});
+    }
+    SUBCASE("A text that is shorter than a page") {
+      auto area{jwezel::ui::TextArea(w1, Rectangle{1, 1, 19, 5}, "one\ntwo\nthree")};
+      send("\x1b[5~");
+      CHECK_EQ(area.cursor().y(), 0);
+      CHECK_EQ(area.scroll(), Vector{0, 0});
+      send("\x1b[6~");
+      CHECK_EQ(area.cursor().y(), 2);
+      CHECK_EQ(area.scroll(), Vector{0, 0}); // all of it is shown anyway
+      CHECK_EQ(shown(Rectangle{1, 1, 6, 2}), "one  \n");
+    }
+    SUBCASE("An area with a single row") {
+      auto area{jwezel::ui::TextArea(w1, Rectangle{1, 1, 19, 2}, "a\nb\nc")};
+      send("\x1b[5~"); // a page is one line
+      CHECK_EQ(area.cursor().y(), 1);
+      CHECK_EQ(area.scroll().y(), 1);
+      send("\x1b[5~");
+      CHECK_EQ(area.cursor().y(), 0);
+      CHECK_EQ(area.scroll().y(), 0);
+    }
+    SUBCASE("A line has no pages, so the window can have the keys") {
+      using jwezel::Key;
+      auto count{0};
+      jwezel::ui::Action paging{[&count] {++count;}, {Key::PageUp, Key::PageDown}};
+      w1.addAction(paging);
+      auto input{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, "single line")};
+      auto area{jwezel::ui::TextArea(w1, Rectangle{1, 3, 19, 5}, "a\nb\nc\nd")};
+      send("\x1b[5~");
+      send("\x1b[6~");
+      CHECK_EQ(count, 2); // the line did not use them
+      CHECK_EQ(input.cursor(), Vector{11, 0});
+      w1.focus(&area);
+      send("\x1b[5~");
+      CHECK_EQ(count, 2); // the text area did
+      CHECK_EQ(area.cursor().y(), 1);
     }
   }
   REQUIRE_FALSE(fclose(inputRead));

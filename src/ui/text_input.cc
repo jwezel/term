@@ -8,30 +8,34 @@
 
 namespace jwezel::ui {
 
-TextInput::TextInput(Container &parent, const Rectangle &area, const Text &content, const Char &background):
+TextInput::TextInput(Container &parent, const Rectangle &area, std::string_view text, const Char &background):
 Widget{area, background, parent},
-content_{content}
+buffer_{text}
 {
-  if (content_.data.empty()) {
-    content_.data.emplace_back();
-  }
-  cursor_.x() = lineWidth(0);
+  start();
+}
+
+TextInput::TextInput(Container &parent, std::string_view text, const Char &background):
+Widget{RectangleDefault, background, parent},
+buffer_{text}
+{
+  start();
+}
+
+void TextInput::start() {
+  cursor_ = buffer_.end();
   scrollIntoView();
   render();
   registerHandlers();
 }
 
-TextInput::TextInput(Container &parent, const Text &content, const Char &background):
-Widget{RectangleDefault, background, parent},
-content_{content}
-{
-  if (content_.data.empty()) {
-    content_.data.emplace_back();
-  }
-  cursor_.x() = lineWidth(0);
+void TextInput::text(std::string_view text) {
+  buffer_.text(text);
+  cursor_ = buffer_.end();
+  scrollX_ = 0;
+  scrollY_ = 0;
   scrollIntoView();
   render();
-  registerHandlers();
 }
 
 void TextInput::registerHandlers() {
@@ -58,12 +62,20 @@ auto TextInput::handleKey(const Event &event) -> bool {
     moveDown();
     break;
 
+    case Key::PageUp:
+    case Key::PageDown:
+    if (!acceptsEnter()) {
+      return false; // a line has no pages: the window may have a use for the key
+    }
+    movePage(key == Key::PageDown? 1: -1);
+    break;
+
     case Key::Home:
     cursor_.x() = 0;
     break;
 
     case Key::End:
-    cursor_.x() = lineWidth(cursor_.y());
+    cursor_.x() = buffer_.lineLength(cursor_.y());
     break;
 
     case Key::Backspace:
@@ -94,43 +106,22 @@ auto TextInput::handleKey(const Event &event) -> bool {
 }
 
 void TextInput::insertChar(Unicode key) {
-  auto &row{content_.data[cursor_.y()]};
-  row.insert(row.begin() + cursor_.x(), Char{key});
+  buffer_.insert(cursor_, key);
   ++cursor_.x();
 }
 
 void TextInput::insertNewline() {
-  auto &row{content_.data[cursor_.y()]};
-  String tail{row.begin() + cursor_.x(), row.end()};
-  row.erase(row.begin() + cursor_.x(), row.end());
-  content_.data.insert(content_.data.begin() + cursor_.y() + 1, tail);
+  buffer_.split(cursor_);
   ++cursor_.y();
   cursor_.x() = 0;
 }
 
 void TextInput::backspace() {
-  if (cursor_.x() > 0) {
-    auto &row{content_.data[cursor_.y()]};
-    row.erase(row.begin() + cursor_.x() - 1);
-    --cursor_.x();
-  } else if (cursor_.y() > 0) {
-    auto &previous{content_.data[cursor_.y() - 1]};
-    const auto previousWidth{toDim(previous.size())};
-    previous.insert(previous.end(), content_.data[cursor_.y()].begin(), content_.data[cursor_.y()].end());
-    content_.data.erase(content_.data.begin() + cursor_.y());
-    --cursor_.y();
-    cursor_.x() = previousWidth;
-  }
+  cursor_ = buffer_.eraseBefore(cursor_);
 }
 
 void TextInput::del() {
-  auto &row{content_.data[cursor_.y()]};
-  if (cursor_.x() < toDim(row.size())) {
-    row.erase(row.begin() + cursor_.x());
-  } else if (cursor_.y() + 1 < toDim(content_.data.size())) {
-    row.insert(row.end(), content_.data[cursor_.y() + 1].begin(), content_.data[cursor_.y() + 1].end());
-    content_.data.erase(content_.data.begin() + cursor_.y() + 1);
-  }
+  buffer_.erase(cursor_);
 }
 
 void TextInput::moveLeft() {
@@ -138,14 +129,14 @@ void TextInput::moveLeft() {
     --cursor_.x();
   } else if (cursor_.y() > 0) {
     --cursor_.y();
-    cursor_.x() = lineWidth(cursor_.y());
+    cursor_.x() = buffer_.lineLength(cursor_.y());
   }
 }
 
 void TextInput::moveRight() {
-  if (cursor_.x() < lineWidth(cursor_.y())) {
+  if (cursor_.x() < buffer_.lineLength(cursor_.y())) {
     ++cursor_.x();
-  } else if (cursor_.y() + 1 < toDim(content_.data.size())) {
+  } else if (cursor_.y() + 1 < buffer_.lineCount()) {
     ++cursor_.y();
     cursor_.x() = 0;
   }
@@ -154,15 +145,27 @@ void TextInput::moveRight() {
 void TextInput::moveUp() {
   if (cursor_.y() > 0) {
     --cursor_.y();
-    cursor_.x() = std::min(cursor_.x(), lineWidth(cursor_.y()));
+    cursor_.x() = std::min(cursor_.x(), buffer_.lineLength(cursor_.y()));
   }
 }
 
 void TextInput::moveDown() {
-  if (cursor_.y() + 1 < toDim(content_.data.size())) {
+  if (cursor_.y() + 1 < buffer_.lineCount()) {
     ++cursor_.y();
-    cursor_.x() = std::min(cursor_.x(), lineWidth(cursor_.y()));
+    cursor_.x() = std::min(cursor_.x(), buffer_.lineLength(cursor_.y()));
   }
+}
+
+void TextInput::movePage(int direction) {
+  const auto page{std::max(Dim{1}, area().height())};
+  const auto target{std::clamp(toDim(cursor_.y() + direction * page), Dim{0}, toDim(buffer_.lineCount() - 1))};
+  const auto moved{toDim(target - cursor_.y())};
+  cursor_.y() = target;
+  cursor_.x() = std::min(cursor_.x(), buffer_.lineLength(target));
+  // What is shown moves as far as the cursor does, so it stays where it is in the area, but it does not move
+  // beyond what there is
+  const auto lastTop{std::max(Dim{0}, toDim(buffer_.lineCount() - page))};
+  scrollY_ = std::clamp(toDim(scrollY_ + moved), Dim{0}, lastTop);
 }
 
 auto TextInput::accept(const Event &event) -> bool {
@@ -194,27 +197,24 @@ void TextInput::scrollIntoView() {
   }
 }
 
-auto TextInput::lineWidth(Dim line) const -> Dim {
-  return toDim(content_.data[static_cast<size_t>(line)].size());
-}
-
 void TextInput::render() {
   const auto size{area().size()};
   if (size.x() <= 0 or size.y() <= 0) {
     return;
   }
   auto visible{canvas(inputRoles[static_cast<size_t>(widgetState())])};
-  const auto width{std::min(size.x(), toDim(content_.width() - scrollX_))};
-  const auto height{std::min(size.y(), toDim(content_.height() - scrollY_))};
-  for (Dim row = 0; row < height; ++row) {
-    const auto visibleWidth{std::min(width, toDim(content_.data[static_cast<size_t>(scrollY_ + row)].size() - scrollX_))};
-    if (visibleWidth > 0) {
-      overlay(
-        visible,
-        content_[Rectangle{scrollX_, toDim(scrollY_ + row), toDim(scrollX_ + visibleWidth), toDim(scrollY_ + row + 1)}],
-        Vector{0, row}
-      );
+  for (Dim row = 0; row < size.y() and toDim(scrollY_ + row) < buffer_.lineCount(); ++row) {
+    const auto &line{buffer_.line(toDim(scrollY_ + row))};
+    // The part of the line that is in the area; a line can be shorter than the part that is scrolled away
+    const auto length{std::min(size.x(), toDim(toDim(line.size()) - scrollX_))};
+    if (length <= 0) {
+      continue;
     }
+    Text characters{Space, Vector{length, 1}};
+    for (Dim column = 0; column < length; ++column) {
+      characters.data[0][static_cast<size_t>(column)] = Char{line[static_cast<size_t>(scrollX_ + column)]};
+    }
+    overlay(visible, characters, Vector{0, row});
   }
   if (auto *root{this->root()}; root->focus() == this) {
     root->updateCaret(); // before writing, so the display parks the cursor at the new caret afterwards

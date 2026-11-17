@@ -159,11 +159,11 @@ struct Dialog {
     Text{" New address "}, nullptr, colors
   },
   prompt_{window_, Rectangle{3, 2, 43, 3}, Text{"Street, number, postal code and city:"}, dialogBackground},
-  entry_{window_, Rectangle{3, 3, 43, 4}, Text{}, dialogBackground},
+  entry_{window_, Rectangle{3, 3, 43, 4}, "", dialogBackground},
   hint_{window_, Rectangle{3, 5, 43, 6}, Text{"Enter accepts, Esc cancels, Tab moves on"}, dialogBackground},
   ok_{window_, Rectangle{24, 8, 30, 9}, Text{"OK"}, dialogBackground},
   cancel_{window_, Rectangle{32, 8, 42, 9}, Text{"Cancel"}, dialogBackground},
-  accept_{[this, done] {done(true, plain(entry_.content()));}, {Key::Enter}},
+  accept_{[this, done] {done(true, entry_.text());}, {Key::Enter}},
   reject_{[done] {done(false, {});}, {Key::Escape, '\x03'}} // Ctrl-C comes as a key as well, the terminal is in raw mode
   {
     // Enter and Escape are actions of the whole window. Nothing has to be said about them in the widgets: an entry
@@ -216,7 +216,7 @@ struct Demo {
   notesLabel_{window_, Rectangle{2, 3, 62, 4}, Text{"Notes"}, mainBackground},
   notes_{
     window_, Rectangle{2, 4, 62, 10},
-    Text{"This is a text area.\nType, move with the arrow keys,\nor click to put the cursor somewhere."}, mainBackground
+    "This is a text area.\nType, move with the arrow keys,\nor click to put the cursor somewhere.", mainBackground
   },
   eventsLabel_{window_, Rectangle{2, 11, 62, 12}, Text{"Events"}, mainBackground},
   events_{window_, Rectangle{2, 12, 62, 17}, Text{}, mainBackground},

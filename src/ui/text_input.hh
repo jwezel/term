@@ -1,8 +1,11 @@
 #pragma once
 
+#include "text_buffer.hh"
 #include "widget.hh"
 
 #include <functional>
+#include <string>
+#include <string_view>
 #include <vector>
 
 namespace jwezel::ui {
@@ -19,7 +22,11 @@ namespace jwezel::ui {
 /// glyphs that could show which field has the focus, so by default the role
 /// `input.focus` tints the background.
 /// Subclasses supply the policy: LineEdit accepts on Enter and scrolls one
-/// row; TextArea inserts a newline on Enter and scrolls vertically.
+/// row; TextArea inserts a newline on Enter and scrolls vertically, and Page Up and
+/// Page Down move the cursor by the lines of a page.
+///
+/// The text is kept in a `TextBuffer`, apart from the display: the widget edits the
+/// buffer, and draws what is of it in the area. Nothing is read from the display.
 struct TextInput: Widget {
   using Handler = std::function<bool(const ui::Element &element, const Event &event)>;
 
@@ -28,17 +35,17 @@ struct TextInput: Widget {
   ///
   /// @param      parent      The parent container
   /// @param      area        The area
-  /// @param      content     The initial content
+  /// @param      text        The initial text, in UTF-8; the cursor is behind it
   /// @param      background  The background
-  explicit TextInput(Container &parent, const Rectangle &area, const Text &content = {}, const Char &background = Space);
+  explicit TextInput(Container &parent, const Rectangle &area, std::string_view text = {}, const Char &background = Space);
 
   ///
   /// Create TextInput with its area assigned by the parent layout (e.g. a Box)
   ///
   /// @param      parent      The parent container
-  /// @param      content     The initial content
+  /// @param      text        The initial text, in UTF-8; the cursor is behind it
   /// @param      background  The background
-  explicit TextInput(Container &parent, const Text &content = {}, const Char &background = Space);
+  explicit TextInput(Container &parent, std::string_view text = {}, const Char &background = Space);
 
   TextInput(const TextInput &) = delete;
 
@@ -52,7 +59,32 @@ struct TextInput: Widget {
 
   [[nodiscard]] auto caret() const -> std::optional<Vector> override;
 
-  [[nodiscard]] auto content() const -> const Text & {return content_;}
+  ///
+  /// Get the text, in UTF-8, with a line feed between the lines
+  ///
+  /// The text is the document the widget edits; what is on the display is made from it.
+  [[nodiscard]] auto text() const -> std::string {return buffer_.text();}
+
+  ///
+  /// Replace the text; the cursor is behind it, and the widget shows the beginning of the text or the end of it, where
+  /// the cursor is
+  ///
+  /// @param[in]  text  The text, in UTF-8
+  void text(std::string_view text);
+
+  ///
+  /// Get the lines of the text, as characters
+  [[nodiscard]] auto lines() const -> const std::vector<std::u32string> & {return buffer_.lines();}
+
+  [[nodiscard]] auto buffer() const -> const TextBuffer & {return buffer_;}
+
+  ///
+  /// Get the position of the cursor in the text: {column, line}
+  [[nodiscard]] auto cursor() const -> const Vector & {return cursor_;}
+
+  ///
+  /// Get the position in the text of what is shown at the top left of the widget: {column, line}
+  [[nodiscard]] auto scroll() const -> Vector {return Vector{scrollX_, scrollY_};}
 
   ///
   /// Register an accept handler (invoked on Enter when Enter is not inserted)
@@ -73,6 +105,8 @@ struct TextInput: Widget {
   [[nodiscard]] virtual auto acceptsEnter() const -> bool {return false;}
 
   private:
+  void start();
+
   void registerHandlers();
 
   auto handleKey(const Event &event) -> bool;
@@ -93,13 +127,15 @@ struct TextInput: Widget {
 
   void moveDown();
 
+  ///
+  /// Move the cursor, and what is shown, by a page, which is as many lines as the widget has
+  void movePage(int direction);
+
   auto accept(const Event &event) -> bool;
 
   void scrollIntoView();
 
-  [[nodiscard]] auto lineWidth(Dim line) const -> Dim;
-
-  Text content_;
+  TextBuffer buffer_;
   Vector cursor_; // {column, line}
   Dim scrollX_ = 0;
   Dim scrollY_ = 0;
