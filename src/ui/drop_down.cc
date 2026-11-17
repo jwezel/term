@@ -93,8 +93,7 @@ void DropDown::maxRows(Dim rows) {
 }
 
 auto DropDown::onSelect(const Handler &handler) -> int {
-  selectHandlers_.push_back(handler);
-  return static_cast<int>(selectHandlers_.size() - 1);
+  return on<SelectEvent>(handler);
 }
 
 void DropDown::move(const Rectangle &area) {
@@ -114,15 +113,14 @@ void DropDown::pressedElsewhere() {
 }
 
 void DropDown::choose(Dim index, const Event &event) {
+  const auto previous{selected_};
   select(index);
   close();
-  for (const auto &handler : selectHandlers_) {
-    handler(*this, event);
-  }
+  emit(SelectEvent{UiEvent::causeOf(event), selected_, previous, items_[static_cast<size_t>(selected_)]});
 }
 
 auto DropDown::handleKey(const Event &event) -> bool {
-  const auto key{dynamic_cast<KeyEvent *>(event())->key()};
+  const auto key{event.as<KeyEvent>().key()};
   if (!popup_) {
     if (key == ' ' or key == Key::Enter or key == Key::Down) {
       open();
@@ -173,20 +171,20 @@ auto DropDown::handleKey(const Event &event) -> bool {
 }
 
 auto DropDown::handleMouseButton(const Event &event) -> bool {
-  auto *mouse{dynamic_cast<MouseButtonEvent *>(event())};
-  const auto position{mouse->position()};
-  if (mouse->modifiers().mod5) { // the wheel: button 1 is up, button 2 is down
-    if (popup_ and mouse->action() == MouseAction::Down) {
-      popup_->highlight(toDim(popup_->highlighted() + (mouse->button() == MouseButton::Button1? -1: 1)));
+  const auto &mouse{event.as<MouseButtonEvent>()};
+  const auto position{mouse.position()};
+  if (mouse.modifiers().mod5) { // the wheel: button 1 is up, button 2 is down
+    if (popup_ and mouse.action() == MouseAction::Down) {
+      popup_->highlight(toDim(popup_->highlighted() + (mouse.button() == MouseButton::Button1? -1: 1)));
       return true;
     }
     return false;
   }
-  if (mouse->button() != MouseButton::Button1) {
+  if (mouse.button() != MouseButton::Button1) {
     return false;
   }
   const auto inside{contains(bounds(), position)};
-  if (mouse->action() == MouseAction::Down) {
+  if (mouse.action() == MouseAction::Down) {
     if (popup_) {
       if (const auto item{popup_->itemAt(position)}; item >= 0) {
         choose(item, event);
@@ -225,7 +223,7 @@ auto DropDown::handleMouseMove(const Event &event) -> bool {
   if (!popup_) {
     return false;
   }
-  const auto item{popup_->itemAt(dynamic_cast<MouseMoveEvent *>(event())->position())};
+  const auto item{popup_->itemAt(event.as<MouseMoveEvent>().position())};
   if (item < 0 or item == popup_->highlighted()) {
     return false;
   }

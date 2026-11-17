@@ -1,6 +1,7 @@
 #pragma once
 
 #include "label.hh"
+#include "ui_event.hh"
 
 #include <functional>
 #include <vector>
@@ -20,8 +21,15 @@ namespace jwezel::ui {
 /// does what an action stands for. The colors
 /// are those of the roles `button`, `button.focus` (by default a tint) and,
 /// while the mouse button is down on it, `button.active`.
+///
+/// A button was pressed; the cause is the key or the release of the mouse button that did it
+struct PressEvent: UiEvent {
+  using UiEvent::UiEvent;
+
+  CLASS_ID(PressEvent);
+};
+
 struct Button: Label {
-  using Handler = std::function<bool(const ui::Element &element, const Event &event)>;
 
   ///
   /// Create Button with an explicit area
@@ -53,7 +61,7 @@ struct Button: Label {
   ///
   /// Register a press handler
   ///
-  /// @param[in]  handler  The handler
+  /// @param[in]  handler  The handler, which is given a `PressEvent`: `event.as<PressEvent>()`
   ///
   /// @return     Index of the handler
   auto onPress(const Handler &handler) -> int;
@@ -66,7 +74,6 @@ struct Button: Label {
 
   void press(const Event &event);
 
-  std::vector<Handler> pressHandlers_;
   bool armed_{false}; // the left mouse button went down inside the button and is still down
 };
 

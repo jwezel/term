@@ -68,6 +68,7 @@ headers = [
   'src/ui/text_buffer.hh',
   'src/ui/text_input.hh',
   'src/ui/ui.hh',
+  'src/ui/ui_event.hh',
   'src/ui/ui_style.hh',
   'src/ui/widget.hh',
   'src/ui/window.hh',
@@ -105,6 +106,7 @@ test_dep = [
 test_exe = executable(
   'test_term',
   'test/test_display.cc',
+  'test/test_event.cc',
   'test/test_geometry.cc',
   'test/test_keyboard.cc',
   'test/test_surface.cc',

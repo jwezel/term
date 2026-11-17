@@ -1,6 +1,7 @@
 #pragma once
 
 #include "text_buffer.hh"
+#include "ui_event.hh"
 #include "widget.hh"
 
 #include <functional>
@@ -27,9 +28,25 @@ namespace jwezel::ui {
 ///
 /// The text is kept in a `TextBuffer`, apart from the display: the widget edits the
 /// buffer, and draws what is of it in the area. Nothing is read from the display.
-struct TextInput: Widget {
-  using Handler = std::function<bool(const ui::Element &element, const Event &event)>;
+///
+/// An entry was accepted: Enter was pressed in a widget where Enter does not start a new line
+struct AcceptEvent: UiEvent {
+  AcceptEvent(const Cause &cause, std::string text):
+  UiEvent{cause},
+  text_{std::move(text)}
+  {}
 
+  ///
+  /// The text, in UTF-8, as it was when it was accepted
+  [[nodiscard]] auto text() const -> const std::string & {return text_;}
+
+  private:
+  std::string text_;
+
+  CLASS_ID(AcceptEvent);
+};
+
+struct TextInput: Widget {
   ///
   /// Create TextInput with an explicit area
   ///
@@ -92,7 +109,7 @@ struct TextInput: Widget {
   /// If no handler returns true the Enter key is not used up, so it goes on to the actions of the widget and of
   /// the window: an entry without handlers lets the default action of its window happen.
   ///
-  /// @param[in]  handler  The handler
+  /// @param[in]  handler  The handler, which is given an `AcceptEvent`: `event.as<AcceptEvent>()`
   ///
   /// @return     Index of the handler
   auto onAccept(const Handler &handler) -> int;
@@ -139,7 +156,6 @@ struct TextInput: Widget {
   Vector cursor_; // {column, line}
   Dim scrollX_ = 0;
   Dim scrollY_ = 0;
-  std::vector<Handler> acceptHandlers_;
 };
 
 } // namespace jwezel::ui

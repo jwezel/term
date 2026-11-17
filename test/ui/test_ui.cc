@@ -23,11 +23,14 @@
 #include <doctest/doctest.h>
 #include <fstream>
 #include <iterator>
+#include <stdexcept>
+#include <vector>
 #include <format>
 #include <string>
 
 using
   jwezel::AttributeMode::mix,
+  jwezel::Dim,
   jwezel::Char,
   jwezel::clear,
   jwezel::Line,
@@ -2314,6 +2317,228 @@ TEST_CASE("UI Window") {
       send("\x1b[5~");
       CHECK_EQ(count, 2); // the text area did
       CHECK_EQ(area.cursor().y(), 1);
+    }
+  }
+
+  SUBCASE("Typed events") {
+    using jwezel::Key, jwezel::KeyEvent, jwezel::MouseAction, jwezel::MouseButtonEvent, jwezel::MouseMoveEvent;
+    using jwezel::ui::AcceptEvent, jwezel::ui::PressEvent, jwezel::ui::SelectEvent, jwezel::ui::UiEvent;
+    using jwezel::ui::Element;
+    auto send{
+      [&](const char *input) {
+        REQUIRE_NE(fputs(input, inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+      }
+    };
+    auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 24, 12}, Text{"T"}, nullptr, &plain)};
+    const std::vector<Text> fruit{Text{"Apple"}, Text{"Banana"}, Text{"Cherry"}};
+    SUBCASE("Press") {
+      auto button{jwezel::ui::Button(w1, Rectangle{1, 1, 10, 2}, Text{"OK"})};
+      std::vector<const Element *> sources;
+      std::vector<const UiEvent::Cause *> causes;
+      std::vector<std::string> kinds;
+      std::vector<jwezel::Unicode> keys;
+      std::vector<jwezel::Vector> positions;
+      button.onPress(
+        [&](const Element &element, const jwezel::Event &event) {
+          const auto &press{event.as<PressEvent>()};
+          sources.push_back(&element);
+          kinds.emplace_back(press.input().typeName());
+          if (const auto *key{std::get_if<KeyEvent>(&press.cause())}; key) {
+            keys.push_back(key->key());
+          }
+          if (const auto *mouse{std::get_if<MouseButtonEvent>(&press.cause())}; mouse) {
+            positions.push_back(mouse->position());
+            CHECK(mouse->action() == MouseAction::Up); // a click is the release
+          }
+          return true;
+        }
+      );
+      SUBCASE("By key") {
+        send(" ");
+        send("\x0d");
+        CHECK_EQ(kinds, std::vector<std::string>{"KeyEvent", "KeyEvent"});
+        CHECK_EQ(keys, std::vector<jwezel::Unicode>{' ', Key::Enter});
+        CHECK(positions.empty());
+        CHECK_EQ(sources, std::vector<const Element *>{&button, &button});
+      }
+      SUBCASE("By mouse") {
+        send("\x1b[<0;3;2M");
+        CHECK(kinds.empty()); // the press is not what is reported
+        send("\x1b[<0;3;2m");
+        CHECK_EQ(kinds, std::vector<std::string>{"MouseButtonEvent"});
+        CHECK_EQ(positions, std::vector<jwezel::Vector>{Vector{2, 1}}); // relative to the window
+        CHECK(keys.empty());
+      }
+      SUBCASE("The event is a value, which stays valid") {
+        std::vector<PressEvent> kept;
+        button.onPress(
+          [&kept](const Element &, const jwezel::Event &event) {
+            kept.push_back(event.as<PressEvent>()); // a copy
+            return false;
+          }
+        );
+        send("x");
+        send(" ");
+        REQUIRE_EQ(kept.size(), 1);
+        const auto *key{std::get_if<KeyEvent>(&kept[0].cause())};
+        REQUIRE_NE(key, nullptr);
+        CHECK_EQ(key->key(), ' ');
+      }
+      SUBCASE("All handlers are told, whatever they return") {
+        std::string order;
+        button.onPress([&order](const Element &, const jwezel::Event &) {order += "b"; return false;});
+        button.onPress([&order](const Element &, const jwezel::Event &) {order += "c"; return true;});
+        button.onPress([&order](const Element &, const jwezel::Event &) {order += "d"; return false;});
+        send(" ");
+        CHECK_EQ(order, "bcd");
+        CHECK_EQ(keys.size(), 1); // and the first one
+      }
+      SUBCASE("A handler that is added while the event is told does not get it") {
+        auto late{0};
+        auto added{false};
+        button.onPress(
+          [&](const Element &, const jwezel::Event &) {
+            if (!added) {
+              added = true;
+              button.onPress([&late](const Element &, const jwezel::Event &) {++late; return false;});
+            }
+            return false;
+          }
+        );
+        send(" ");
+        CHECK_EQ(late, 0);
+        send(" ");
+        CHECK_EQ(late, 1);
+      }
+      SUBCASE("Handlers are told about their kind of event only") {
+        auto accepted{0};
+        auto selected{0};
+        auto entry{jwezel::ui::LineEdit(w1, Rectangle{1, 3, 19, 4}, "text")};
+        auto drop{jwezel::ui::DropDown(w1, Rectangle{1, 5, 19, 6}, fruit)};
+        entry.onAccept([&accepted](const Element &, const jwezel::Event &) {++accepted; return true;});
+        drop.onSelect([&selected](const Element &, const jwezel::Event &) {++selected; return true;});
+        send(" "); // the button has the focus
+        CHECK_EQ(kinds.size(), 1);
+        CHECK_EQ(accepted, 0);
+        CHECK_EQ(selected, 0);
+      }
+    }
+    SUBCASE("Select") {
+      auto drop{jwezel::ui::DropDown(w1, Rectangle{1, 1, 19, 2}, fruit, 1)};
+      std::vector<SelectEvent> chosen;
+      std::vector<Dim> selectedWhenTold;
+      drop.onSelect(
+        [&](const Element &, const jwezel::Event &event) {
+          chosen.push_back(event.as<SelectEvent>());
+          selectedWhenTold.push_back(drop.selected());
+          return true;
+        }
+      );
+      SUBCASE("By key") {
+        send(" ");
+        send("\x1b[A");
+        send("\x0d");
+        REQUIRE_EQ(chosen.size(), 1);
+        CHECK_EQ(chosen[0].index(), 0);
+        CHECK_EQ(chosen[0].previous(), 1);
+        CHECK_EQ(std::string(chosen[0].item()), "Apple\n");
+        CHECK(chosen[0].changed());
+        CHECK_EQ(selectedWhenTold[0], 0); // the drop down has selected it already
+        const auto *key{std::get_if<KeyEvent>(&chosen[0].cause())};
+        REQUIRE_NE(key, nullptr);
+        CHECK_EQ(key->key(), Key::Enter);
+        CHECK_EQ(std::string(chosen[0].input().typeName()), "KeyEvent");
+      }
+      SUBCASE("The same item again is not a change") {
+        send(" ");
+        send("\x0d");
+        REQUIRE_EQ(chosen.size(), 1);
+        CHECK_EQ(chosen[0].index(), 1);
+        CHECK_EQ(chosen[0].previous(), 1);
+        CHECK_EQ(std::string(chosen[0].item()), "Banana\n");
+        CHECK_FALSE(chosen[0].changed());
+      }
+      SUBCASE("By mouse") {
+        send("\x1b[<0;3;2M"); // opens the list
+        CHECK(chosen.empty());
+        send("\x1b[<0;3;5M"); // the third item: Cherry
+        REQUIRE_EQ(chosen.size(), 1);
+        CHECK_EQ(chosen[0].index(), 2);
+        CHECK_EQ(chosen[0].previous(), 1);
+        CHECK_EQ(std::string(chosen[0].item()), "Cherry\n");
+        const auto *mouse{std::get_if<MouseButtonEvent>(&chosen[0].cause())};
+        REQUIRE_NE(mouse, nullptr);
+        CHECK_EQ(mouse->position(), Vector{2, 4});
+      }
+      SUBCASE("Escape chooses nothing") {
+        send(" ");
+        send("\x1b");
+        CHECK(chosen.empty());
+      }
+      SUBCASE("Select without the user does not tell") {
+        drop.select(2);
+        CHECK(chosen.empty());
+      }
+    }
+    SUBCASE("Accept") {
+      auto entry{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, "caf\xc3\xa9")};
+      std::vector<AcceptEvent> accepted;
+      entry.onAccept(
+        [&accepted](const Element &, const jwezel::Event &event) {
+          accepted.push_back(event.as<AcceptEvent>());
+          return true;
+        }
+      );
+      send("!");
+      send("\x0d");
+      REQUIRE_EQ(accepted.size(), 1);
+      CHECK_EQ(accepted[0].text(), "caf\xc3\xa9!"); // what it was then
+      const auto *key{std::get_if<KeyEvent>(&accepted[0].cause())};
+      REQUIRE_NE(key, nullptr);
+      CHECK_EQ(key->key(), Key::Enter);
+      send("?");
+      CHECK_EQ(accepted[0].text(), "caf\xc3\xa9!"); // and it is still that
+      send("\x0d");
+      REQUIRE_EQ(accepted.size(), 2);
+      CHECK_EQ(accepted[1].text(), "caf\xc3\xa9!?");
+      SUBCASE("A text area does not accept") {
+        auto area{jwezel::ui::TextArea(w1, Rectangle{1, 3, 19, 6}, "a")};
+        area.onAccept([&accepted](const Element &, const jwezel::Event &event) {accepted.push_back(event.as<AcceptEvent>()); return true;});
+        w1.focus(&area);
+        send("\x0d");
+        CHECK_EQ(accepted.size(), 2); // a new line was inserted instead
+        CHECK_EQ(area.text(), "a\n");
+      }
+    }
+    SUBCASE("The kinds") {
+      CHECK_NE(PressEvent::type_, AcceptEvent::type_);
+      CHECK_NE(PressEvent::type_, SelectEvent::type_);
+      CHECK_NE(AcceptEvent::type_, SelectEvent::type_);
+      CHECK_NE(PressEvent::type_, UiEvent::type_);
+      CHECK_EQ(std::string{SelectEvent::typeName_}, "SelectEvent");
+      const jwezel::Event press{new PressEvent{UiEvent::Cause{KeyEvent{'a'}}}};
+      CHECK(press.is<PressEvent>());
+      CHECK(press.is<UiEvent>()); // all of them are
+      CHECK_FALSE(press.is<SelectEvent>());
+      CHECK_THROWS_AS((void)press.as<SelectEvent>(), std::logic_error);
+      CHECK_EQ(std::string(press.typeName()), "PressEvent");
+    }
+    SUBCASE("Only input has a cause") {
+      CHECK_NOTHROW((void)UiEvent::causeOf(jwezel::Event{new KeyEvent{'a'}}));
+      CHECK_THROWS_AS(
+        (void)UiEvent::causeOf(jwezel::Event{new MouseMoveEvent{Vector{1, 1}}}),
+        std::logic_error
+      );
+      CHECK_THROWS_AS((void)UiEvent::causeOf(jwezel::Event{}), std::logic_error);
+    }
+    SUBCASE("The generic registration is the one of the input events") {
+      auto button{jwezel::ui::Button(w1, Rectangle{1, 1, 10, 2}, Text{"OK"})};
+      auto keys{0};
+      button.on<KeyEvent>([&keys](const Element &, const jwezel::Event &event) {keys += event.is<KeyEvent>(); return false;});
+      send("a");
+      CHECK_EQ(keys, 1);
     }
   }
   REQUIRE_FALSE(fclose(inputRead));

@@ -24,7 +24,7 @@ Label{parent, text, background}
 void Button::registerHandlers() {
   onKey(
     [this](const ui::Element &, const Event &event) {
-      if (const auto key{dynamic_cast<KeyEvent *>(event())->key()}; key == ' ' or key == Key::Enter) {
+      if (const auto key{event.as<KeyEvent>().key()}; key == ' ' or key == Key::Enter) {
         press(event);
         return true;
       }
@@ -33,13 +33,13 @@ void Button::registerHandlers() {
   );
   onMouseButton(
     [this](const ui::Element &, const Event &event) {
-      auto *mouse{dynamic_cast<MouseButtonEvent *>(event())};
-      if (mouse->button() != MouseButton::Button1 or mouse->modifiers().mod5) { // not the left button, or the wheel
+      const auto &mouse{event.as<MouseButtonEvent>()};
+      if (mouse.button() != MouseButton::Button1 or mouse.modifiers().mod5) { // not the left button, or the wheel
         return false;
       }
-      const Rectangle pointArea{mouse->position(), mouse->position() + Vector{1, 1}};
+      const Rectangle pointArea{mouse.position(), mouse.position() + Vector{1, 1}};
       const auto inside{bool{bounds() & pointArea}};
-      if (mouse->action() == MouseAction::Down) {
+      if (mouse.action() == MouseAction::Down) {
         const auto changed{armed_ != inside};
         armed_ = inside;
         if (changed) {
@@ -79,15 +79,12 @@ void Button::render() {
 }
 
 void Button::press(const Event &event) {
-  for (const auto &handler : pressHandlers_) {
-    handler(*this, event);
-  }
+  emit(PressEvent{UiEvent::causeOf(event)});
   triggerActions();
 }
 
 auto Button::onPress(const Handler &handler) -> int {
-  pressHandlers_.push_back(handler);
-  return static_cast<int>(pressHandlers_.size() - 1);
+  return on<PressEvent>(handler);
 }
 
 } // namespace jwezel::ui

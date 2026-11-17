@@ -1,6 +1,7 @@
 #pragma once
 
 #include "list_popup.hh"
+#include "ui_event.hh"
 #include "widget.hh"
 
 #include <functional>
@@ -28,9 +29,44 @@ namespace jwezel::ui {
 ///
 /// The list is a popup in front of all other elements, which only exists while it
 /// is open. Only the first row of the items is shown.
-struct DropDown: Widget {
-  using Handler = std::function<bool(const ui::Element &element, const Event &event)>;
+///
+/// An item of a drop down was chosen
+///
+/// The drop down has selected the item when the event is emitted; `previous()` is what it had selected, so
+/// the choice changed something if `changed()`.
+struct SelectEvent: UiEvent {
+  SelectEvent(const Cause &cause, Dim index, Dim previous, Text item):
+  UiEvent{cause},
+  index_{index},
+  previous_{previous},
+  item_{std::move(item)}
+  {}
 
+  ///
+  /// The index of the chosen item
+  [[nodiscard]] auto index() const -> Dim {return index_;}
+
+  ///
+  /// The index of the item that was selected before, which may be the same
+  [[nodiscard]] auto previous() const -> Dim {return previous_;}
+
+  ///
+  /// The chosen item
+  [[nodiscard]] auto item() const -> const Text & {return item_;}
+
+  ///
+  /// Whether another item than the selected one was chosen
+  [[nodiscard]] auto changed() const -> bool {return index_ != previous_;}
+
+  private:
+  Dim index_;
+  Dim previous_;
+  Text item_;
+
+  CLASS_ID(SelectEvent);
+};
+
+struct DropDown: Widget {
   ///
   /// Create DropDown with an explicit area
   ///
@@ -109,7 +145,7 @@ struct DropDown: Widget {
   /// Register a select handler
   ///
   /// The handlers are invoked when the user chooses an item, whether it is the
-  /// selected one or another, with the event that did it.
+  /// selected one or another, with a `SelectEvent`: `event.as<SelectEvent>()`.
   ///
   /// @param[in]  handler  The handler
   ///
@@ -143,7 +179,6 @@ struct DropDown: Widget {
   Dim maxRows_{8};
   bool dragging_{false}; // the button that opened the list is still down
   std::optional<ListPopup> popup_;
-  std::vector<Handler> selectHandlers_;
 };
 
 } // namespace jwezel::ui

@@ -193,8 +193,8 @@ void Root::handleBlur() {
 
 auto Root::handleEvent(const Event &event) -> bool {
   if (event.type() == MouseMoveEvent::type_ or event.type() == MouseButtonEvent::type_) {
-    const auto position{dynamic_cast<MouseEvent *>(event())->position()};
-    auto *buttonEvent{event.type() == MouseButtonEvent::type_? dynamic_cast<MouseButtonEvent *>(event()): nullptr};
+    const auto position{event.as<MouseEvent>().position()};
+    const auto *buttonEvent{event.get<MouseButtonEvent>()};
     const auto wasCapturing{capture_.active()};
     const auto change{buttonEvent? capture_.track(*buttonEvent): MouseCapture::Change::none};
     Widget *widget{};
@@ -245,7 +245,7 @@ auto Root::handleEvent(const Event &event) -> bool {
 }
 
 auto Root::handleKey(const Event &event) -> bool {
-  const auto key{dynamic_cast<KeyEvent *>(event())->key()};
+  const auto key{event.as<KeyEvent>().key()};
   // What the focused widget offers, then what the window offers, then what is always there
   if (focus_ and focus_->triggerShortcut(key)) {
     return true;

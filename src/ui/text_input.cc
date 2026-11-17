@@ -43,8 +43,7 @@ void TextInput::registerHandlers() {
 }
 
 auto TextInput::handleKey(const Event &event) -> bool {
-  auto *keyEvent{dynamic_cast<KeyEvent *>(event())};
-  const auto key{keyEvent->key()};
+  const auto key{event.as<KeyEvent>().key()};
   switch (key) {
     case Key::Left:
     moveLeft();
@@ -169,16 +168,11 @@ void TextInput::movePage(int direction) {
 }
 
 auto TextInput::accept(const Event &event) -> bool {
-  auto handled{false};
-  for (const auto &handler : acceptHandlers_) {
-    handled = handler(*this, event) or handled;
-  }
-  return handled;
+  return emit(AcceptEvent{UiEvent::causeOf(event), text()});
 }
 
 auto TextInput::onAccept(const Handler &handler) -> int {
-  acceptHandlers_.push_back(handler);
-  return static_cast<int>(acceptHandlers_.size() - 1);
+  return on<AcceptEvent>(handler);
 }
 
 void TextInput::scrollIntoView() {

@@ -30,19 +30,19 @@ auto Element::event(const Event &event) -> bool {
 
     case MouseMoveEvent::type_:
     return mouseMoveEvent(
-      Event{new MouseMoveEvent{dynamic_cast<MouseMoveEvent *>(event())->position() - root()->origin()}}
+      Event{new MouseMoveEvent{event.as<MouseMoveEvent>().position() - root()->origin()}}
     );
     break;
 
     case MouseButtonEvent::type_: {
-      auto *buttonEvent{dynamic_cast<MouseButtonEvent *>(event())};
+      const auto &buttonEvent{event.as<MouseButtonEvent>()};
       return mouseButtonEvent(
         Event{
           new MouseButtonEvent{
-            buttonEvent->button(),
-            buttonEvent->modifiers(),
-            buttonEvent->position() - root()->origin(),
-            buttonEvent->action()
+            buttonEvent.button(),
+            buttonEvent.modifiers(),
+            buttonEvent.position() - root()->origin(),
+            buttonEvent.action()
           }
         }
       );
@@ -87,19 +87,16 @@ auto Element::keyEvent(const Event &event) -> bool {
   return false;
 }
 
-auto Element::onMouseMove(const std::function<bool(const Element &element, const Event &)>& handler) -> int {
-  eventHandlers_.emplace_back(MouseMoveEvent::type_, handler);
-  return static_cast<int>(eventHandlers_.size() - 1);
+auto Element::onMouseMove(const Handler &handler) -> int {
+  return on<MouseMoveEvent>(handler);
 }
 
-auto Element::onMouseButton(const std::function<bool(const Element &element, const Event &)>& handler) -> int {
-  eventHandlers_.emplace_back(MouseButtonEvent::type_, handler);
-  return static_cast<int>(eventHandlers_.size() - 1);
+auto Element::onMouseButton(const Handler &handler) -> int {
+  return on<MouseButtonEvent>(handler);
 }
 
-auto Element::onKey(const std::function<bool(const Element &element, const Event &)>& handler) -> int {
-  eventHandlers_.emplace_back(KeyEvent::type_, handler);
-  return static_cast<int>(eventHandlers_.size() - 1);
+auto Element::onKey(const Handler &handler) -> int {
+  return on<KeyEvent>(handler);
 }
 
 

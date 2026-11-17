@@ -223,12 +223,11 @@ struct Demo {
   hint_{window_, Rectangle{2, 18, 62, 19}, Text{"Tab: next  Space: menu  Esc: close dialog  Ctrl-C: quit"}, mainBackground},
   quit_{[this] {done_ = true;}, {'\x03'}} // Ctrl-C comes as a key, the terminal is in raw mode
   {
-    // The menu is an ordinary drop down. Choosing an entry emits a select event; the event itself does not say
-    // which entry, the handler has to ask the widget.
-    // TODO(feature): events with a payload (the index and item of a selection, the old and new state of a toggle ...)
+    // The menu is an ordinary drop down. Choosing an entry emits a select event, which says which entry it was
+    // and what chose it.
     menu_.onSelect(
       [this](const jwezel::ui::Element &, const Event &event) {
-        menuSelected(event);
+        menuSelected(event.as<jwezel::ui::SelectEvent>());
         return true;
       }
     );
@@ -272,9 +271,9 @@ struct Demo {
     events_.content(Text{joined});
   }
 
-  void menuSelected(const Event &event) {
-    const auto index{menu_.selected()};
-    log(std::format("menu: select #{} \"{}\" ({})", index, plain(menu_.items()[static_cast<size_t>(index)]), event.typeName()));
+  void menuSelected(const jwezel::ui::SelectEvent &selected) {
+    const auto index{selected.index()};
+    log(std::format("menu: select #{} \"{}\" ({})", index, plain(selected.item()), selected.input().typeName()));
     menu_.select(0); // a menu shows its caption, not the last choice
     switch (index) {
       case 1:

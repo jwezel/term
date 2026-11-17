@@ -13,6 +13,9 @@ struct Root;
 
 struct Element
 {
+  ///
+  /// A handler of events; it is told whether it was `handled`, which for input events keeps the others from getting it
+  using Handler = std::function<bool(const Element &element, const Event &event)>;
 
   ///
   /// Create Element
@@ -74,19 +77,59 @@ struct Element
 
   auto keyEvent(const Event &event) -> bool;
 
-  auto onMouseMove(const std::function<bool(const Element &element, const Event &)>& handler) -> int;
+  auto onMouseMove(const Handler &handler) -> int;
 
-  auto onMouseButton(const std::function<bool(const Element &element, const Event &)>& handler) -> int;
+  auto onMouseButton(const Handler &handler) -> int;
 
-  auto onKey(const std::function<bool(const Element &element, const Event &)>& handler) -> int;
+  auto onKey(const Handler &handler) -> int;
+
+  ///
+  /// Register a handler for a kind of events
+  ///
+  /// The handler is given events of exactly that class, as `Event`s; `event.as<E>()` gives the event as what it is.
+  ///
+  /// @tparam     E        The event class
+  /// @param[in]  handler  The handler
+  ///
+  /// @return     Index of the handler
+  template<class E>
+  auto on(const Handler &handler) -> int {
+    eventHandlers_.emplace_back(E::type_, handler);
+    return static_cast<int>(eventHandlers_.size() - 1);
+  }
 
   protected:
+  ///
+  /// Tell the handlers of a kind of event what happened
+  ///
+  /// Unlike input events, which stop with the handler that handles them, all the handlers of the event are called;
+  /// those that are registered while it is emitted are not.
+  ///
+  /// @param[in]  event  The event
+  ///
+  /// @return     Whether any handler handled the event
+  template<class E>
+  auto emit(E event) -> bool {
+    const Event wrapped{new E{std::move(event)}};
+    std::vector<Handler> handlers;
+    for (const auto &handler: eventHandlers_) {
+      if (handler.first == E::type_) {
+        handlers.push_back(handler.second);
+      }
+    }
+    auto handled{false};
+    for (const auto &handler: handlers) {
+      handled = handler(*this, wrapped) or handled;
+    }
+    return handled;
+  }
+
   void layoutManaged(bool managed) {layoutManaged_ = managed;}
 
   private:
   struct Container *parent_;
   bool layoutManaged_{false};
-  vector<pair<decltype(BaseEvent::type_), std::function<bool(const Element &element, const Event &)>>> eventHandlers_;
+  vector<pair<decltype(BaseEvent::type_), Handler>> eventHandlers_;
 };
 
 } // namespace jwezel::ui
