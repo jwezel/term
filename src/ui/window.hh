@@ -18,9 +18,10 @@ namespace jwezel::ui {
 /// focus and when it has not, and gets its colors from a color style. Applications that do not
 /// need windows place their UI on the desktop instead (see `Ui::desktop`).
 ///
-/// The decoration and the color style are optional weak references that must outlive the window.
-/// Those that are not given are the defaults of `defaultDecoration()` and `defaultColorStyle()`,
-/// which are consulted whenever the window is drawn.
+/// The decoration, the color style and the UI style are optional weak references that must outlive the window.
+/// The decoration is the one given, or that of the UI style, or `defaultDecoration()`. A color style or UI
+/// style that is not given is the default one, which is consulted whenever the window is drawn. The styles
+/// are those of everything in the window: its widgets get their glyphs and colors from them.
 struct Window: jwezel::Window, Root {
   explicit Window(
     struct Ui &ui,
@@ -28,7 +29,8 @@ struct Window: jwezel::Window, Root {
     const Rectangle &area = RectangleDefault,
     const Text &title = {},
     const Decoration *decoration = nullptr,
-    const ColorStyle *colors = nullptr
+    const ColorStyle *colors = nullptr,
+    const UiStyle *style = nullptr
   );
 
   Window(const Window &) = delete;
@@ -59,20 +61,16 @@ struct Window: jwezel::Window, Root {
   [[nodiscard]] auto decoration() const -> const Decoration &;
 
   ///
-  /// Set the decoration (weak reference, nullptr for the default); the content is laid out again
+  /// Set the decoration (weak reference, nullptr for the one of the UI style); the content is laid out again
   void decoration(const Decoration *decoration);
-
-  ///
-  /// Get the colors of the frame
-  [[nodiscard]] auto colors() const -> const ColorStyle &;
-
-  ///
-  /// Set the color style (weak reference, nullptr for the default)
-  void colors(const ColorStyle *colors);
 
   ///
   /// Get the state, which is active while the window has the focus
   [[nodiscard]] auto state() const -> DecorationState {return state_;}
+
+  ///
+  /// Draw the frame and all elements again
+  void restyle() override;
 
   void handleGeometry(const Rectangle &previous) override;
 
@@ -86,8 +84,7 @@ struct Window: jwezel::Window, Root {
   void decorate();
 
   Text title_;
-  const Decoration *decoration_; // weak reference, nullptr for the default
-  const ColorStyle *colors_;     // weak reference, nullptr for the default
+  const Decoration *decoration_; // weak reference, nullptr for the one of the style
   DecorationState state_;
 };
 

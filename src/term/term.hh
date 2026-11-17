@@ -86,7 +86,7 @@ struct Terminal: Surface, TerminalInterface {
 
   void stop();
 
-  [[nodiscard]] auto focus() const -> Window * {return focusWindow_;}
+  [[nodiscard]] auto focus() const -> Window * override {return focusWindow_;}
 
   [[nodiscard]] auto display() -> Display & {return display_;}
 

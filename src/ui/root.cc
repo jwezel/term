@@ -12,15 +12,58 @@
 
 namespace jwezel::ui {
 
-Root::Root(jwezel::Window &host):
+Root::Root(jwezel::Window &host, const ColorStyle *colors, const UiStyle *style):
 Container{nullptr},
-host_{host}
+host_{host},
+colors_{colors},
+style_{style}
 {
   host_.inputHandler(this);
 }
 
 Root::~Root() {
   host_.inputHandler(nullptr);
+}
+
+auto Root::active() const -> bool {
+  return host_.terminal()->focus() == &host_;
+}
+
+auto Root::colors() const -> const ColorStyle & {
+  return colors_? *colors_: defaultColorStyle();
+}
+
+void Root::colors(const ColorStyle *colors) {
+  colors_ = colors;
+  restyle();
+}
+
+auto Root::style() const -> const UiStyle & {
+  return style_? *style_: defaultUiStyle();
+}
+
+void Root::style(const UiStyle *style) {
+  style_ = style;
+  restyle();
+}
+
+namespace {
+
+void restyleAll(const Container &container) {
+  for (auto *child: container.children()) {
+    if (auto *widget{dynamic_cast<Widget *>(child)}; widget) {
+      widget->restyle();
+    }
+    if (const auto *inner{dynamic_cast<Container *>(child)}; inner) {
+      restyleAll(*inner);
+    }
+  }
+}
+
+} // namespace
+
+void Root::restyle() {
+  restyleAll(*this);
 }
 
 void Root::focus(Widget *widget) {

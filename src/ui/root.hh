@@ -1,6 +1,8 @@
 #pragma once
 
+#include "color_style.hh"
 #include "container.hh"
+#include "ui_style.hh"
 
 #include <term/geometry.hh>
 #include <term/mouse_capture.hh>
@@ -33,8 +35,10 @@ struct Root: Container, InputHandler {
   ///
   /// Create Root
   ///
-  /// @param      host  The window the UI is shown in; it must outlive the root
-  explicit Root(jwezel::Window &host);
+  /// @param      host    The window the UI is shown in; it must outlive the root
+  /// @param[in]  colors  Optional color style of the elements (weak reference; must outlive the root)
+  /// @param[in]  style   Optional UI style of the elements (weak reference; must outlive the root)
+  explicit Root(jwezel::Window &host, const ColorStyle *colors = nullptr, const UiStyle *style = nullptr);
 
   Root(const Root &) = delete;
 
@@ -47,6 +51,30 @@ struct Root: Container, InputHandler {
   ~Root() override;
 
   [[nodiscard]] auto host() const -> jwezel::Window & {return host_;}
+
+  ///
+  /// Whether the host window has the terminal focus, which makes its focused widget the one that gets the input
+  [[nodiscard]] auto active() const -> bool;
+
+  ///
+  /// Get the colors of the elements: the color style of the root, or the default one
+  [[nodiscard]] auto colors() const -> const ColorStyle &;
+
+  ///
+  /// Set the color style (weak reference, nullptr for the default); all elements are drawn again
+  void colors(const ColorStyle *colors);
+
+  ///
+  /// Get the style of the elements: the UI style of the root, or the default one
+  [[nodiscard]] auto style() const -> const UiStyle &;
+
+  ///
+  /// Set the UI style (weak reference, nullptr for the default); all elements are drawn again
+  void style(const UiStyle *style);
+
+  ///
+  /// Draw all elements again, because the colors or the style have changed
+  virtual void restyle();
 
   ///
   /// Get the position of the host window on the display
@@ -101,6 +129,8 @@ struct Root: Container, InputHandler {
 
   private:
   jwezel::Window &host_;
+  const ColorStyle *colors_;  // weak reference, nullptr for the default
+  const UiStyle *style_;      // weak reference, nullptr for the default
   Widget *focus_{}; // weak reference to the focused widget
   Widget *grab_{};  // weak reference to the widget that got the mouse press that is still going on
   MouseCapture capture_;

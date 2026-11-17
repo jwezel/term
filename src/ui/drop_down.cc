@@ -64,8 +64,10 @@ void DropDown::open() {
   }
   const auto self{bounds()};
   auto width{self.width()};
+  const auto &glyphs{uiStyle().popup};
+  const auto padding{toDim(Text{glyphs.left}.width() + Text{glyphs.right}.width())};
   for (const auto &item: items_) {
-    width = std::max(width, toDim(item.width() + 2));
+    width = std::max(width, toDim(item.width() + padding));
   }
   const auto rows{std::min(toDim(items_.size()), std::max(Dim{1}, maxRows_))};
   popup_.emplace(
@@ -76,11 +78,16 @@ void DropDown::open() {
     *this,
     background()
   );
+  render(); // looks in use
 }
 
 void DropDown::close() {
+  const auto wasOpen{popup_.has_value()};
   popup_.reset();
   dragging_ = false;
+  if (wasOpen) {
+    render(); // does not look in use anymore
+  }
 }
 
 void DropDown::maxRows(Dim rows) {
@@ -101,6 +108,7 @@ void DropDown::focusChanged(bool focused) {
   if (!focused) {
     close();
   }
+  Widget::focusChanged(focused);
 }
 
 void DropDown::pressedElsewhere() {
@@ -232,18 +240,21 @@ void DropDown::render() {
   if (size.x() <= 0 or size.y() <= 0) {
     return;
   }
-  Text visible{background(), size};
-  const auto framed{size.x() >= 6};
-  const auto textWidth{framed? toDim(size.x() - 6): size.x()};
+  const auto state{static_cast<size_t>(widgetState(popup_.has_value()))};
+  const auto &glyphs{uiStyle().dropDown[state]};
+  const Text left{glyphs.left}, right{glyphs.right};
+  auto visible{canvas(dropDownRoles[state])};
+  const auto framed{size.x() >= left.width() + right.width()};
+  const auto textWidth{framed? toDim(size.x() - left.width() - right.width()): size.x()};
   if (framed) {
-    visible.patch(Text{"[ "}, Vector{0, 0});
-    visible.patch(Text{" ▼ ]"}, Vector{toDim(size.x() - 4), 0});
+    overlay(visible, left, Vector{0, 0});
+    overlay(visible, right, Vector{toDim(size.x() - right.width()), 0});
   }
   if (selected_ >= 0) {
     const auto &item{items_[static_cast<size_t>(selected_)]};
     const auto width{std::min(item.width(), textWidth)};
     if (item.height() > 0 and width > 0) {
-      visible.patch(item[Rectangle{0, 0, width, 1}], Vector{framed? Dim{2}: Dim{0}, 0});
+      overlay(visible, item[Rectangle{0, 0, width, 1}], Vector{framed? left.width(): Dim{0}, 0});
     }
   }
   write(Vector{0, 0}, visible);

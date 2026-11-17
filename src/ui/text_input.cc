@@ -202,13 +202,14 @@ void TextInput::render() {
   if (size.x() <= 0 or size.y() <= 0) {
     return;
   }
-  Text visible{background(), size};
+  auto visible{canvas(inputRoles[static_cast<size_t>(widgetState())])};
   const auto width{std::min(size.x(), toDim(content_.width() - scrollX_))};
   const auto height{std::min(size.y(), toDim(content_.height() - scrollY_))};
   for (Dim row = 0; row < height; ++row) {
     const auto visibleWidth{std::min(width, toDim(content_.data[static_cast<size_t>(scrollY_ + row)].size() - scrollX_))};
     if (visibleWidth > 0) {
-      visible.patch(
+      overlay(
+        visible,
         content_[Rectangle{scrollX_, toDim(scrollY_ + row), toDim(scrollX_ + visibleWidth), toDim(scrollY_ + row + 1)}],
         Vector{0, row}
       );

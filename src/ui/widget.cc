@@ -50,6 +50,37 @@ auto Widget::inputWindow() -> jwezel::Window * {
   return &root()->host();
 }
 
+auto Widget::focused() -> bool {
+  auto *root{this->root()};
+  return root->focus() == this and root->active();
+}
+
+auto Widget::colors() -> const ColorStyle & {
+  return root()->colors();
+}
+
+auto Widget::uiStyle() -> const UiStyle & {
+  return root()->style();
+}
+
+auto Widget::widgetState(bool inUse) -> WidgetState {
+  if (inUse) {
+    return WidgetState::active;
+  }
+  return focused()? WidgetState::focus: WidgetState::normal;
+}
+
+auto Widget::canvas(std::string_view role) -> Text {
+  Text result{background(), area().size()};
+  // The cells replace what the widget showed before when they are written, whatever attributes that had
+  result.setAttr(colors()[role], RectangleMax, AttributeMode::replace);
+  return result;
+}
+
+void Widget::overlay(Text &canvas, const Text &content, const Vector &position) {
+  canvas.patch(content, position, AttributeMode::merge, AttributeMode::default_, AttributeMode::replace);
+}
+
 auto Widget::moveEvent(const Rectangle &area) -> bool {
   TextElement::moveEvent(area);
   bounds_ = area - root()->origin();

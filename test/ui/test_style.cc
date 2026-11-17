@@ -1,5 +1,6 @@
 #include <ui/color_style.hh>
 #include <ui/decoration.hh>
+#include <ui/ui_style.hh>
 
 #include <term/text.hh>
 
@@ -16,6 +17,10 @@ using
   jwezel::RgbRed,
   jwezel::RgbYellow,
   jwezel::ui::BorderStyle,
+  jwezel::ui::Brackets,
+  jwezel::ui::UiStyle,
+  jwezel::ui::WidgetState,
+  jwezel::ui::defaultUiStyle,
   jwezel::ui::BoxDecoration,
   jwezel::ui::ColorRoles,
   jwezel::ui::ColorStyle,
@@ -217,6 +222,51 @@ TEST_CASE("Box decoration") {
       CHECK_EQ(text.data[0][0].attributes.bg, RgbGray5);
       CHECK_EQ(text.data[0][1].attributes.attr, 0);
     }
+  }
+}
+
+TEST_CASE("UI style") {
+  SUBCASE("The default style is the look the widgets always had") {
+    const auto &style{defaultUiStyle()};
+    CHECK_EQ(&style, &defaultUiStyle());
+    for (const auto &brackets: style.button) {
+      CHECK_EQ(brackets.left, "[ ");
+      CHECK_EQ(brackets.right, " ]");
+    }
+    for (const auto &brackets: style.dropDown) {
+      CHECK_EQ(brackets.left, "[ ");
+      CHECK_EQ(brackets.right, " ▼ ]");
+    }
+    CHECK_EQ(style.popup.left, " ");
+    CHECK_EQ(style.popup.right, " ");
+    CHECK_EQ(style.decoration, nullptr); // the default decoration
+  }
+  SUBCASE("A style is a constant value") {
+    constexpr UiStyle style{
+      .button = {Brackets{"(", ")"}, Brackets{"<", ">"}, Brackets{"{", "}"}},
+    };
+    static_assert(style.button[static_cast<std::size_t>(WidgetState::focus)].left == "<");
+    CHECK_EQ(style.button[static_cast<std::size_t>(WidgetState::active)].right, "}");
+    CHECK_EQ(style.dropDown[0].right, " ▼ ]"); // what is not said is the default
+    UiStyle copy{style};
+    copy.popup = Brackets{"|", "|"};
+    CHECK_EQ(copy.popup.left, "|");
+    CHECK_EQ(style.popup.left, " ");
+  }
+  SUBCASE("The default colors do not say anything, except what is needed to see the highlight of a list") {
+    const auto &colors{defaultColorStyle()};
+    for (const auto *role: {
+      "label", "button", "button.focus", "button.active", "input", "input.focus",
+      "dropdown", "dropdown.focus", "dropdown.active", "popup"
+    }) {
+      INFO("Role: ", role);
+      CHECK_NE(colors.find(role), nullptr);
+      CHECK_EQ(colors[role], CharAttributes{});
+    }
+    CHECK_EQ(colors["popup.highlight"].attr, reverse);
+    CHECK_EQ(colors["popup.highlight"].fg, RgbNone);
+    CHECK_EQ(colors["popup.highlight"].bg, RgbNone);
+    CHECK_EQ(colors["button.pressed"], CharAttributes{}); // a role nobody knows: nothing
   }
 }
 

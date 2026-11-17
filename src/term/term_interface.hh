@@ -16,6 +16,10 @@ struct TerminalInterface {
   virtual void focus(struct Window *window) = 0;
 
   ///
+  /// Get the window that has the focus
+  [[nodiscard]] virtual auto focus() const -> struct Window * {return nullptr;}
+
+  ///
   /// Possibly expand display and screen
   ///
   /// @param[in]  size  The size

@@ -11,7 +11,9 @@ namespace jwezel::ui {
 ///
 /// The text is rendered anchored at the top-left corner of the widget and
 /// clipped to the widget area. When the widget is moved (e.g. positioned by
-/// a Box), the text is rendered again into the new area.
+/// a Box), the text is rendered again into the new area. The colors of the
+/// role `label` are applied to the whole widget, and what the text says for
+/// itself comes on top of that.
 struct Label: Widget {
 
   ///

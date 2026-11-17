@@ -6,7 +6,6 @@
 #include <term/window.hh>
 
 #include <algorithm>
-#include <memory>
 
 namespace jwezel::ui {
 
@@ -27,13 +26,13 @@ Window::Window(
   const Rectangle &area,
   const Text &title,
   const Decoration *decoration,
-  const ColorStyle *colors
+  const ColorStyle *colors,
+  const UiStyle *style
 ):
 jwezel::Window{&ui.terminal(), DefaultSize(ui, area), background},
-Root{static_cast<jwezel::Window &>(*this)},
+Root{static_cast<jwezel::Window &>(*this), colors, style},
 title_{title},
 decoration_{decoration},
-colors_{colors},
 state_{ui.terminal().focus() == static_cast<jwezel::Window *>(this)? DecorationState::active: DecorationState::inactive}
 {
   decorate();
@@ -55,11 +54,10 @@ auto Window::content() const -> Rectangle {
 }
 
 auto Window::decoration() const -> const Decoration & {
-  return decoration_? *decoration_: defaultDecoration();
-}
-
-auto Window::colors() const -> const ColorStyle & {
-  return colors_? *colors_: defaultColorStyle();
+  if (decoration_) {
+    return *decoration_;
+  }
+  return style().decoration? *style().decoration: defaultDecoration();
 }
 
 void Window::decorate() {
@@ -78,9 +76,11 @@ void Window::decoration(const Decoration *decoration) {
   layout();
 }
 
-void Window::colors(const ColorStyle *colors) {
-  colors_ = colors;
+void Window::restyle() {
+  fill(background()); // the decoration may have changed
   decorate();
+  layout(); // and with it the room for the content
+  Root::restyle();
 }
 
 void Window::state(DecorationState state) {

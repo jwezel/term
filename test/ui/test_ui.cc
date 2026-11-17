@@ -22,6 +22,7 @@
 #include <doctest/doctest.h>
 #include <fstream>
 #include <iterator>
+#include <format>
 #include <string>
 
 using
@@ -84,6 +85,35 @@ constexpr ColorRoles<4> paintRoles{
   {"title.inactive", jwezel::CharAttributes{jwezel::RgbGray5, jwezel::RgbNone, jwezel::underline}},
 };
 constexpr ColorStyle paint{paintRoles};
+
+// Colors for every widget; the attributes are there to see that they are taken away again
+constexpr ColorRoles<10> widgetRoles{
+  {"label", jwezel::CharAttributes{jwezel::RgbYellow}},
+  {"button", jwezel::CharAttributes{jwezel::RgbBlue}},
+  {"button.focus", jwezel::CharAttributes{jwezel::RgbGreen}},
+  {"button.active", jwezel::CharAttributes{jwezel::RgbNone, jwezel::RgbRed, jwezel::reverse}},
+  {"input", jwezel::CharAttributes{jwezel::RgbNone, jwezel::RgbGray2}},
+  {"input.focus", jwezel::CharAttributes{jwezel::RgbNone, jwezel::RgbGray5}},
+  {"dropdown", jwezel::CharAttributes{jwezel::RgbCyan}},
+  {"dropdown.active", jwezel::CharAttributes{jwezel::RgbMagenta}},
+  {"popup", jwezel::CharAttributes{jwezel::RgbNone, jwezel::RgbGray3}},
+  {"popup.highlight", jwezel::CharAttributes{jwezel::RgbWhite, jwezel::RgbBlue5, jwezel::bold}},
+};
+constexpr ColorStyle widgetColors{widgetRoles};
+
+using jwezel::ui::Brackets;
+
+// Other glyphs for the widgets
+constexpr jwezel::ui::UiStyle roundStyle{
+  .button = {Brackets{"( ", " )"}, Brackets{"< ", " >"}, Brackets{"{ ", " }"}},
+  .dropDown = {Brackets{"( ", " v )"}, Brackets{"( ", " v )"}, Brackets{"( ", " ^ )"}},
+  .popup = Brackets{"|", "|"},
+};
+
+// Popup glyphs that do not add up to the width of the default ones
+constexpr jwezel::ui::UiStyle wideStyle{
+  .popup = Brackets{"<<", ">>>"},
+};
 
 // What the frame of a window looks like on the display: the default decoration, solid or (inactive) dashed
 auto framed(const Vector &size, const Text &title, bool inactive = false) -> Text {
@@ -1360,6 +1390,226 @@ TEST_CASE("UI Window") {
       NoFrame none;
       auto bare{jwezel::ui::Frame(desktop, Rectangle{14, 1, 20, 5}, 'x'_C, &none)};
       CHECK_EQ(shown(Rectangle{14, 1, 20, 5}), Text{'x'_C, Vector{6, 4}});
+    }
+  }
+
+  SUBCASE("Widget styles") {
+    auto send{
+      [&](const char *input) {
+        REQUIRE_NE(fputs(input, inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+      }
+    };
+    auto click{
+      [&](int x, int y) { // display position
+        send(std::format("\x1b[<0;{};{}M", x + 1, y + 1).c_str());
+        send(std::format("\x1b[<0;{};{}m", x + 1, y + 1).c_str());
+      }
+    };
+    const auto cell{
+      [&](jwezel::Dim x, jwezel::Dim y) {return term.display().text().data[static_cast<size_t>(y)][static_cast<size_t>(x)];}
+    };
+    auto shown{[&](const Rectangle &area) {return term.display().text()[area];}};
+    const Rectangle area1{0, 0, 24, 14};
+    const std::vector<Text> fruit{Text{"Apple"}, Text{"Banana"}, Text{"Cherry"}};
+    SUBCASE("Colors") {
+      auto w1{jwezel::ui::Window(ui_, ' '_C, area1, Text{"T"}, nullptr, &widgetColors)};
+      auto button1{jwezel::ui::Button(w1, Rectangle{1, 1, 9, 2}, Text{"OK"})};
+      auto button2{jwezel::ui::Button(w1, Rectangle{1, 3, 9, 4}, Text{"No"})};
+      auto input{jwezel::ui::LineEdit(w1, Rectangle{1, 5, 19, 6}, Text{"ab"})};
+      auto label{jwezel::ui::Label(w1, Rectangle{1, 7, 10, 8}, Text{"Hi"})};
+      auto drop{jwezel::ui::DropDown(w1, Rectangle{1, 9, 19, 10}, fruit)};
+      REQUIRE_EQ(w1.focus(), &button1);
+      CHECK_EQ(&w1.colors(), &widgetColors);
+      SUBCASE("Roles of the normal and the focused state") {
+        CHECK_EQ(cell(1, 1).attributes.fg, jwezel::RgbGreen); // button.focus, on the whole button
+        CHECK_EQ(cell(8, 1).attributes.fg, jwezel::RgbGreen);
+        CHECK_EQ(cell(1, 3).attributes.fg, jwezel::RgbBlue); // button
+        CHECK_EQ(cell(18, 5).attributes.bg, jwezel::RgbGray2); // input, also where there is nothing
+        CHECK_EQ(cell(1, 5).attributes.bg, jwezel::RgbGray2); // and under the content
+        CHECK_EQ(cell(1, 5).rune, 'a');
+        CHECK_EQ(cell(1, 7).attributes.fg, jwezel::RgbYellow); // label
+        CHECK_EQ(cell(2, 7).rune, 'i');
+        CHECK_EQ(cell(2, 7).attributes.fg, jwezel::RgbYellow);
+        CHECK_EQ(cell(5, 7).attributes.fg, jwezel::RgbYellow); // the whole widget
+        CHECK_EQ(cell(1, 9).attributes.fg, jwezel::RgbCyan); // dropdown
+        CHECK_EQ(cell(17, 9).attributes.fg, jwezel::RgbCyan);
+        CHECK_EQ(cell(12, 12).attributes.fg, jwezel::RgbNone); // no widget there
+      }
+      SUBCASE("The focus follows") {
+        click(2, 3);
+        CHECK_EQ(w1.focus(), &button2);
+        CHECK_EQ(cell(1, 3).attributes.fg, jwezel::RgbGreen);
+        CHECK_EQ(cell(1, 1).attributes.fg, jwezel::RgbBlue);
+        click(2, 5);
+        CHECK_EQ(cell(18, 5).attributes.bg, jwezel::RgbGray5); // input.focus
+        CHECK_EQ(cell(1, 5).attributes.bg, jwezel::RgbGray5);
+        CHECK_EQ(cell(1, 3).attributes.fg, jwezel::RgbBlue);
+        send("X");
+        CHECK_EQ(cell(3, 5).rune, 'X'); // typed characters are in the field as well
+        CHECK_EQ(cell(3, 5).attributes.bg, jwezel::RgbGray5);
+        click(2, 3);
+        CHECK_EQ(cell(18, 5).attributes.bg, jwezel::RgbGray2);
+      }
+      SUBCASE("A pressed button is in use") {
+        send("\x1b[<0;3;4M"); // down on button2
+        CHECK_EQ(cell(1, 3).attributes.bg, jwezel::RgbRed); // button.active
+        CHECK_NE(cell(1, 3).attributes.attr & jwezel::reverse, 0);
+        CHECK_EQ(cell(8, 3).attributes.bg, jwezel::RgbRed);
+        CHECK_EQ(cell(1, 1).attributes.fg, jwezel::RgbBlue); // the focus is on button2 now
+        send("\x1b[<0;3;4m"); // up: nothing of the active role is left
+        CHECK_EQ(cell(1, 3).attributes.bg, jwezel::RgbNone);
+        CHECK_EQ(cell(1, 3).attributes.attr, 0);
+        CHECK_EQ(cell(1, 3).attributes.fg, jwezel::RgbGreen); // focused
+        send("\x1b[<0;3;4M"); // pressed again, then called off
+        CHECK_EQ(cell(1, 3).attributes.bg, jwezel::RgbRed);
+        send("\x1b[<32;15;12M");
+        send("\x1b[<0;15;12m");
+        CHECK_EQ(cell(1, 3).attributes.bg, jwezel::RgbNone);
+        CHECK_EQ(cell(1, 3).attributes.attr, 0);
+      }
+      SUBCASE("A window that has not the focus has no focused widget") {
+        auto w2{jwezel::ui::Window(ui_, ' '_C, Rectangle{26, 0, 38, 6}, Text{"B"})};
+        CHECK_EQ(w1.focus(), &button1); // still the focused widget of its window
+        CHECK_EQ(cell(1, 1).attributes.fg, jwezel::RgbBlue); // but it looks like the others
+        click(0, 0); // the frame of w1
+        CHECK_EQ(cell(1, 1).attributes.fg, jwezel::RgbGreen);
+      }
+      SUBCASE("The drop down") {
+        click(2, 9); // opens it
+        REQUIRE(drop.isOpen());
+        CHECK_EQ(cell(1, 9).attributes.fg, jwezel::RgbMagenta); // dropdown.active
+        CHECK_EQ(cell(10, 11).attributes.bg, jwezel::RgbGray3); // popup
+        CHECK_EQ(cell(10, 12).attributes.bg, jwezel::RgbGray3);
+        CHECK_EQ(cell(5, 10).attributes.bg, jwezel::RgbBlue5); // popup.highlight, on the highlighted item
+        CHECK_EQ(cell(5, 10).attributes.fg, jwezel::RgbWhite);
+        CHECK_EQ(cell(5, 10).attributes.attr, jwezel::bold);
+        CHECK_EQ(cell(17, 10).attributes.bg, jwezel::RgbBlue5); // across the whole row
+        send("\x1b[B"); // the highlight moves
+        CHECK_EQ(cell(5, 11).attributes.bg, jwezel::RgbBlue5);
+        CHECK_EQ(cell(5, 10).attributes.bg, jwezel::RgbGray3); // and leaves nothing behind
+        CHECK_EQ(cell(5, 10).attributes.attr, 0);
+        CHECK_EQ(cell(5, 10).attributes.fg, jwezel::RgbNone);
+        send("\x1b"); // closed
+        CHECK_FALSE(drop.isOpen());
+        CHECK_EQ(cell(1, 9).attributes.fg, jwezel::RgbCyan); // "dropdown.focus" is not there: "dropdown"
+      }
+      SUBCASE("Changing the color style draws everything again") {
+        w1.colors(nullptr);
+        CHECK_EQ(&w1.colors(), &jwezel::ui::defaultColorStyle());
+        CHECK_EQ(cell(1, 1).attributes.fg, jwezel::RgbNone);
+        CHECK_EQ(cell(1, 3).attributes.fg, jwezel::RgbNone);
+        CHECK_EQ(cell(18, 5).attributes.bg, jwezel::RgbNone);
+        CHECK_EQ(cell(1, 7).attributes.fg, jwezel::RgbNone);
+        CHECK_EQ(cell(1, 9).attributes.fg, jwezel::RgbNone);
+        CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), Text{"[ OK ]"});
+        w1.colors(&widgetColors);
+        CHECK_EQ(cell(1, 1).attributes.fg, jwezel::RgbGreen);
+        CHECK_EQ(cell(1, 3).attributes.fg, jwezel::RgbBlue);
+        CHECK_EQ(cell(18, 5).attributes.bg, jwezel::RgbGray2);
+      }
+    }
+    SUBCASE("Nested widgets are drawn again") {
+      auto w1{jwezel::ui::Window(ui_, ' '_C, area1, Text{"T"})};
+      auto outer{jwezel::ui::VerticalBox(w1, jwezel::RectangleDefault)};
+      auto inner{jwezel::ui::HorizontalBox(outer, jwezel::RectangleDefault)};
+      auto button{jwezel::ui::Button(inner, Text{"OK"})};
+      CHECK_EQ(cell(2, 1).attributes.fg, jwezel::RgbNone);
+      w1.colors(&widgetColors);
+      CHECK_EQ(cell(2, 1).attributes.fg, jwezel::RgbGreen); // it is the focused one
+    }
+    SUBCASE("The colors of the desktop") {
+      auto &desktop{ui_.desktop()};
+      auto button{jwezel::ui::Button(desktop, Rectangle{2, 1, 10, 2}, Text{"Go"})};
+      CHECK_EQ(cell(2, 1).attributes.fg, jwezel::RgbNone);
+      desktop.colors(&widgetColors);
+      CHECK_EQ(cell(2, 1).attributes.fg, jwezel::RgbGreen);
+      auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{14, 0, 30, 6}, Text{"T"})}; // has its own colors
+      auto inner{jwezel::ui::Button(w1, Rectangle{1, 1, 9, 2}, Text{"In"})};
+      CHECK_EQ(cell(15, 1).attributes.fg, jwezel::RgbNone);
+      CHECK_EQ(cell(2, 1).attributes.fg, jwezel::RgbBlue); // the desktop has not the focus now
+    }
+    SUBCASE("Glyphs") {
+      auto w1{jwezel::ui::Window(ui_, ' '_C, area1, Text{"T"}, nullptr, nullptr, &roundStyle)};
+      auto button1{jwezel::ui::Button(w1, Rectangle{1, 1, 9, 2}, Text{"OK"})};
+      auto button2{jwezel::ui::Button(w1, Rectangle{1, 3, 9, 4}, Text{"No"})};
+      auto drop{jwezel::ui::DropDown(w1, Rectangle{1, 9, 19, 10}, fruit, 1)};
+      CHECK_EQ(&w1.style(), &roundStyle);
+      CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), Text{"< OK >"}); // by state: focused
+      CHECK_EQ(shown(Rectangle{1, 3, 7, 4}), Text{"( No )"}); // normal
+      SUBCASE("A pressed button") {
+        send("\x1b[<0;3;4M");
+        CHECK_EQ(shown(Rectangle{1, 3, 7, 4}), Text{"{ No }"});
+        CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), Text{"( OK )"});
+        send("\x1b[<0;3;4m");
+        CHECK_EQ(shown(Rectangle{1, 3, 7, 4}), Text{"< No >"});
+      }
+      SUBCASE("The drop down") {
+        const auto plain{[&](const Rectangle &area) {return std::string(shown(area));}}; // without the highlight
+        CHECK_EQ(plain(Rectangle{1, 9, 19, 10}), "( Banana       v )\n");
+        click(2, 9);
+        REQUIRE(drop.isOpen());
+        CHECK_EQ(plain(Rectangle{1, 9, 19, 10}), "( Banana       ^ )\n"); // open
+        CHECK_EQ(plain(Rectangle{1, 10, 19, 13}), "|Apple           |\n|Banana          |\n|Cherry          |\n");
+        send("\x1b");
+        CHECK_EQ(plain(Rectangle{1, 9, 19, 10}), "( Banana       v )\n");
+      }
+      SUBCASE("The popup is as wide as the glyphs and the items need") {
+        drop.items({Text{"A very long item of the list"}, Text{"B"}});
+        click(2, 9);
+        REQUIRE(drop.isOpen());
+        CHECK_EQ(std::string(shown(Rectangle{1, 10, 31, 11})), "|A very long item of the list|\n"); // 28 + 2
+        CHECK_EQ(std::string(shown(Rectangle{1, 11, 31, 12})), "|B                           |\n");
+      }
+      SUBCASE("The glyphs of the popup can have any width") {
+        w1.style(&wideStyle);
+        drop.items({Text{"A very long item of the list"}, Text{"B"}});
+        click(2, 9);
+        REQUIRE(drop.isOpen());
+        // 2 + 28 + 3 wide: nothing of the item is cut off, nor is the glyph on the right
+        CHECK_EQ(std::string(shown(Rectangle{1, 10, 34, 11})), "<<A very long item of the list>>>\n");
+        CHECK_EQ(std::string(shown(Rectangle{1, 11, 34, 12})), "<<B                           >>>\n");
+        CHECK_EQ(std::string(shown(Rectangle{1, 9, 19, 10})), "[ B            ▼ ]\n"); // default drop down glyphs
+      }
+      SUBCASE("The style can be changed") {
+        w1.style(nullptr);
+        CHECK_EQ(&w1.style(), &jwezel::ui::defaultUiStyle());
+        CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), Text{"[ OK ]"});
+        CHECK_EQ(shown(Rectangle{1, 3, 7, 4}), Text{"[ No ]"});
+        CHECK_EQ(shown(Rectangle{1, 9, 19, 10}), Text{"[ Banana       ▼ ]"});
+        w1.style(&roundStyle);
+        CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), Text{"< OK >"});
+      }
+    }
+    SUBCASE("The decoration is part of the style") {
+      jwezel::ui::BoxDecoration heavy{jwezel::ui::BorderStyle{2, 0, false}, jwezel::ui::BorderStyle{2, 0, false}};
+      NoFrame none;
+      const jwezel::ui::UiStyle heavyStyle{.decoration = &heavy};
+      const Rectangle area{0, 0, 8, 4};
+      auto w1{jwezel::ui::Window(ui_, ' '_C, area, Text{"Hi"}, nullptr, nullptr, &heavyStyle)};
+      CHECK_EQ(&w1.decoration(), &heavy);
+      CHECK_EQ(std::string(shown(area)), "┏Hi━━━━┓\n┃      ┃\n┃      ┃\n┗━━━━━━┛\n");
+      SUBCASE("A decoration of the window itself comes first") {
+        w1.decoration(&none);
+        CHECK_EQ(&w1.decoration(), &none);
+        CHECK_EQ(w1.content(), Rectangle{0, 0, 8, 4});
+        w1.decoration(nullptr); // the one of the style again
+        CHECK_EQ(&w1.decoration(), &heavy);
+      }
+      SUBCASE("The style can be changed") {
+        auto box{jwezel::ui::VerticalBox(w1, jwezel::RectangleDefault)};
+        auto label{jwezel::ui::Label(box, Text{"x"})};
+        const jwezel::ui::UiStyle noFrameStyle{.decoration = &none};
+        w1.style(&noFrameStyle);
+        CHECK_EQ(w1.content(), Rectangle{0, 0, 8, 4}); // the content has made room
+        CHECK_EQ(label.bounds(), Rectangle{0, 0, 8, 4});
+        CHECK_EQ(w1.text(), Text{' '_C, Vector{8, 4}});
+        w1.style(nullptr);
+        CHECK_EQ(&w1.decoration(), &jwezel::ui::defaultDecoration());
+        CHECK_EQ(label.bounds(), Rectangle{1, 1, 7, 3});
+        CHECK_EQ(w1.text(), framed(Vector{8, 4}, Text{"Hi"}));
+      }
     }
   }
   REQUIRE_FALSE(fclose(inputRead));

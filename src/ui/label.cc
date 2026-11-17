@@ -17,7 +17,12 @@ text_{text}
 }
 
 void Label::render() {
-  write(Vector{0, 0}, text_);
+  if (area().size().x() <= 0 or area().size().y() <= 0) {
+    return;
+  }
+  auto visible{canvas(labelRole)};
+  overlay(visible, text_, Vector{0, 0});
+  write(Vector{0, 0}, visible);
 }
 
 } // namespace jwezel::ui

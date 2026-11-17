@@ -12,7 +12,10 @@ namespace jwezel::ui {
 /// The popup is a plain widget: it only displays the items and keeps track of the
 /// highlight and of what is scrolled into view. It leaves all interaction to the
 /// widget that owns it (see `eventTarget`), which can therefore remove the
-/// popup at any time. Only the first row of an item is shown.
+/// popup at any time. Only the first row of an item is shown, between the
+/// glyphs that the UI style has for the items of a popup. The popup has the
+/// colors of the role `popup`, and the highlighted item those of
+/// `popup.highlight` (the default is reverse video) on top of that.
 struct ListPopup: Widget {
   ///
   /// Create ListPopup

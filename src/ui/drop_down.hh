@@ -21,6 +21,10 @@ namespace jwezel::ui {
 /// the button. The list closes when the focus goes elsewhere or when the mouse
 /// is clicked somewhere else.
 ///
+/// The glyphs around the selected item come from the UI style (by state: normal,
+/// focus, and active while the list is open), and so do the colors of the roles
+/// `dropdown`, `dropdown.focus` and `dropdown.active`.
+///
 /// The list is a popup in front of all other elements, which only exists while it
 /// is open. Only the first row of the items is shown.
 struct DropDown: Widget {

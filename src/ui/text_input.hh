@@ -13,7 +13,9 @@ namespace jwezel::ui {
 /// Provides the editing engine: a content buffer, the cursor, key handling
 /// (characters, Backspace, Delete, arrows, Home/End, Enter) and scrolling.
 /// It renders the visible content and places the terminal's hardware cursor
-/// (the caret) at the editing position while it has the focus.
+/// (the caret) at the editing position while it has the focus. The whole
+/// widget gets the colors of the role `input`, or `input.focus` while it gets
+/// the keyboard input, so the field can be seen where it is empty.
 /// Subclasses supply the policy: LineEdit accepts on Enter and scrolls one
 /// row; TextArea inserts a newline on Enter and scrolls vertically.
 struct TextInput: Widget {
