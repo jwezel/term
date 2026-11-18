@@ -31,7 +31,7 @@ enum class FocusPolicy: u1 {
 /// A widget can host actions, which have their shortcuts work while the widget has the focus.
 struct Widget: TextElement, ui::Element, ActionHost
 {
-  explicit Widget(const Rectangle &area, const Char &background, Container &parent);
+  Widget(const Rectangle &area, const Char &background, Container &parent);
 
   void move(const Rectangle &area) override;
 

@@ -75,7 +75,7 @@ struct DropDown: Widget {
   /// @param      items       The items
   /// @param      selected    Index of the selected item
   /// @param      background  The background
-  explicit DropDown(
+  DropDown(
     Container &parent,
     const Rectangle &area,
     const std::vector<Text> &items = {},

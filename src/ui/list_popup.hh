@@ -27,7 +27,7 @@ struct ListPopup: Widget {
   /// @param      highlighted  Index of the item to highlight
   /// @param      owner        The widget the popup belongs to, which gets its mouse input
   /// @param      background   The background
-  explicit ListPopup(
+  ListPopup(
     Container &parent,
     const Rectangle &area,
     const std::vector<Text> &items,

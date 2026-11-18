@@ -23,7 +23,7 @@ struct Label: Widget {
   /// @param      area        The area
   /// @param      text        The text to display
   /// @param      background  The background
-  explicit Label(Container &parent, const Rectangle &area, const Text &text = {}, const Char &background = Space);
+  Label(Container &parent, const Rectangle &area, const Text &text = {}, const Char &background = Space);
 
   ///
   /// Create Label with its area assigned by the parent layout (e.g. a Box)

@@ -93,7 +93,7 @@ struct InputHandler {
 ///
 /// Window
 struct Window: TextElement {
-  explicit Window(struct TerminalInterface *terminal, const Rectangle &area, const Char &background = Space, Window *below = 0);
+  Window(struct TerminalInterface *terminal, const Rectangle &area, const Char &background = Space, Window *below = 0);
 
   ~Window() override;
 

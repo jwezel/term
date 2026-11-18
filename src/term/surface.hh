@@ -27,7 +27,7 @@ struct Surface {
   struct Element;
 
   struct Fragment {
-    explicit Fragment(const Rectangle &area, struct Element *element):
+    Fragment(const Rectangle &area, struct Element *element):
     area(area),
     element(element)
     {}
@@ -210,7 +210,7 @@ struct TextElement: Surface::Element {
   /// @param[in]  id    The identifier
   /// @param[in]  area  The area
   ///
-  explicit TextElement(Surface *surface, const Rectangle &area, const Char &background=Space, TextElement *below=0);
+  TextElement(Surface *surface, const Rectangle &area, const Char &background=Space, TextElement *below=0);
 
   TextElement() = default;
 

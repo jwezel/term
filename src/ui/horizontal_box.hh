@@ -11,7 +11,7 @@ namespace jwezel::ui {
 /// the box. Children stretch across the full height and share the width
 /// according to their weights.
 struct HorizontalBox: Box {
-  explicit HorizontalBox(Container &parent, const Rectangle &area, const BoxLayout &layout = {}):
+  HorizontalBox(Container &parent, const Rectangle &area, const BoxLayout &layout = {}):
   Box{parent, area, layout, Orientation::horizontal}
   {}
 };

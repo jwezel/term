@@ -38,7 +38,7 @@ struct Button: Label {
   /// @param      area        The area
   /// @param      text        The text to display
   /// @param      background  The background
-  explicit Button(Container &parent, const Rectangle &area, const Text &text = {}, const Char &background = Space);
+  Button(Container &parent, const Rectangle &area, const Text &text = {}, const Char &background = Space);
 
   ///
   /// Create Button with its area assigned by the parent layout (e.g. a Box)

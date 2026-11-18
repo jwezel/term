@@ -54,7 +54,7 @@ struct TextInput: Widget {
   /// @param      area        The area
   /// @param      text        The initial text, in UTF-8; the cursor is behind it
   /// @param      background  The background
-  explicit TextInput(Container &parent, const Rectangle &area, std::string_view text = {}, const Char &background = Space);
+  TextInput(Container &parent, const Rectangle &area, std::string_view text = {}, const Char &background = Space);
 
   ///
   /// Create TextInput with its area assigned by the parent layout (e.g. a Box)

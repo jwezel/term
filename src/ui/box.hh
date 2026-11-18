@@ -35,7 +35,7 @@ enum class Orientation {horizontal, vertical};
 /// accumulated so the slices always fill the box exactly.
 struct Box: Container {
 
-  explicit Box(Container &parent, const Rectangle &area, const BoxLayout &layout, Orientation orientation);
+  Box(Container &parent, const Rectangle &area, const BoxLayout &layout, Orientation orientation);
 
   Box(const Box &) = delete;
 

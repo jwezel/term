@@ -11,7 +11,7 @@ namespace jwezel::ui {
 /// the box. Children stretch across the full width and share the height
 /// according to their weights.
 struct VerticalBox: Box {
-  explicit VerticalBox(Container &parent, const Rectangle &area, const BoxLayout &layout = {}):
+  VerticalBox(Container &parent, const Rectangle &area, const BoxLayout &layout = {}):
   Box{parent, area, layout, Orientation::vertical}
   {}
 };
