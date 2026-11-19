@@ -33,7 +33,7 @@ struct ListPopup: Widget {
     const std::vector<Text> &items,
     Dim highlighted,
     Widget &owner,
-    const Char &background = Space
+    const Char &background = InheritBackground
   );
 
   ListPopup(const ListPopup &) = delete;

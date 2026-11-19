@@ -26,6 +26,14 @@ enum class FocusPolicy: u1 {
 };
 
 ///
+/// Background that takes the background of the window the widget is in
+///
+/// This is what a widget uses when it is created without a background: the colors of its role are layered on
+/// top of it, and a role that does not name a background lets the window show through. `Space` is the
+/// terminal's own background.
+inline const Char InheritBackground{NoneRune};
+
+///
 /// Base class of all widgets
 ///
 /// A widget can host actions, which have their shortcuts work while the widget has the focus.

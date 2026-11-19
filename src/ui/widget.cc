@@ -17,13 +17,18 @@ auto displayArea(const Rectangle &area, Container &parent) -> Rectangle {
   return area == RectangleDefault? area: area + parent.root()->origin();
 }
 
+// The background of the widget, which is the one of the window unless it has one of its own
+auto resolvedBackground(const Char &background, Container &parent) -> Char {
+  return background == InheritBackground? parent.root()->host().background(): background;
+}
+
 } // namespace
 
 Widget::Widget(const Rectangle &area, const Char &background, Container &parent):
 TextElement{
   parent.root()->host().surface(),
   displayArea(area, parent),
-  background
+  resolvedBackground(background, parent)
 },
 ui::Element{&parent},
 bounds_{area}

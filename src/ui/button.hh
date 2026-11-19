@@ -38,7 +38,7 @@ struct Button: Label {
   /// @param      area        The area
   /// @param      text        The text to display
   /// @param      background  The background
-  Button(Container &parent, const Rectangle &area, const Text &text = {}, const Char &background = Space);
+  Button(Container &parent, const Rectangle &area, const Text &text = {}, const Char &background = InheritBackground);
 
   ///
   /// Create Button with its area assigned by the parent layout (e.g. a Box)
@@ -46,7 +46,7 @@ struct Button: Label {
   /// @param      parent      The parent container
   /// @param      text        The text to display
   /// @param      background  The background
-  explicit Button(Container &parent, const Text &text = {}, const Char &background = Space);
+  explicit Button(Container &parent, const Text &text = {}, const Char &background = InheritBackground);
 
   Button(const Button &) = delete;
 
@@ -65,6 +65,10 @@ struct Button: Label {
   ///
   /// @return     Index of the handler
   auto onPress(const Handler &handler) -> int;
+
+  ///
+  /// The size of the text between the brackets of the normal state
+  [[nodiscard]] auto preferredSize() -> Vector override;
 
   protected:
   void render() override;

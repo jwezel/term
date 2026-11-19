@@ -59,6 +59,22 @@ struct Element
   /// @return     The area relative to the window
   [[nodiscard]] virtual auto bounds() -> Rectangle = 0;
 
+  ///
+  /// The size the element would like to have when a layout sizes it to its content
+  ///
+  /// A box that lays out an element with `LayoutSize::fit` gives it this size along its main axis and uses the
+  /// cross component of it when the element is aligned instead of stretched. The default is zero: an element
+  /// without content of its own has no preference.
+  ///
+  /// @return     The preferred size
+  [[nodiscard]] virtual auto preferredSize() -> Vector {return Vector{0, 0};}
+
+  ///
+  /// Tell the layout that the preferred size of the element may have changed
+  ///
+  /// Containers hand this up to the box that lays them out, which lays its children out again.
+  virtual void layoutChanged();
+
   auto parent() {return parent_;}
 
   ///

@@ -9,7 +9,17 @@ namespace jwezel::ui {
 ///
 /// Enter inserts a newline; the content scrolls vertically.
 struct TextArea: TextInput {
-  using TextInput::TextInput;
+  TextArea(Container &parent, const Rectangle &area, std::string_view text = {}, const Char &background = InheritBackground):
+  TextInput{parent, area, text, background}
+  {
+    layoutChanged(); // a text area prefers as many rows as it has lines, which Enter makes different
+  }
+
+  explicit TextArea(Container &parent, std::string_view text = {}, const Char &background = InheritBackground):
+  TextInput{parent, text, background}
+  {
+    layoutChanged();
+  }
 
   TextArea(const TextArea &) = delete;
 

@@ -32,7 +32,7 @@ struct Frame: Widget {
   explicit Frame(
     Container &parent,
     const Rectangle &area=RectangleDefault,
-    const Char &background=Char{},
+    const Char &background=InheritBackground,
     const Decoration *decoration=nullptr,
     ui::Element *content=nullptr,
     const Text &title={},

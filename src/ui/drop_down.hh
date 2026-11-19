@@ -80,7 +80,7 @@ struct DropDown: Widget {
     const Rectangle &area,
     const std::vector<Text> &items = {},
     Dim selected = 0,
-    const Char &background = Space
+    const Char &background = InheritBackground
   );
 
   ///
@@ -94,7 +94,7 @@ struct DropDown: Widget {
     Container &parent,
     const std::vector<Text> &items = {},
     Dim selected = 0,
-    const Char &background = Space
+    const Char &background = InheritBackground
   );
 
   DropDown(const DropDown &) = delete;
@@ -112,6 +112,19 @@ struct DropDown: Widget {
   ///
   /// Replace the items; the list is closed and the selection is limited to the new items
   void items(const std::vector<Text> &items);
+
+  ///
+  /// Get the caption, which is shown instead of the selected item while the list is closed
+  [[nodiscard]] auto caption() const -> const Text & {return caption_;}
+
+  ///
+  /// Show a fixed caption instead of the selected item while the list is closed
+  ///
+  /// This is what a menu does: it is called something, and what was chosen from it is not what it shows. The
+  /// caption does not change the items or the selection, and an empty one shows the selected item again.
+  ///
+  /// @param[in]  caption  The caption
+  void caption(const Text &caption);
 
   ///
   /// Get the index of the selected item
@@ -160,6 +173,10 @@ struct DropDown: Widget {
 
   void pressedElsewhere() override;
 
+  ///
+  /// The width of the widest item or of the caption, with the glyphs around it; one row
+  [[nodiscard]] auto preferredSize() -> Vector override;
+
   protected:
   void render() override;
 
@@ -175,6 +192,7 @@ struct DropDown: Widget {
   void choose(Dim index, const Event &event);
 
   std::vector<Text> items_;
+  Text caption_;
   Dim selected_;
   Dim maxRows_{8};
   bool dragging_{false}; // the button that opened the list is still down

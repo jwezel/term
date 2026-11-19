@@ -54,7 +54,7 @@ struct TextInput: Widget {
   /// @param      area        The area
   /// @param      text        The initial text, in UTF-8; the cursor is behind it
   /// @param      background  The background
-  TextInput(Container &parent, const Rectangle &area, std::string_view text = {}, const Char &background = Space);
+  TextInput(Container &parent, const Rectangle &area, std::string_view text = {}, const Char &background = InheritBackground);
 
   ///
   /// Create TextInput with its area assigned by the parent layout (e.g. a Box)
@@ -62,7 +62,7 @@ struct TextInput: Widget {
   /// @param      parent      The parent container
   /// @param      text        The initial text, in UTF-8; the cursor is behind it
   /// @param      background  The background
-  explicit TextInput(Container &parent, std::string_view text = {}, const Char &background = Space);
+  explicit TextInput(Container &parent, std::string_view text = {}, const Char &background = InheritBackground);
 
   TextInput(const TextInput &) = delete;
 
@@ -114,6 +114,10 @@ struct TextInput: Widget {
   ///
   /// @return     Index of the handler
   auto onAccept(const Handler &handler) -> int;
+
+  ///
+  /// The size of the text, with room for the caret behind it; a line edit is one row high
+  [[nodiscard]] auto preferredSize() -> Vector override;
 
   protected:
   void render() override;

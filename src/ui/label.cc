@@ -8,6 +8,7 @@ text_{text}
 {
   focusPolicy(FocusPolicy::none);
   render();
+  layoutChanged(); // the text is what the label prefers to be
 }
 
 Label::Label(Container &parent, const Text &text, const Char &background):
@@ -16,11 +17,13 @@ text_{text}
 {
   focusPolicy(FocusPolicy::none);
   render();
+  layoutChanged();
 }
 
 void Label::content(const Text &text) {
   text_ = text;
   render();
+  layoutChanged();
 }
 
 void Label::render() {

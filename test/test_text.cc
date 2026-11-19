@@ -294,6 +294,12 @@ TEST_CASE("Text") {
       t2.extend(Vector(12, 4), Char('.', attr));
       CHECK_EQ(t2, Text("............\n............\n............\n............", attr));
     }
+    SUBCASE("Extend zero width") {
+      Text t2{Text{"\n"}};
+      CHECK_EQ(t2.width(), 0);
+      t2.extend(Vector(4, 2), Char('.', attr));
+      CHECK_EQ(t2, Text("....\n....", attr));
+    }
     SUBCASE("Patch") {
       auto t2 = text;
       t2.patch(Text("xx\nyy", attr), Vector(1, 0));

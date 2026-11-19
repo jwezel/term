@@ -27,6 +27,7 @@ selected_{limit(selected, items)}
 {
   render();
   registerHandlers();
+  layoutChanged();
 }
 
 DropDown::DropDown(Container &parent, const std::vector<Text> &items, Dim selected, const Char &background):
@@ -36,6 +37,7 @@ selected_{limit(selected, items)}
 {
   render();
   registerHandlers();
+  layoutChanged();
 }
 
 void DropDown::registerHandlers() {
@@ -49,11 +51,19 @@ void DropDown::items(const std::vector<Text> &items) {
   items_ = items;
   selected_ = limit(selected_, items_);
   render();
+  layoutChanged();
+}
+
+void DropDown::caption(const Text &caption) {
+  caption_ = caption;
+  render();
+  layoutChanged();
 }
 
 void DropDown::select(Dim index) {
   selected_ = limit(index, items_);
   render();
+  layoutChanged();
 }
 
 void DropDown::open() {
@@ -246,14 +256,29 @@ void DropDown::render() {
     overlay(visible, left, Vector{0, 0});
     overlay(visible, right, Vector{toDim(size.x() - right.width()), 0});
   }
-  if (selected_ >= 0) {
-    const auto &item{items_[static_cast<size_t>(selected_)]};
-    const auto width{std::min(item.width(), textWidth)};
-    if (item.height() > 0 and width > 0) {
-      overlay(visible, item[Rectangle{0, 0, width, 1}], Vector{framed? left.width(): Dim{0}, 0});
+  const Text *shown{};
+  if (caption_.width() > 0) {
+    shown = &caption_;
+  } else if (selected_ >= 0) {
+    shown = &items_[static_cast<size_t>(selected_)];
+  }
+  if (shown) {
+    const auto width{std::min(shown->width(), textWidth)};
+    if (shown->height() > 0 and width > 0) {
+      overlay(visible, (*shown)[Rectangle{0, 0, width, 1}], Vector{framed? left.width(): Dim{0}, 0});
     }
   }
   write(Vector{0, 0}, visible);
+}
+
+auto DropDown::preferredSize() -> Vector {
+  const auto &glyphs{uiStyle().dropDown[static_cast<size_t>(WidgetState::normal)]};
+  const auto padding{toDim(Text{glyphs.left}.width() + Text{glyphs.right}.width())};
+  auto width{caption_.width()};
+  for (const auto &item: items_) {
+    width = std::max(width, item.width());
+  }
+  return Vector{toDim(width + padding), 1};
 }
 
 } // namespace jwezel::ui

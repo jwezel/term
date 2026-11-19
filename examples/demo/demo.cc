@@ -158,11 +158,11 @@ struct Dialog {
     ui, dialogBackground, Rectangle{position, Vector{static_cast<Dim>(position.x() + width), static_cast<Dim>(position.y() + height)}},
     Text{" New address "}, nullptr, colors
   },
-  prompt_{window_, Rectangle{3, 2, 43, 3}, Text{"Street, number, postal code and city:"}, dialogBackground},
-  entry_{window_, Rectangle{3, 3, 43, 4}, "", dialogBackground},
-  hint_{window_, Rectangle{3, 5, 43, 6}, Text{"Enter accepts, Esc cancels, Tab moves on"}, dialogBackground},
-  ok_{window_, Rectangle{24, 8, 30, 9}, Text{"OK"}, dialogBackground},
-  cancel_{window_, Rectangle{32, 8, 42, 9}, Text{"Cancel"}, dialogBackground},
+  prompt_{window_, Rectangle{3, 2, 43, 3}, Text{"Street, number, postal code and city:"}},
+  entry_{window_, Rectangle{3, 3, 43, 4}, ""},
+  hint_{window_, Rectangle{3, 5, 43, 6}, Text{"Enter accepts, Esc cancels, Tab moves on"}},
+  ok_{window_, Rectangle{24, 8, 30, 9}, Text{"OK"}},
+  cancel_{window_, Rectangle{32, 8, 42, 9}, Text{"Cancel"}},
   accept_{[this, done] {done(true, entry_.contents());}, {Key::Enter}},
   reject_{[done] {done(false, {});}, {Key::Escape, '\x03'}} // Ctrl-C comes as a key as well, the terminal is in raw mode
   {
@@ -211,16 +211,16 @@ struct Demo {
   terminal_{terminal},
   ui_{terminal},
   window_{ui_, mainBackground, Rectangle{margin, 1, static_cast<Dim>(margin + width), static_cast<Dim>(1 + height)}, Text{" jwezel UI demo "}, nullptr, &mainColors},
-  menu_{window_, Rectangle{2, 1, 20, 2}, std::vector<Text>{Text{"Menu"}, Text{"Address..."}, Text{"Toggle colors"}, Text{"Exit"}}, 0, mainBackground},
-  title_{window_, Rectangle{22, 1, 62, 2}, Text{"Everything you see is a widget"}, mainBackground},
-  notesLabel_{window_, Rectangle{2, 3, 62, 4}, Text{"Notes"}, mainBackground},
+  menu_{window_, Rectangle{2, 1, 20, 2}, std::vector<Text>{Text{"Address..."}, Text{"Toggle colors"}, Text{"Exit"}}, 0},
+  title_{window_, Rectangle{22, 1, 62, 2}, Text{"Everything you see is a widget"}},
+  notesLabel_{window_, Rectangle{2, 3, 62, 4}, Text{"Notes"}},
   notes_{
     window_, Rectangle{2, 4, 62, 10},
-    "This is a text area.\nType, move with the arrow keys,\nor click to put the cursor somewhere.", mainBackground
+    "This is a text area.\nType, move with the arrow keys,\nor click to put the cursor somewhere."
   },
-  eventsLabel_{window_, Rectangle{2, 11, 62, 12}, Text{"Events"}, mainBackground},
-  events_{window_, Rectangle{2, 12, 62, 17}, Text{}, mainBackground},
-  hint_{window_, Rectangle{2, 18, 62, 19}, Text{"Tab: next  Space: menu  Esc: close dialog  Ctrl-C: quit"}, mainBackground},
+  eventsLabel_{window_, Rectangle{2, 11, 62, 12}, Text{"Events"}},
+  events_{window_, Rectangle{2, 12, 62, 17}, Text{}},
+  hint_{window_, Rectangle{2, 18, 62, 19}, Text{"Tab: next  Space: menu  Esc: close dialog  Ctrl-C: quit"}},
   quit_{[this] {done_ = true;}, {'\x03'}} // Ctrl-C comes as a key, the terminal is in raw mode
   {
     // The menu is an ordinary drop down. Choosing an entry emits a select event, which says which entry it was
@@ -232,6 +232,7 @@ struct Demo {
       }
     );
     window_.addAction(quit_); // Tab and Shift-Tab go from the menu to the notes and back, without anybody saying so
+    menu_.caption(Text{"Menu"}); // a menu shows what it is called, not what was chosen from it
     log("started");
   }
 
@@ -274,17 +275,16 @@ struct Demo {
   void menuSelected(const jwezel::ui::SelectEvent &selected) {
     const auto index{selected.index()};
     log(std::format("menu: select #{} \"{}\" ({})", index, plain(selected.item()), selected.input().typeName()));
-    menu_.select(0); // a menu shows its caption, not the last choice
     switch (index) {
-      case 1:
+      case 0:
       openDialog();
       break;
 
-      case 2:
+      case 1:
       toggleColors();
       break;
 
-      case 3:
+      case 2:
       done_ = true;
       break;
 

@@ -710,11 +710,10 @@ void Char::drawLineChar(const Segments &segments, u1 dash, bool roundedCorners) 
 }
 
 void Text::extend(const Vector &size, const Char &fill) {
-  if (width() > 0) {
-    for (Dim l = 0; l < height(); ++l) {
-      if (size.x() > toDim(data[l].size())) {
-        fill_n(back_inserter(data[l]), size.x() - data[l].size(), fill);
-      }
+  // A text that has lines of width 0 has to grow as well: a layout can give an element a size of 0 first
+  for (Dim l = 0; l < height(); ++l) {
+    if (size.x() > toDim(data[static_cast<size_t>(l)].size())) {
+      fill_n(back_inserter(data[static_cast<size_t>(l)]), size.x() - toDim(data[static_cast<size_t>(l)].size()), fill);
     }
   }
   if (size.y() > toDim(data.size())) {

@@ -27,6 +27,7 @@ void TextInput::start() {
   scrollIntoView();
   render();
   registerHandlers();
+  layoutChanged();
 }
 
 void TextInput::contents(std::string_view text) {
@@ -36,6 +37,7 @@ void TextInput::contents(std::string_view text) {
   scrollY_ = 0;
   scrollIntoView();
   render();
+  layoutChanged();
 }
 
 void TextInput::registerHandlers() {
@@ -107,20 +109,24 @@ auto TextInput::handleKey(const Event &event) -> bool {
 void TextInput::insertChar(Unicode key) {
   buffer_.insert(cursor_, key);
   ++cursor_.x();
+  layoutChanged();
 }
 
 void TextInput::insertNewline() {
   buffer_.split(cursor_);
   ++cursor_.y();
   cursor_.x() = 0;
+  layoutChanged();
 }
 
 void TextInput::backspace() {
   cursor_ = buffer_.eraseBefore(cursor_);
+  layoutChanged();
 }
 
 void TextInput::del() {
   buffer_.erase(cursor_);
+  layoutChanged();
 }
 
 void TextInput::moveLeft() {
@@ -173,6 +179,14 @@ auto TextInput::accept(const Event &event) -> bool {
 
 auto TextInput::onAccept(const Handler &handler) -> int {
   return on<AcceptEvent>(handler);
+}
+
+auto TextInput::preferredSize() -> Vector {
+  auto width{Dim{1}}; // room for the caret behind the text
+  for (const auto &line: buffer_.lines()) {
+    width = std::max(width, toDim(line.size() + 1));
+  }
+  return Vector{width, acceptsEnter()? std::max(Dim{1}, buffer_.lineCount()): Dim{1}};
 }
 
 void TextInput::scrollIntoView() {

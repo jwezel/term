@@ -23,7 +23,7 @@ struct Label: Widget {
   /// @param      area        The area
   /// @param      text        The text to display
   /// @param      background  The background
-  Label(Container &parent, const Rectangle &area, const Text &text = {}, const Char &background = Space);
+  Label(Container &parent, const Rectangle &area, const Text &text = {}, const Char &background = InheritBackground);
 
   ///
   /// Create Label with its area assigned by the parent layout (e.g. a Box)
@@ -31,7 +31,7 @@ struct Label: Widget {
   /// @param      parent      The parent container
   /// @param      text        The text to display
   /// @param      background  The background
-  explicit Label(Container &parent, const Text &text = {}, const Char &background = Space);
+  explicit Label(Container &parent, const Text &text = {}, const Char &background = InheritBackground);
 
   Label(const Label &) = delete;
 
@@ -50,6 +50,10 @@ struct Label: Widget {
   ///
   /// @param[in]  text  The text
   void content(const Text &text);
+
+  ///
+  /// The size of the text, which is what a layout that sizes the label to its content uses
+  [[nodiscard]] auto preferredSize() -> Vector override {return text_.size();}
 
   protected:
   void render() override;

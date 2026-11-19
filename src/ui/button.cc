@@ -11,6 +11,7 @@ Label{parent, area, text, background}
   render();
   registerHandlers();
   focusPolicy(FocusPolicy::strong); // unlike a label, a button gets the focus
+  layoutChanged(); // the brackets make it wider than its text
 }
 
 Button::Button(Container &parent, const Text &text, const Char &background):
@@ -19,6 +20,7 @@ Label{parent, text, background}
   render();
   registerHandlers();
   focusPolicy(FocusPolicy::strong);
+  layoutChanged();
 }
 
 void Button::registerHandlers() {
@@ -85,6 +87,18 @@ void Button::press(const Event &event) {
 
 auto Button::onPress(const Handler &handler) -> int {
   return on<PressEvent>(handler);
+}
+
+auto Button::preferredSize() -> Vector {
+  if (text_.height() <= 0 or text_.width() <= 0) {
+    return Vector{0, 0}; // it shows nothing
+  }
+  const auto &brackets{uiStyle().button[static_cast<size_t>(WidgetState::normal)]};
+  const Text left{brackets.left}, right{brackets.right};
+  return Vector{
+    toDim(left.width() + text_.width() + right.width()),
+    std::max(Dim{1}, text_.height())
+  };
 }
 
 } // namespace jwezel::ui

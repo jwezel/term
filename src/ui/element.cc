@@ -17,6 +17,12 @@ Element::~Element() {
   }
 }
 
+void Element::layoutChanged() {
+  if (parent_) {
+    parent_->layoutChanged();
+  }
+}
+
 auto Element::root() /*NOLINT(misc-no-recursion)*/ -> Root * {
   auto *result{parent_? parent_->root(): 0};
   if (!result) {

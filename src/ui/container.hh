@@ -23,6 +23,14 @@ struct Container: ui::Element {
     children_.erase(&child);
   }
 
+  ///
+  /// A child may have a different preferred size now; hand this up to the container that lays this one out
+  void layoutChanged() override {
+    if (auto *container{parent()}; container) {
+      container->layoutChanged();
+    }
+  }
+
   auto children() const -> const unordered_set<Element *> & {return children_;}
 
   private:
