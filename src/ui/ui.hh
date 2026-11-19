@@ -4,6 +4,9 @@
 
 #include <term/term.hh>
 
+#include <deque>
+#include <functional>
+
 namespace jwezel::ui {
 
 /// Connects a terminal to a UI desktop and provides the UI event loop.
@@ -11,6 +14,9 @@ namespace jwezel::ui {
 /// Windows created for this UI and widgets placed on its desktop use the same terminal event loop. The `Ui` object
 /// holds a reference to its terminal, which must outlive it.
 struct Ui {
+  /// Work that the event loop runs after the current event has been handled.
+  using Work = std::function<void()>;
+
   /// Create a UI for a terminal.
   /// @param terminal The terminal that supplies display and input.
   explicit Ui(Terminal &terminal);
@@ -31,6 +37,16 @@ struct Ui {
   /// Ask the event loop started by `run()` to stop.
   void stop();
 
+  ///
+  /// Post work to the event loop.
+  ///
+  /// The work is run after the event that is currently being handled has been handled, before the next event. It
+  /// is the way to ask the event loop to do something that is not an event: close a dialog, return the focus to a
+  /// window below, or stop.
+  ///
+  /// @param[in]  work  The work to run
+  void post(const Work &work);
+
   /// Get the terminal connected to this UI.
   [[nodiscard]] auto terminal() const -> auto & {return terminal_;}
 
@@ -47,6 +63,7 @@ struct Ui {
   private:
   Terminal &terminal_;
   Root desktop_;
+  std::deque<Work> work_;
 };
 
 } // namespace jwezel::ui

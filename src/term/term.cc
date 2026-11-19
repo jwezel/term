@@ -150,11 +150,15 @@ void Terminal::runEvent() {
   }
 }
 
-void Terminal::run() {
+void Terminal::start() {
   if (!focusWindow_) {
     focus(dynamic_cast<Window *>(zorder().back()));
   }
   running_ = true;
+}
+
+void Terminal::run() {
+  start();
   while (running_) {
     runEvent();
   }

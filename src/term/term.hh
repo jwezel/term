@@ -78,10 +78,24 @@ struct Terminal: Surface, TerminalInterface {
   void runEvent();
 
   ///
+  /// Start the event loop
+  void start();
+
+  ///
   /// Run loop
+  ///
+  /// Runs until `stop()` is called
   void run();
 
+  ///
+  /// Ask the event loop to stop
   void stop();
+
+  ///
+  /// Get whether the event loop is running
+  ///
+  /// @return     True if the event loop is running
+  [[nodiscard]] auto running() const -> bool {return running_;}
 
   [[nodiscard]] auto focus() const -> Window * override {return focusWindow_;}
 

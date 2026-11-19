@@ -423,7 +423,7 @@ struct Demo {
   eventsLabel_{window_, Rectangle{2, 11, 62, 12}, Text{"Events"}},
   events_{window_, Rectangle{2, 12, 62, 17}, Text{}},
   hint_{window_, Rectangle{2, 18, 62, 19}, Text{"Tab: next  Space: menu  Esc: close dialog  Ctrl-C: quit"}},
-  quit_{[this] {done_ = true;}, {'\x03'}} // Ctrl-C comes as a key, the terminal is in raw mode
+  quit_{[this] {quit();}, {'\x03'}} // Ctrl-C comes as a key, the terminal is in raw mode
   {
     // The menu is an ordinary drop down. Choosing an entry emits a select event, which says which entry it was
     // and what chose it.
@@ -449,16 +449,7 @@ struct Demo {
   ~Demo() = default;
 
   void run() {
-    while (!done_) {
-      terminal_.runEvent();
-      // A dialog is not destroyed by its own handlers but here, after the event has been handled.
-      // TODO(feature): a way to post work to the event loop (Ui::post), and focus that returns to the window below.
-      if (closeDialog_) {
-        closeDialog_ = false;
-        dialog_.reset();
-        terminal_.focus(&window_);
-      }
-    }
+    ui_.run();
   }
 
   private:
@@ -474,6 +465,10 @@ struct Demo {
     events_.content(Text{joined});
   }
 
+  void quit() {
+    ui_.post([this] {ui_.stop();});
+  }
+
   void menuSelected(const jwezel::ui::SelectEvent &selected) {
     const auto index{selected.index()};
     log(std::format("menu: select #{} \"{}\" ({})", index, plain(selected.item()), selected.input().typeName()));
@@ -487,7 +482,7 @@ struct Demo {
       break;
 
       case 2:
-      done_ = true;
+      quit();
       break;
 
       default:
@@ -514,7 +509,10 @@ struct Demo {
         } else {
           log("contact: cancelled");
         }
-        closeDialog_ = true;
+        ui_.post([this] {
+          dialog_.reset();
+          terminal_.focus(&window_);
+        });
       }
     );
     log("dialog: opened");
@@ -543,8 +541,6 @@ struct Demo {
   std::deque<std::string> lines_;
   std::vector<PersonRecord> contacts_;
   bool colored_{true};
-  bool done_{false};
-  bool closeDialog_{false};
   std::optional<Dialog> dialog_; // last: destroyed first
 };
 
