@@ -6,14 +6,10 @@
 
 namespace jwezel::ui {
 
+/// A passive text widget that does not take keyboard focus.
 ///
-/// Widget that displays a text
-///
-/// The text is rendered anchored at the top-left corner of the widget and
-/// clipped to the widget area. When the widget is moved (e.g. positioned by
-/// a Box), the text is rendered again into the new area. The colors of the
-/// role `label` are applied to the whole widget, and what the text says for
-/// itself comes on top of that. A label does nothing, so it does not get the focus.
+/// Text is anchored at the top-left corner and clipped to the assigned area. A label's preferred size is its text
+/// content size.
 struct Label: Widget {
 
   ///
@@ -43,6 +39,7 @@ struct Label: Widget {
 
   ~Label() override = default;
 
+  /// Get the text currently displayed by the label.
   [[nodiscard]] auto content() const -> const Text & {return text_;}
 
   ///

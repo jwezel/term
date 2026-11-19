@@ -10,31 +10,16 @@
 
 namespace jwezel::ui {
 
-///
-/// Drop down control
-///
-/// Shows the selected item, framed like a button and with an arrow. Space,
-/// Enter, the down key or a click open a list with all items below it. In the
-/// open list the arrow keys, Home/End, Page up/down and the mouse wheel move
-/// the highlight, Enter or Space choose the highlighted item, and Escape
-/// closes the list without choosing. With the mouse an item is chosen by
-/// clicking it, or by pressing the drop down, moving to the item and releasing
-/// the button. The list closes when the focus goes elsewhere or when the mouse
-/// is clicked somewhere else.
-///
-/// The glyphs around the selected item come from the UI style (by state: normal,
-/// focus, and active while the list is open), and so do the colors of the roles
-/// `dropdown`, `dropdown.focus` and `dropdown.active`, which are tinted by default
-/// when the drop down has the focus.
-///
-/// The list is a popup in front of all other elements, which only exists while it
-/// is open. Only the first row of the items is shown.
-///
-/// An item of a drop down was chosen
+/// Notification that a drop-down item was chosen.
 ///
 /// The drop down has selected the item when the event is emitted; `previous()` is what it had selected, so
 /// the choice changed something if `changed()`.
 struct SelectEvent: UiEvent {
+  /// Describe the selected value and the selection that preceded it.
+  /// @param cause Key or mouse-button input that selected the item.
+  /// @param index Index now selected.
+  /// @param previous Index selected before this event.
+  /// @param item Copy of the selected item text.
   SelectEvent(const Cause &cause, Dim index, Dim previous, Text item):
   UiEvent{cause},
   index_{index},
@@ -66,6 +51,14 @@ struct SelectEvent: UiEvent {
   CLASS_ID(SelectEvent);
 };
 
+/// A focusable choice control with a transient list popup.
+///
+/// Space, Enter, Down, or a click opens the choices. Arrow keys, Home/End, Page Up/Down, and the mouse wheel move the
+/// highlight; Enter, Space, or a click selects the highlighted item. Escape closes the popup without changing the
+/// selection. The popup closes when focus moves elsewhere.
+///
+/// Glyphs and colors come from the root's UI and color styles. A non-empty `caption()` changes only the closed-state
+/// label; it does not change the selected item or the choices.
 struct DropDown: Widget {
   ///
   /// Create DropDown with an explicit area

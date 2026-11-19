@@ -180,19 +180,19 @@ const Attributes
 ///
 /// Attribute combining mode for the Char type.
 enum class AttributeMode: u1 {
-  default_, ///< default
-  merge,
-  mix,
-  replace,
-  ignore,
+  default_, ///< Use the destination character's default combining mode.
+  merge,    ///< The source specifies foreground/background and attributes to replace; unspecified values shine through.
+  mix,      ///< Combine specified colors and attributes with the destination.
+  replace,  ///< Replace the destination character and all its attributes with the source.
+  ignore,   ///< Ignore the source character's combining mode and preserve destination behavior.
 };
 
 ///
 /// Alignment
 enum class Alignment: u1 {
-  left,
-  center,
-  right,
+  left,   ///< Align to the left edge.
+  center, ///< Center within the available width.
+  right,  ///< Align to the right edge.
 };
 
 const extern vector<string> AttributeMode2String;
@@ -515,6 +515,7 @@ struct Text {
   /// Fill text with character
   ///
   /// @param[in]  fill  Fill character
+  /// @param[in]  area  Area to fill, clipped to the text bounds
   auto fill(const Char &fill=Space, const Rectangle &area=RectangleMax) -> Rectangle;
 
   ///
@@ -552,7 +553,8 @@ struct Text {
   ///
   /// Resize text
   ///
-  /// @param[in]  size  The size
+  /// @param[in]  size  The new size
+  /// @param[in]  fill  Character used to fill newly added cells
   void resize(const Vector &size, const Char &fill);
 
   ///
@@ -612,6 +614,9 @@ struct Text {
   /// If endPosition is DimHigh the line is drawn all the way to the right or bottom
   ///
   /// @param[in]  line  The line
+  /// @param[in]  strength        Line strength
+  /// @param[in]  dash            Dash mode
+  /// @param[in]  roundedCorners  Whether to round corners
   ///
   /// @return     Rectangle spanning the area of modification
   auto line(const Line &line, u1 strength=1, u1 dash=0, bool roundedCorners=false) -> Rectangle;

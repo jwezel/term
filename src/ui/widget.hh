@@ -82,7 +82,6 @@ struct Widget: TextElement, ui::Element, ActionHost
   /// root and when the window of the root gains or loses the terminal focus.
   /// Widgets look different in the two cases, so the default is to draw the widget again.
   ///
-  /// @param[in]  focused  True if the widget gets the keyboard input now
   virtual void focusChanged(bool /*focused*/) {render();}
 
   ///

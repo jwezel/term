@@ -11,26 +11,11 @@
 
 namespace jwezel::ui {
 
-///
-/// Base class for text input widgets
-///
-/// Provides the editing engine: a content buffer, the cursor, key handling
-/// (characters, Backspace, Delete, arrows, Home/End, Enter) and scrolling.
-/// It renders the visible content and places the terminal's hardware cursor
-/// (the caret) at the editing position while it has the focus. The whole
-/// widget gets the colors of the role `input`, or `input.focus` while it gets
-/// the keyboard input, so the field can be seen where it is empty. There are no
-/// glyphs that could show which field has the focus, so by default the role
-/// `input.focus` tints the background.
-/// Subclasses supply the policy: LineEdit accepts on Enter and scrolls one
-/// row; TextArea inserts a newline on Enter and scrolls vertically, and Page Up and
-/// Page Down move the cursor by the lines of a page.
-///
-/// The text is kept in a `TextBuffer`, apart from the display: the widget edits the
-/// buffer, and draws what is of it in the area. Nothing is read from the display.
-///
-/// An entry was accepted: Enter was pressed in a widget where Enter does not start a new line
+/// Notification that a single-line text entry accepted its current contents with Enter.
 struct AcceptEvent: UiEvent {
+  /// Create an acceptance event with a snapshot of the accepted contents.
+  /// @param cause Input event that caused acceptance.
+  /// @param text Accepted text in UTF-8.
   AcceptEvent(const Cause &cause, std::string text):
   UiEvent{cause},
   text_{std::move(text)}
@@ -46,6 +31,11 @@ struct AcceptEvent: UiEvent {
   CLASS_ID(AcceptEvent);
 };
 
+/// Base editing engine for single-line and multi-line text widgets.
+///
+/// The editable document lives in `TextBuffer`, independently of rendered cells. `LineEdit` accepts on Enter and
+/// scrolls horizontally; `TextArea` inserts a newline, scrolls vertically, and supports Page Up/Down. The widget
+/// manages cursor movement, editing keys, viewport scrolling, rendering, and the focused hardware caret.
 struct TextInput: Widget {
   ///
   /// Create TextInput with an explicit area
@@ -94,6 +84,7 @@ struct TextInput: Widget {
   /// Get the lines of the text, as characters
   [[nodiscard]] auto lines() const -> const std::vector<std::u32string> & {return buffer_.lines();}
 
+  /// Get a read-only view of the underlying editable document.
   [[nodiscard]] auto buffer() const -> const TextBuffer & {return buffer_;}
 
   ///

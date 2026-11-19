@@ -11,18 +11,18 @@
 namespace jwezel {
 
 ///
-/// This class describes a display.
+/// Renders cell updates and controls cursor, mouse-reporting, and screen state on a terminal device.
 ///
-/// Responsibility:
-///
-/// Render content on a terminal device
+/// This is the library's terminal-output boundary. Higher layers submit text updates and do not emit terminal
+/// control sequences themselves.
 struct Display: Device {
+  /// Amount of mouse input reported by a terminal.
   enum class MouseMode: u1 {
-    off,
-    x10,
-    normal,
-    buttons,
-    anything
+    off,      ///< Do not request mouse reports.
+    x10,      ///< Report button presses only.
+    normal,   ///< Report button presses and releases.
+    buttons,  ///< Report presses, releases, and button motion.
+    anything  ///< Report all mouse motion and button events.
   };
   ///
   /// The screen that the display is on
@@ -36,8 +36,8 @@ struct Display: Device {
   /// display ends, leaving the shell screen as it was. It is fixed: there is nothing to scroll and nothing to
   /// stay clear of, so the display is in the top left corner and can be as large as the terminal.
   enum class Screen: u1 {
-    main,
-    alternate
+    main,      ///< Use the shell screen; the display may scroll terminal history to make room.
+    alternate  ///< Use a temporary full-terminal screen restored when the display is destroyed.
   };
 
   ///
@@ -88,18 +88,14 @@ struct Display: Device {
   ///
   /// Move cursor
   ///
-  /// @param[in]  x     0-based column
-  /// @param[in]  y     0-based line
-  ///
-  /// @return     string with ANSI sequence
+  /// @param[in]  column  0-based column
+  /// @param[in]  line    0-based line
   void cursor(Dim column, Dim line);
 
   ///
   /// Turn cursor on/off
   ///
   /// @param[in]  mode  The mode
-  ///
-  /// @return     string with ANSI sequence
   void cursor(bool mode);
 
   ///

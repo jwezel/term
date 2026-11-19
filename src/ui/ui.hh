@@ -6,7 +6,13 @@
 
 namespace jwezel::ui {
 
+/// Connects a terminal to a UI desktop and provides the UI event loop.
+///
+/// Windows created for this UI and widgets placed on its desktop use the same terminal event loop. The `Ui` object
+/// holds a reference to its terminal, which must outlive it.
 struct Ui {
+  /// Create a UI for a terminal.
+  /// @param terminal The terminal that supplies display and input.
   explicit Ui(Terminal &terminal);
 
   Ui(const Ui &) = delete;
@@ -19,10 +25,13 @@ struct Ui {
 
   ~Ui() = default;
 
+  /// Run the terminal event loop until `stop()` is called.
   void run();
 
+  /// Ask the event loop started by `run()` to stop.
   void stop();
 
+  /// Get the terminal connected to this UI.
   [[nodiscard]] auto terminal() const -> auto & {return terminal_;}
 
   ///

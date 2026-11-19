@@ -26,6 +26,7 @@ struct ActionHost;
 ///   a window gets a default action (Enter) and a cancel action (Escape).
 /// - Added to a widget, its shortcuts work while the widget has the focus.
 struct Action {
+  /// Callable invoked when an enabled action is triggered.
   using Handler = std::function<void()>;
 
   ///

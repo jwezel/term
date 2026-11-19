@@ -42,9 +42,7 @@ struct Backdrop: public Surface::Element {
   [[nodiscard]] auto text(const Rectangle &area=RectangleMax) const -> Text override;
 
   ///
-  /// Move window
-  ///
-  /// @param[in]  area  The area
+  /// Ignore attempts to move the backdrop.
   void move(const Rectangle &/*area*/) override {}
 };
 
@@ -84,14 +82,16 @@ struct InputHandler {
   virtual void handleBlur() {}
 
   ///
-  /// The window was moved or resized
-  ///
-  /// @param[in]  previous  The area the window had before
+  /// The window was moved or resized.
   virtual void handleGeometry(const Rectangle &/*previous*/) {}
 };
 
 ///
 /// Window
+/// A rectangular, z-ordered region of a surface with its own input and focus routing.
+///
+/// A window is drawn above the elements below it. Its terminal coordinates are managed by `Terminal`; UI windows
+/// additionally use the window as the root and coordinate origin of their widget trees.
 struct Window: TextElement {
   Window(struct TerminalInterface *terminal, const Rectangle &area, const Char &background = Space, Window *below = 0);
 

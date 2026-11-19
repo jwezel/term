@@ -139,6 +139,67 @@ demo_exe = executable(
   include_directories: lib_incdir
 )
 
+quick_start_exe = executable(
+  'quick_start',
+  'examples/quick_start/quick_start.cc',
+  link_with: shlib,
+  dependencies: [lib_dep],
+  include_directories: lib_incdir
+)
+
+doxygen = find_program('doxygen', required: false)
+if doxygen.found()
+  doc_config = configuration_data()
+  header_inputs = []
+  foreach header : headers
+    header_inputs += '"' + join_paths(meson.project_source_root(), header) + '"'
+  endforeach
+  doc_pages = [
+    'doc/index.md',
+    'doc/introduction.md',
+    'doc/tutorial.md',
+    'doc/concepts.md',
+    'doc/developer.md',
+    'doc/architecture/index.md'
+  ]
+  page_inputs = []
+  foreach page : doc_pages
+    page_inputs += '"' + join_paths(meson.project_source_root(), page) + '"'
+  endforeach
+  doc_config.set('HEADER_INPUTS', ' '.join(header_inputs))
+  doc_config.set('DOC_INPUTS', ' '.join(page_inputs))
+  doc_config.set_quoted('EXAMPLE_DIR', join_paths(meson.project_source_root(), 'examples/quick_start'))
+  doc_config.set_quoted('IMAGE_DIR', join_paths(meson.project_source_root(), 'doc/images'))
+  doc_config.set_quoted('MAIN_PAGE', join_paths(meson.project_source_root(), 'doc/index.md'))
+  doxyfile = configure_file(
+    input: 'Doxyfile.in',
+    output: 'Doxyfile',
+    configuration: doc_config
+  )
+  doc_inputs = files(
+    'Doxyfile.in',
+    'doc/build_docs.py',
+    'doc/index.md',
+    'doc/introduction.md',
+    'doc/tutorial.md',
+    'doc/concepts.md',
+    'doc/developer.md',
+    'doc/architecture/index.md',
+    'examples/quick_start/quick_start.cc',
+    'doc/images/quick_start.png'
+  )
+  custom_target(
+    'docs',
+    input: doxyfile,
+    output: 'docs',
+    command: [find_program('python3'), files('doc/build_docs.py'), doxygen, '@INPUT@', '@OUTPUT@'],
+    depend_files: headers + doc_inputs,
+    build_by_default: false
+  )
+else
+  message('Doxygen was not found; the docs target is unavailable')
+endif
+
 # Make this library usable as a Meson subproject.
 term_dep = declare_dependency(
   include_directories: include_directories('.'),

@@ -17,13 +17,10 @@ namespace jwezel {
 using std::nullopt;
 
 ///
-/// Terminal
+/// Coordinates terminal input, display output, windows, and the event loop.
 ///
-/// Responsibilites:
-///   - Provide a:
-///     - Display
-///     - Keyboard
-///   - Control display size
+/// The terminal owns its `Display`, `Keyboard`, backdrop, and desktop window. The selected screen behavior is
+/// controlled by `Display::Screen`.
 struct Terminal: Surface, TerminalInterface {
   ///
   /// Constructor
@@ -56,20 +53,16 @@ struct Terminal: Surface, TerminalInterface {
   void deleteElement(Element *element, Element *destination) override;
 
   ///
-  /// Create window
+  /// Set the window that receives terminal focus.
   ///
-  /// @param[in]  area        The area
-  /// @param[in]  background  The background
-  /// @param[in]  below       The below
-  ///
-  /// @return     new window
+  /// @param[in]  window  The window, or `nullptr` to clear focus
   void focus(Window *window) override;
 
   ///
-  /// Move window
+  /// Move a window to a new display area.
   ///
-  /// @param[in]  windowId  The window identifier
-  /// @param[in]  area      The area
+  /// @param[in]  window  The window to move
+  /// @param[in]  area    The new area
   void moveWindow(Window &window, const Rectangle &area) override;
 
   void caret(Window &window, const Surface::Element *owner, const std::optional<Vector> &position) override;
@@ -110,9 +103,9 @@ struct Terminal: Surface, TerminalInterface {
   auto expand(const Vector &size) -> bool override;
 
   ///
-  /// Possibly contract display and screen
+  /// Reduce the display to fit the remaining elements, if possible.
   ///
-  /// @param[in]  size  The size
+  /// @return     Whether the display was contracted
   auto contract() -> bool override;
 
   private:

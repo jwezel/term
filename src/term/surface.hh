@@ -26,6 +26,7 @@ struct Window;
 struct Surface {
   struct Element;
 
+  /// A visible rectangular portion of an element after higher z-order elements cover it.
   struct Fragment {
     Fragment(const Rectangle &area, struct Element *element):
     area(area),
@@ -48,7 +49,10 @@ struct Surface {
   /// The following method are to be overridden:
   ///
   /// - area
+  /// Abstract drawable whose visible fragments are maintained by a `Surface`.
   struct Element {
+    /// Attach an element to a surface.
+    /// @param surface Surface that tracks the element; the element does not own it.
     explicit Element(Surface *surface);
 
     Element() = default;
@@ -80,9 +84,7 @@ struct Surface {
     virtual void move(const Rectangle &area);
 
     ///
-    /// Move element
-    ///
-    /// @param[in]  area  The area
+    /// Called when the element is moved; the default handler does not consume the event.
     virtual auto moveEvent(const Rectangle &/*area*/) -> bool {return false;}
 
     virtual void update(const vector<Rectangle> &areas);
@@ -108,7 +110,10 @@ struct Surface {
     friend struct Surface;
   };
 
-  explicit Surface(Device *device, initializer_list<Element *> ={});
+  /// Create a surface that sends changed regions to a device.
+  /// @param device Non-owning output device; it must outlive the surface.
+  /// @param elements Initial elements in bottom-to-top order.
+  explicit Surface(Device *device, initializer_list<Element *> elements={});
 
   Surface() = default;
 
@@ -203,12 +208,17 @@ struct Surface {
   Device *device_{};
 };
 
+/// A surface element backed by a rectangular buffer of terminal cells.
+///
+/// Writes and fills update the element's cell buffer; the surface then composites only the portions that are visible.
 struct TextElement: Surface::Element {
   ///
   /// Constructor
   ///
-  /// @param[in]  id    The identifier
-  /// @param[in]  area  The area
+  /// @param[in]  surface     The surface this element is drawn on
+  /// @param[in]  area        The element's area on the surface
+  /// @param[in]  background  The element's background cell
+  /// @param[in]  below       Optional element below which this element is placed
   ///
   TextElement(Surface *surface, const Rectangle &area, const Char &background=Space, TextElement *below=0);
 
@@ -240,7 +250,7 @@ struct TextElement: Surface::Element {
   /// Write text to text element
   ///
   /// @param[in]  position  The position
-  /// @param[in]  text      The text
+  /// @param[in]  txt_      The text
   auto write(const Vector &position, const Text &txt_) -> TextElement &;
 
   ///

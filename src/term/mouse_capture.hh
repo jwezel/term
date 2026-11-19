@@ -17,9 +17,9 @@ namespace jwezel {
 /// are not tracked.
 struct MouseCapture {
   enum class Change: u1 {
-    none,   ///< Nothing to do
-    began,  ///< The first button went down (or went down again without a release in between)
-    ended   ///< The last button went up
+    none,   ///< The tracked press-and-release sequence remains in the same state.
+    began,  ///< A button press began a sequence, or restarted it after a repeated press.
+    ended   ///< The last held button was released, ending the sequence.
   };
 
   ///

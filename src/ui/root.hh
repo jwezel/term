@@ -41,11 +41,10 @@ struct Widget;
 /// area.
 struct Root: Container, InputHandler, ActionHost {
   ///
-  /// Create Root
-  ///
-  /// @param      host    The window the UI is shown in; it must outlive the root
-  /// @param[in]  colors  Optional color style of the elements (weak reference; must outlive the root)
-  /// @param[in]  style   Optional UI style of the elements (weak reference; must outlive the root)
+  /// Create a UI root hosted by an existing terminal window.
+  /// @param host Window that supplies input, geometry, and the underlying display surface; it must outlive the root.
+  /// @param colors Optional non-owning color style; it must outlive the root.
+  /// @param style Optional non-owning glyph/decoration style; it must outlive the root.
   explicit Root(jwezel::Window &host, const ColorStyle *colors = nullptr, const UiStyle *style = nullptr);
 
   Root(const Root &) = delete;
@@ -156,6 +155,7 @@ struct Root: Container, InputHandler, ActionHost {
 
   [[nodiscard]] auto bounds() -> Rectangle override {return host_.area();}
 
+  /// Route an input event to the appropriate widget or action.
   auto handleEvent(const Event &event) -> bool override;
 
   void handleFocus() override;

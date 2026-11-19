@@ -8,27 +8,17 @@
 
 namespace jwezel::ui {
 
-///
-/// Button widget
-///
-/// Displays its text framed by brackets (those of the UI style for the state of the button: by default angle
-/// brackets show that it has the focus) and can be pressed with the Space or
-/// Enter key or with a left mouse button click: the button has to be released
-/// inside the button as well as pressed, so a click can be called off by
-/// moving the mouse out of the button before releasing it. Press handlers
-/// registered with onPress() are invoked with the triggering event, and then the
-/// actions that were added to the button are triggered: pressing it is how it
-/// does what an action stands for. The colors
-/// are those of the roles `button`, `button.focus` (by default a tint) and,
-/// while the mouse button is down on it, `button.active`.
-///
-/// A button was pressed; the cause is the key or the release of the mouse button that did it
+/// A button was pressed; the cause is the key or mouse-button release that activated it.
 struct PressEvent: UiEvent {
   using UiEvent::UiEvent;
 
   CLASS_ID(PressEvent);
 };
 
+/// A focusable label activated with Enter, Space, or a left mouse click.
+///
+/// The button is framed with the glyphs for its current UI state. A mouse press activates only if released inside
+/// the button. Registered `Action`s let the button and a keyboard shortcut share behavior.
 struct Button: Label {
 
   ///

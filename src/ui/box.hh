@@ -8,15 +8,13 @@
 
 namespace jwezel::ui {
 
-///
-/// How a box sizes a child along its main axis
+/// How a box sizes a child along its main axis.
 enum class LayoutSize: u1 {
   stretch, ///< The child gets a share of the room, according to its weight
   fit      ///< The child gets the size it asks for (`Element::preferredSize()`)
 };
 
-///
-/// Where a box places a child across its main axis
+/// Where a box places a child across its cross axis.
 ///
 /// A child that is not stretched across the cross axis gets its preferred size there, and is placed at the
 /// beginning, in the middle or at the end of the room it has.
@@ -28,36 +26,36 @@ enum class LayoutAlign: u1 {
 };
 
 ///
-/// Layout description of a Box
+/// Layout policy for a `Box`.
 ///
-/// The layout is supplied to the box constructor and fixed for the lifetime
-/// of the box. All lists are in order of addition; children beyond the end of
-/// a list get the default of it.
-///
-/// @param weights     Stretch factor per child; the default is 1
-/// @param sizes       Whether a child stretches along the main axis or is as large as it prefers
-/// @param alignments  Where a child is placed across the main axis
-/// @param spacing     Empty space between children along the layout axis
-/// @param padding     Inset of the content area on all sides
+/// The layout is supplied to the box constructor and fixed for its lifetime. Per-child vectors are indexed by child
+/// insertion order; entries beyond each vector's length use that property's default.
 struct BoxLayout {
-  std::vector<double> weights;
-  std::vector<LayoutSize> sizes;
-  std::vector<LayoutAlign> alignments;
-  int spacing = 0;
-  int padding = 0;
+  std::vector<double> weights; ///< Relative main-axis share per stretching child; missing entries default to 1.
+  std::vector<LayoutSize> sizes; ///< Main-axis sizing per child; missing entries default to `stretch`.
+  std::vector<LayoutAlign> alignments; ///< Cross-axis alignment per child; missing entries default to `stretch`.
+  int spacing = 0; ///< Empty cells between adjacent children along the main axis.
+  int padding = 0; ///< Inset on all sides between the box bounds and its content area.
 };
 
-enum class Orientation {horizontal, vertical};
+/// Direction in which a box arranges its children.
+enum class Orientation {
+  horizontal, ///< Left to right; width is the main axis.
+  vertical    ///< Top to bottom; height is the main axis.
+};
 
+/// Container that arranges children along one axis.
 ///
-/// Container that arranges its children along one axis
-///
-/// Children are positioned as they are added, and repositioned when the box
-/// itself is moved. Each child stretches across the full cross axis and gets
-/// a slice of the main axis proportional to its weight; rounding is
-/// accumulated so the slices always fill the box exactly.
+/// Children are laid out in insertion order. Stretch children divide remaining main-axis space by weight; fit
+/// children request their preferred size. If fit children exceed the available space, earlier children receive
+/// space first. A child's preferred size also controls its cross-axis size when alignment is not `stretch`.
 struct Box: Container {
 
+  /// Create a box that arranges children in the requested orientation.
+  /// @param parent Parent container; it must outlive the box.
+  /// @param area The box area relative to its root, or `RectangleDefault` for parent-managed sizing.
+  /// @param layout Per-child sizing/alignment plus spacing and padding.
+  /// @param orientation Horizontal or vertical arrangement.
   Box(Container &parent, const Rectangle &area, const BoxLayout &layout, Orientation orientation);
 
   Box(const Box &) = delete;
@@ -82,16 +80,17 @@ struct Box: Container {
   /// @param[in]  area  The new area
   void move(const Rectangle &area) override;
 
-  ///
-  /// Recompute the position of all children
+  /// Recompute the position and size of every child from the current bounds and layout policy.
   void layout();
 
   ///
   /// The size the box would like to have: its children, one after the other along the main axis
   [[nodiscard]] auto preferredSize() -> Vector override;
 
+  /// Re-layout children after a child's preferred size changes, then notify the parent.
   void layoutChanged() override;
 
+  /// Get the box's assigned area relative to its root.
   [[nodiscard]] auto bounds() -> Rectangle override {return area_;}
 
   private:

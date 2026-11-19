@@ -23,6 +23,9 @@ constexpr static const auto typeName_ = #NAME; \
   return typeName_; \
 }
 
+/// Polymorphic base for event payloads with a run-time type identifier.
+///
+/// Concrete event classes use `CLASS_ID(TypeName)` to provide the identifier used by `Event` for checked retrieval.
 struct BaseEvent
 {
   BaseEvent() = default;
@@ -40,7 +43,13 @@ struct BaseEvent
   CLASS_ID(Event);
 };
 
+/// Move-only owner of a polymorphic event payload.
+///
+/// The event owns its payload, so a handler may inspect it for the lifetime of the `Event`. Use `get<E>()` when the
+/// type is conditional and `as<E>()` when the handler requires a particular type.
 struct Event {
+  /// Take ownership of an allocated event payload.
+  /// @param event Event payload to own; null creates an empty event.
   explicit Event(BaseEvent *event):
   event_(event)
   {}

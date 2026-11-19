@@ -12,9 +12,6 @@ Table of contents
 
 * [Introduction](#introduction)
 * [Features](#features)
-* [Prerequisites](#prerequisites)
-* [Dependencies](#dependencies)
-* [Installation](#installation)
 * [Usage](#usage)
 * [Known issues and limitations](#known-issues-and-limitations)
 * [Getting help](#getting-help)
@@ -22,6 +19,7 @@ Table of contents
 * [License](#license)
 * [Authors and history](#authors-and-history)
 * [Acknowledgments](#acknowledgments)
+* [Full manual and API reference](#documentation)
 
 
 Introduction
@@ -46,45 +44,62 @@ Features
 - Box and line drawing with automatic interpolation
 - Mouse support
 - Auto-expanding and auto-contracting desktop
-- Flex-based layout engine
-
-
-Prerequisites
--------------
-
-- Conan
-- Meson
-- ninja
-- g++
-
-
-Dependencies
-------------
-
-- Boost
-- Taitank
-- utfcpp
-
-
-Installation
-------------
-
-- Install prerequisites (brew is recommended, but you can use your package manager)
-
-```bash
-TDB
-```
+- Weighted, fit-to-content, and aligned box layouts
 
 
 Usage
 -----
 
-TBD: This section explains the principles behind this README file.  If this repository were for actual _software_, this [Usage](#usage) section would explain more about how to run the software, what kind of output or behavior to expect, and so on.
+Install Python 3, Conan 2, Meson, Ninja, and a C++23 compiler. From a checkout, install the dependencies and build the
+quick-start program:
 
+```sh
+python3 -m pip install -r requirements.txt
+conan profile detect
+conan install packages --build=missing
+PKG_CONFIG_PATH=packages meson setup build
+```
 
-### Basic operation
+The small program below opens a window. Press Enter or click **Quit** to exit. It is compiled as the `quick_start`
+Meson target, so the README teaser is checked by the normal build.
 
-TBD
+```sh
+meson compile -C build quick_start
+./build/quick_start
+```
+
+```cpp
+#include <term/geometry.hh>
+#include <term/term.hh>
+#include <term/text.hh>
+#include <ui/button.hh>
+#include <ui/label.hh>
+#include <ui/ui.hh>
+#include <ui/window.hh>
+
+int main() {
+  jwezel::Terminal terminal;
+  jwezel::ui::Ui ui{terminal};
+  jwezel::ui::Window window{ui, jwezel::Space, jwezel::Rectangle{0, 0, 40, 10}, jwezel::Text{"Hello, term"}};
+  jwezel::ui::Label hint{window, jwezel::Rectangle{2, 2, 36, 3}, jwezel::Text{"Press Enter or click Quit."}};
+  jwezel::ui::Button quit{window, jwezel::Rectangle{2, 5, 12, 6}, jwezel::Text{"Quit"}};
+  quit.onPress([&ui](const jwezel::ui::Element &, const jwezel::Event &) {
+    ui.stop();
+    return true;
+  });
+  ui.run();
+}
+```
+
+![Screenshot of the running quick-start terminal UI](doc/images/quick_start.png)
+
+The [tutorial](doc/tutorial.md) builds on this example with layouts, typed events, and text input.
+
+Documentation
+-------------
+
+The [manual and API reference](doc/index.md) cover architecture, concepts, tutorials, and the public C++ headers.
+With Doxygen installed, generate the browsable HTML version using `ninja -C build docs`; open `build/html/index.html`.
 
 
 Known issues and limitations
@@ -96,13 +111,13 @@ At the moment the terminal output layer is only issuing control sequences for AN
 Getting help
 ------------
 
-TBD: Inform readers of how they can contact you, or at least how they can report problems they may encounter.  This may simply be a request to use the issue tracker on your repository, but many projects have associated chat or mailing lists, and this section is a good place to mention those.
+Report bugs and request features in the [GitHub issue tracker](https://github.com/jwezel/term/issues). Include your compiler, terminal, and the steps needed to reproduce the problem.
 
 
 Contributing
 ------------
 
-TDB: Mention how people can offer contributions, and point them to your guidelines for contributing.
+Contributions are welcome as GitHub pull requests. Please keep changes focused, add or update tests and public-header documentation where appropriate, and run the normal and release test suites before submitting.
 
 
 License

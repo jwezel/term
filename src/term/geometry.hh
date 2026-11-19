@@ -21,12 +21,13 @@ namespace jwezel {
 using std::string, std::logic_error, std::vector, std::optional, std::range_error;
 using std::format;
 
-/// Dimension (x, y) in a @class Vector.
+/// Signed 16-bit coordinate or extent used by terminal geometry.
 using Dim = int16_t;
 
-extern const Dim DimLow;  ///< Lowest possible value of a dimension
-extern const Dim DimHigh; ///< Highest possible value of a dimension
+extern const Dim DimLow;  ///< Sentinel for the lowest/default-relative coordinate.
+extern const Dim DimHigh; ///< Sentinel for the highest/default-relative coordinate.
 
+/// Error raised when rectangle bounds are invalid.
 class RectangleError: public logic_error
 {
   public:
@@ -44,12 +45,15 @@ inline auto toDim(T v)->Dim {
 }
 
 ///
-/// A vector
+/// A pair of signed terminal dimensions, used for positions and sizes.
+///
+/// Positions are conventionally `{column, row}` and sizes `{width, height}`. Negative components are used by
+/// `position()` and `defaultTo()` as relative-position or default-value sentinels.
 struct Vector {
-  /// Constructor
+  /// Create a vector from horizontal and vertical components.
   ///
-  /// @param[in]  x
-  /// @param[in]  y
+  /// @param[in]  x  Horizontal component, usually a column or width
+  /// @param[in]  y  Vertical component, usually a row or height
   explicit Vector(Dim x=0, Dim y=0) noexcept;
 
   ///
@@ -121,10 +125,9 @@ struct Vector {
   }
 
   ///
-  /// Replace negative elements in @c *this with sum of element in @c *this and
-  /// @arg position such that -1 becomes last.
+  /// Replace negative components with positions counted from the end, so -1 denotes the last element.
   ///
-  /// @param[in]  other  The other vector
+  /// @param[in]  position  The position whose negative components are adjusted
   ///
   /// @return     Vector with adjusted values
   [[nodiscard]] auto position(const Vector &position) const -> Vector;

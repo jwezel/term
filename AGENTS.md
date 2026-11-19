@@ -27,6 +27,8 @@
 - **Focus tests:** When a test creates a second window and later expects the first to render active, restore focus explicitly in the test. Do not change `Terminal::focus` semantics just to satisfy that test.
 - **Fit clamp:** The preferred-size clamp in `Box::layout()` is intentionally retained. Removing it is an equivalent mutation because the overflow pass clamps fit children to the same available space.
 - **Demo contact form:** Use line edits for free-form single-line values, drop-downs for choices, and a text area for notes. Keep the birth-date format hint (`YYYY-MM-DD`) and ensure the dialog fits the demo's declared minimum terminal size (70x22). Accepted form values are collected into a value-owned `PersonRecord`.
+- **Documentation:** Generate a Doxygen HTML manual and API reference. Keep concise API contracts next to declarations in public headers; put tutorials, long conceptual explanations, and developer guidance in Markdown under `doc/`. Link manual pages with Doxygen page references. Keep docs optional in Meson when Doxygen is unavailable.
+- **README teaser:** Keep a very short, complete, compiled `quick_start` example in the README Usage section, followed immediately by a screenshot captured from the running program. The source of the snippet is `examples/quick_start/quick_start.cc`.
 
 ## Development and verification workflow
 
@@ -38,9 +40,11 @@
   - `timeout 300 ./build/test_term`
 - The ASan/UBSan tree is `/tmp/opencode/build-asan`; when relevant, run it with `ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=print_stacktrace=1`.
 - Use pty checks for interactive demo behavior and test both the normal 90x28 terminal and the demo's 70x22 minimum when changing its layout.
+- When Doxygen is installed, generate and inspect the manual with `timeout 600 ninja -C build docs`; HTML goes to `build/html/`, with Doxygen diagnostics in `build/doxygen-warnings.log`.
 
 ## Current checkpoint (2026-11-19)
 
 - Commit `62c892a` contains the background inheritance, drop-down caption, and layout sizing/alignment polish.
 - The working tree has an uncommitted change to `examples/demo/demo.cc` expanding the address dialog into a person/contact form. Preserve it; do not reset or overwrite it.
+- Documentation work is in progress: root `Doxyfile.in`, the optional Meson `docs` target, a Markdown manual under `doc/`, and the compiled README quick-start example/screenshot.
 - The normal, ASan/UBSan, and release test suites have each passed with 10,064 assertions. The demo pty checks have covered saving, cancellation, and the 70x22 minimum size.

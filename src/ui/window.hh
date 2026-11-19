@@ -23,6 +23,17 @@ namespace jwezel::ui {
 /// style that is not given is the default one, which is consulted whenever the window is drawn. The styles
 /// are those of everything in the window: its widgets get their glyphs and colors from them.
 struct Window: jwezel::Window, Root {
+  /// Create a decorated terminal window that is also the root of its UI tree.
+  ///
+  /// A null decoration, color style, or UI style selects the corresponding default. Non-null style pointers are
+  /// non-owning and must remain alive for the lifetime of the window.
+  /// @param ui The UI whose terminal hosts the window.
+  /// @param background The window's explicit background cell.
+  /// @param area Window area in display coordinates, or `RectangleDefault` for a default-sized window.
+  /// @param title Text drawn in the window decoration.
+  /// @param decoration Optional window decoration.
+  /// @param colors Optional color-role table.
+  /// @param style Optional glyph and decoration style.
   explicit Window(
     struct Ui &ui,
     const Char &background = Space,

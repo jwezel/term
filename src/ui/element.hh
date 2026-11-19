@@ -11,6 +11,10 @@ namespace jwezel::ui {
 struct Container;
 struct Root;
 
+/// Base class for an element in a UI tree.
+///
+/// Elements refer to their parent non-owningly; the parent must outlive them. Areas are relative to the root's host
+/// window, and containers may assign areas to elements created with `RectangleDefault`.
 struct Element
 {
   ///
@@ -75,7 +79,8 @@ struct Element
   /// Containers hand this up to the box that lays them out, which lays its children out again.
   virtual void layoutChanged();
 
-  auto parent() {return parent_;}
+  /// Get the non-owning parent container, or null for a detached element.
+  [[nodiscard]] auto parent() const {return parent_;}
 
   ///
   /// Whether the area of the element is left to its parent
@@ -85,12 +90,16 @@ struct Element
   /// window is resized.
   [[nodiscard]] auto layoutManaged() const -> bool {return layoutManaged_;}
 
+  /// Deliver an event to registered handlers; input dispatch stops when a handler returns true.
   auto event(const jwezel::Event &event) -> bool;
 
+  /// Deliver mouse movement to handlers registered with `onMouseMove`.
   auto mouseMoveEvent(const Event &event) -> bool;
 
+  /// Deliver a mouse-button event to handlers registered with `onMouseButton`.
   auto mouseButtonEvent(const Event &event) -> bool;
 
+  /// Deliver a key event to handlers registered with `onKey`.
   auto keyEvent(const Event &event) -> bool;
 
   auto onMouseMove(const Handler &handler) -> int;
