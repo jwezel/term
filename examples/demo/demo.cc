@@ -139,36 +139,184 @@ auto plain(const Text &text) -> std::string {
   return result;
 }
 
+/// Value-owned data collected by the address-book dialog.
+struct PersonRecord {
+  std::string title;
+  std::string firstName;
+  std::string middleName;
+  std::string lastName;
+  std::string preferredName;
+  std::string pronouns;
+  std::string birthDate;
+  std::string gender;
+  std::string email;
+  std::string phone;
+  std::string mobile;
+  std::string website;
+  std::string company;
+  std::string jobTitle;
+  std::string addressLine1;
+  std::string addressLine2;
+  std::string city;
+  std::string region;
+  std::string postalCode;
+  std::string country;
+  std::string emergencyContact;
+  std::string emergencyPhone;
+  std::string notes;
+
+  [[nodiscard]] auto displayName() const -> std::string {
+    auto result{title};
+    for (const auto &part: {firstName, middleName, lastName}) {
+      if (!part.empty()) {
+        result += (result.empty()? "": " ") + part;
+      }
+    }
+    if (result.empty()) {
+      result = "Unnamed contact";
+    }
+    if (!preferredName.empty()) {
+      result += std::format(" ({})", preferredName);
+    }
+    return result;
+  }
+
+  [[nodiscard]] auto summary() const -> std::string {
+    auto result{displayName()};
+    for (const auto &part: {city, email}) {
+      if (!part.empty()) {
+        result += std::format("  ·  {}", part);
+      }
+    }
+    return result;
+  }
+};
+
 //~Dialog~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+auto leftLabel(Dim row) -> Rectangle {return Rectangle{3, row, 13, static_cast<Dim>(row + 1)};}
+
+auto leftInput(Dim row) -> Rectangle {return Rectangle{13, row, 34, static_cast<Dim>(row + 1)};}
+
+auto rightLabel(Dim row) -> Rectangle {return Rectangle{35, row, 45, static_cast<Dim>(row + 1)};}
+
+auto rightInput(Dim row) -> Rectangle {return Rectangle{45, row, 64, static_cast<Dim>(row + 1)};}
+
+/// A compact, consistently aligned label and single-line editor.
+struct TextField {
+  TextField(
+    Window &parent,
+    const Rectangle &labelArea,
+    const Rectangle &inputArea,
+    std::string_view caption,
+    std::string_view initial={}
+  ):
+  label{parent, labelArea, Text{caption}},
+  input{parent, inputArea, initial}
+  {}
+
+  [[nodiscard]] auto value() const -> std::string {return input.contents();}
+
+  Label label;
+  LineEdit input;
+};
+
+/// A label and a choice list, for values that should come from a known set.
+struct ChoiceField {
+  ChoiceField(
+    Window &parent,
+    const Rectangle &labelArea,
+    const Rectangle &inputArea,
+    std::string_view caption,
+    const std::vector<Text> &options,
+    Dim selected=0
+  ):
+  label{parent, labelArea, Text{caption}},
+  input{parent, inputArea, options, selected}
+  {}
+
+  [[nodiscard]] auto value() const -> std::string {
+    const auto selected{input.selected()};
+    if (selected < 0) {
+      return {};
+    }
+    auto result{plain(input.items()[static_cast<size_t>(selected)])};
+    return result == "Select"? std::string{}: result;
+  }
+
+  Label label;
+  DropDown input;
+};
+
 ///
-/// Dialog to enter an address, with OK and Cancel
+/// A detailed person and address form. It uses the same ordinary widgets as the rest of the demo: line edits for
+/// free-form values, drop-downs for choices, and a small multi-line notes field.
 ///
 /// The dialog owns its window and widgets as plain members; they are destroyed in reverse order, widgets first.
 /// The result is reported to `done`, which must not destroy the dialog right away: the dialog is in the middle of
 /// handling an event then. The owner destroys it when it is back in its loop.
 struct Dialog {
-  using Done = std::function<void(bool accepted, const std::string &address)>;
+  using Done = std::function<void(bool accepted, const PersonRecord &person)>;
 
-  static constexpr Dim width{46};
-  static constexpr Dim height{11};
+  static constexpr Dim width{66};
+  static constexpr Dim height{21};
 
   Dialog(Ui &ui, const Vector &position, const ColorStyle *colors, const Done &done):
   window_{
-    ui, dialogBackground, Rectangle{position, Vector{static_cast<Dim>(position.x() + width), static_cast<Dim>(position.y() + height)}},
-    Text{" New address "}, nullptr, colors
+    ui, dialogBackground,
+    Rectangle{position, Vector{static_cast<Dim>(position.x() + width), static_cast<Dim>(position.y() + height)}},
+    Text{" New person & address "}, nullptr, colors
   },
-  prompt_{window_, Rectangle{3, 2, 43, 3}, Text{"Street, number, postal code and city:"}},
-  entry_{window_, Rectangle{3, 3, 43, 4}, ""},
-  hint_{window_, Rectangle{3, 5, 43, 6}, Text{"Enter accepts, Esc cancels, Tab moves on"}},
-  ok_{window_, Rectangle{24, 8, 30, 9}, Text{"OK"}},
-  cancel_{window_, Rectangle{32, 8, 42, 9}, Text{"Cancel"}},
-  accept_{[this, done] {done(true, entry_.contents());}, {Key::Enter}},
-  reject_{[done] {done(false, {});}, {Key::Escape, '\x03'}} // Ctrl-C comes as a key as well, the terminal is in raw mode
+  identityHeader_{
+    window_, Rectangle{3, 1, 64, 2}, Text{"PERSONAL  /  BIRTH DATE: YYYY-MM-DD", RgbBlue5, RgbNone, bold}
+  },
+  title_{
+    window_, leftLabel(2), leftInput(2), "Title",
+    {Text{"Select"}, Text{"Mx."}, Text{"Ms."}, Text{"Mr."}, Text{"Dr."}, Text{"Prof."}}
+  },
+  firstName_{window_, rightLabel(2), rightInput(2), "First name"},
+  middleName_{window_, leftLabel(3), leftInput(3), "Middle"},
+  lastName_{window_, rightLabel(3), rightInput(3), "Last name"},
+  preferredName_{window_, leftLabel(4), leftInput(4), "Preferred"},
+  pronouns_{
+    window_, rightLabel(4), rightInput(4), "Pronouns",
+    {Text{"Select"}, Text{"she/her"}, Text{"he/him"}, Text{"they/them"}, Text{"use name"}}
+  },
+  birthDate_{window_, leftLabel(5), leftInput(5), "Birth date"},
+  gender_{window_, rightLabel(5), rightInput(5), "Gender", {
+    Text{"Select"}, Text{"Woman"}, Text{"Man"}, Text{"Non-binary"}, Text{"Self-describe"}, Text{"Prefer not to say"}
+  }},
+  contactHeader_{window_, Rectangle{3, 6, 64, 7}, Text{"CONTACT  /  HOW TO REACH THEM", RgbBlue5, RgbNone, bold}},
+  email_{window_, leftLabel(7), leftInput(7), "Email"},
+  phone_{window_, rightLabel(7), rightInput(7), "Phone"},
+  mobile_{window_, leftLabel(8), leftInput(8), "Mobile"},
+  website_{window_, rightLabel(8), rightInput(8), "Website"},
+  organization_{window_, leftLabel(9), leftInput(9), "Company"},
+  jobTitle_{window_, rightLabel(9), rightInput(9), "Job title"},
+  addressHeader_{window_, Rectangle{3, 10, 64, 11}, Text{"ADDRESS  /  WHERE THEY LIVE", RgbBlue5, RgbNone, bold}},
+  addressLine1_{window_, Rectangle{3, 11, 13, 12}, Rectangle{13, 11, 64, 12}, "Street"},
+  addressLine2_{window_, Rectangle{3, 12, 13, 13}, Rectangle{13, 12, 64, 13}, "Apt / unit"},
+  city_{window_, leftLabel(13), leftInput(13), "City"},
+  region_{window_, rightLabel(13), rightInput(13), "Region"},
+  postalCode_{window_, leftLabel(14), leftInput(14), "Post code"},
+  country_{window_, rightLabel(14), rightInput(14), "Country", {
+    Text{"United States"}, Text{"Canada"}, Text{"United Kingdom"}, Text{"Australia"}, Text{"New Zealand"},
+    Text{"France"}, Text{"Germany"}, Text{"India"}, Text{"Japan"}, Text{"Other"}
+  }},
+  emergencyHeader_{window_, Rectangle{3, 15, 64, 16}, Text{"IN CASE OF EMERGENCY", RgbBlue5, RgbNone, bold}},
+  emergencyName_{window_, leftLabel(16), leftInput(16), "Contact"},
+  emergencyPhone_{window_, rightLabel(16), rightInput(16), "Phone"},
+  notesLabel_{window_, Rectangle{3, 17, 13, 19}, Text{"Notes"}},
+  notes_{window_, Rectangle{13, 17, 64, 19}, ""},
+  hint_{window_, Rectangle{3, 19, 42, 20}, Text{"Tab moves  ·  Esc cancels", RgbGray4}},
+  ok_{window_, Rectangle{43, 19, 52, 20}, Text{"Save"}},
+  cancel_{window_, Rectangle{54, 19, 64, 20}, Text{"Cancel"}},
+  accept_{[this, done] {done(true, person());}, {Key::Enter}},
+  reject_{[done] {done(false, {});}, {Key::Escape, '\x03'}}
+  // Ctrl-C comes as a key as well, the terminal is in raw mode
   {
-    // Enter and Escape are actions of the whole window. Nothing has to be said about them in the widgets: an entry
-    // that has no use for Enter leaves it to the window, and the buttons trigger the very same actions when they
-    // are pressed. The order of the focus is the order in which the widgets were created.
+    // Enter and Escape are actions of the whole window. Line edits leave Enter for the default action; the notes
+    // field consumes it as a newline. The buttons trigger the same actions, and Tab follows field creation order.
     window_.addAction(accept_);
     window_.addAction(reject_);
     ok_.addAction(accept_);
@@ -188,9 +336,63 @@ struct Dialog {
   [[nodiscard]] auto window() -> Window & {return window_;}
 
   private:
+  [[nodiscard]] auto person() const -> PersonRecord {
+    return PersonRecord{
+      .title = title_.value(),
+      .firstName = firstName_.value(),
+      .middleName = middleName_.value(),
+      .lastName = lastName_.value(),
+      .preferredName = preferredName_.value(),
+      .pronouns = pronouns_.value(),
+      .birthDate = birthDate_.value(),
+      .gender = gender_.value(),
+      .email = email_.value(),
+      .phone = phone_.value(),
+      .mobile = mobile_.value(),
+      .website = website_.value(),
+      .company = organization_.value(),
+      .jobTitle = jobTitle_.value(),
+      .addressLine1 = addressLine1_.value(),
+      .addressLine2 = addressLine2_.value(),
+      .city = city_.value(),
+      .region = region_.value(),
+      .postalCode = postalCode_.value(),
+      .country = country_.value(),
+      .emergencyContact = emergencyName_.value(),
+      .emergencyPhone = emergencyPhone_.value(),
+      .notes = notes_.contents()
+    };
+  }
+
   Window window_;
-  Label prompt_;
-  LineEdit entry_;
+  Label identityHeader_;
+  ChoiceField title_;
+  TextField firstName_;
+  TextField middleName_;
+  TextField lastName_;
+  TextField preferredName_;
+  ChoiceField pronouns_;
+  TextField birthDate_;
+  ChoiceField gender_;
+  Label contactHeader_;
+  TextField email_;
+  TextField phone_;
+  TextField mobile_;
+  TextField website_;
+  TextField organization_;
+  TextField jobTitle_;
+  Label addressHeader_;
+  TextField addressLine1_;
+  TextField addressLine2_;
+  TextField city_;
+  TextField region_;
+  TextField postalCode_;
+  ChoiceField country_;
+  Label emergencyHeader_;
+  TextField emergencyName_;
+  TextField emergencyPhone_;
+  Label notesLabel_;
+  TextArea notes_;
   Label hint_;
   Button ok_;
   Button cancel_;
@@ -305,8 +507,13 @@ struct Demo {
     };
     dialog_.emplace(
       ui_, position, colored_? &dialogColors: nullptr,
-      [this](bool accepted, const std::string &address) {
-        log(accepted? std::format("dialog: OK \"{}\"", address): "dialog: cancelled");
+      [this](bool accepted, const PersonRecord &person) {
+        if (accepted) {
+          contacts_.push_back(person);
+          log(std::format("saved: {}", person.summary()));
+        } else {
+          log("contact: cancelled");
+        }
         closeDialog_ = true;
       }
     );
@@ -334,6 +541,7 @@ struct Demo {
   Label hint_;
   Action quit_;
   std::deque<std::string> lines_;
+  std::vector<PersonRecord> contacts_;
   bool colored_{true};
   bool done_{false};
   bool closeDialog_{false};
