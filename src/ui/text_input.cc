@@ -29,7 +29,7 @@ void TextInput::start() {
   registerHandlers();
 }
 
-void TextInput::text(std::string_view text) {
+void TextInput::contents(std::string_view text) {
   buffer_.text(text);
   cursor_ = buffer_.end();
   scrollX_ = 0;
@@ -168,7 +168,7 @@ void TextInput::movePage(int direction) {
 }
 
 auto TextInput::accept(const Event &event) -> bool {
-  return emit(AcceptEvent{UiEvent::causeOf(event), text()});
+  return emit(AcceptEvent{UiEvent::causeOf(event), contents()});
 }
 
 auto TextInput::onAccept(const Handler &handler) -> int {

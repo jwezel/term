@@ -2149,7 +2149,7 @@ TEST_CASE("UI Window") {
     auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 24, 12}, Text{"T"}, nullptr, &plain)};
     SUBCASE("The text is the model, in UTF-8") {
       auto area{jwezel::ui::TextArea(w1, Rectangle{1, 1, 19, 5}, "caf\xc3\xa9 \xe2\x82\xac\nsecond")};
-      CHECK_EQ(area.text(), "caf\xc3\xa9 \xe2\x82\xac\nsecond");
+      CHECK_EQ(area.contents(), "caf\xc3\xa9 \xe2\x82\xac\nsecond");
       CHECK_EQ(area.lines().size(), 2);
       CHECK_EQ(area.lines()[0].size(), 6); // characters, not bytes
       CHECK_EQ(area.lines()[0][3], U'\u00e9');
@@ -2160,58 +2160,59 @@ TEST_CASE("UI Window") {
       send("\x1b[F"); // End
       CHECK_EQ(area.cursor(), Vector{6, 0}); // one step for a character that is more than one byte
       send("\x7f"); // Backspace
-      CHECK_EQ(area.text(), "caf\xc3\xa9 \nsecond"); // the euro sign is gone, as a whole
+      CHECK_EQ(area.contents(), "caf\xc3\xa9 \nsecond"); // the euro sign is gone, as a whole
       send("\x1b[D");
       send("\x1b[D");
       send("\x7f"); // before the é: the f
-      CHECK_EQ(area.text(), "ca\xc3\xa9 \nsecond");
+      CHECK_EQ(area.contents(), "ca\xc3\xa9 \nsecond");
     }
     SUBCASE("Editing changes the text, and it is the text that is edited") {
       auto area{jwezel::ui::TextArea(w1, Rectangle{1, 1, 19, 5}, "ab")};
       send("X");
-      CHECK_EQ(area.text(), "abX");
+      CHECK_EQ(area.contents(), "abX");
       send("\r");
-      CHECK_EQ(area.text(), "abX\n");
+      CHECK_EQ(area.contents(), "abX\n");
       CHECK_EQ(area.lines().size(), 2);
       send("y");
-      CHECK_EQ(area.text(), "abX\ny");
+      CHECK_EQ(area.contents(), "abX\ny");
       send("\x1b[H"); // Home
       send("\x7f"); // Backspace at the beginning: the lines are one again
-      CHECK_EQ(area.text(), "abXy");
+      CHECK_EQ(area.contents(), "abXy");
       CHECK_EQ(area.cursor(), Vector{3, 0});
       send("\x1b[3~"); // Delete
-      CHECK_EQ(area.text(), "abX");
+      CHECK_EQ(area.contents(), "abX");
       send("\r");
       send("\r");
       send("\x1b[A");
       send("\x1b[3~"); // at the end of a line, the next is joined
-      CHECK_EQ(area.text(), "abX\n");
+      CHECK_EQ(area.contents(), "abX\n");
     }
     SUBCASE("Nothing is read from what is shown: the text does not have to fit") {
       auto input{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 7, 2}, "HelloWorld")}; // 6 wide
-      CHECK_EQ(input.text(), "HelloWorld");
+      CHECK_EQ(input.contents(), "HelloWorld");
+      CHECK_EQ(std::string(input.text()), "World \n"); // the inherited one: what is shown
       CHECK_EQ(input.lines()[0].size(), 10);
       CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), "World \n"); // the end, with room for the cursor
       CHECK_EQ(input.scroll(), Vector{5, 0});
       send("\x1b[H");
       CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), "HelloW\n");
-      CHECK_EQ(input.text(), "HelloWorld");
+      CHECK_EQ(input.contents(), "HelloWorld");
     }
     SUBCASE("Replacing the text") {
       auto input{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 7, 2}, "HelloWorld")};
-      input.text("Hi");
-      CHECK_EQ(input.text(), "Hi");
+      input.contents("Hi");
+      CHECK_EQ(input.contents(), "Hi");
       CHECK_EQ(input.cursor(), Vector{2, 0}); // behind it
       CHECK_EQ(input.scroll(), Vector{0, 0}); // and the widget has been scrolled back
       CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), "Hi    \n"); // nothing of the old text is left
-      input.text("");
+      input.contents("");
       CHECK_EQ(input.lines().size(), 1);
       CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), "      \n");
       CHECK_EQ(term.display().caret(), Vector{1, 1});
       send("x");
-      CHECK_EQ(input.text(), "x");
+      CHECK_EQ(input.contents(), "x");
       auto area{jwezel::ui::TextArea(w1, Rectangle{1, 3, 19, 5}, "a")};
-      area.text("one\ntwo\nthree\nfour"); // more lines than there are rows
+      area.contents("one\ntwo\nthree\nfour"); // more lines than there are rows
       CHECK_EQ(area.cursor(), Vector{4, 3});
       CHECK_EQ(area.scroll(), Vector{0, 2});
       CHECK_EQ(shown(Rectangle{1, 3, 19, 5}), "three             \nfour              \n");
@@ -2267,7 +2268,7 @@ TEST_CASE("UI Window") {
       CHECK_EQ(rows(), Rows{"line 16\n", "line 17\n", "line 18\n", "line 19\n"});
       send(pageDown.c_str());
       CHECK_EQ(area.cursor(), Vector{7, 19});
-      CHECK_EQ(area.text().substr(0, 7), "line 00"); // nothing was typed or deleted by all that
+      CHECK_EQ(area.contents().substr(0, 7), "line 00"); // nothing was typed or deleted by all that
       CHECK_EQ(area.lines().size(), 20);
     }
     SUBCASE("The column does not go beyond the end of the line") {
@@ -2509,7 +2510,7 @@ TEST_CASE("UI Window") {
         w1.focus(&area);
         send("\x0d");
         CHECK_EQ(accepted.size(), 2); // a new line was inserted instead
-        CHECK_EQ(area.text(), "a\n");
+        CHECK_EQ(area.contents(), "a\n");
       }
     }
     SUBCASE("The kinds") {

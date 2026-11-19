@@ -163,7 +163,7 @@ struct Dialog {
   hint_{window_, Rectangle{3, 5, 43, 6}, Text{"Enter accepts, Esc cancels, Tab moves on"}, dialogBackground},
   ok_{window_, Rectangle{24, 8, 30, 9}, Text{"OK"}, dialogBackground},
   cancel_{window_, Rectangle{32, 8, 42, 9}, Text{"Cancel"}, dialogBackground},
-  accept_{[this, done] {done(true, entry_.text());}, {Key::Enter}},
+  accept_{[this, done] {done(true, entry_.contents());}, {Key::Enter}},
   reject_{[done] {done(false, {});}, {Key::Escape, '\x03'}} // Ctrl-C comes as a key as well, the terminal is in raw mode
   {
     // Enter and Escape are actions of the whole window. Nothing has to be said about them in the widgets: an entry

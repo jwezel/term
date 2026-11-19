@@ -79,15 +79,16 @@ struct TextInput: Widget {
   ///
   /// Get the text, in UTF-8, with a line feed between the lines
   ///
-  /// The text is the document the widget edits; what is on the display is made from it.
-  [[nodiscard]] auto text() const -> std::string {return buffer_.text();}
+  /// The text is the document the widget edits; what is on the display is made from it. `text(area)` is what the
+  /// widget shows, which is that, laid out.
+  [[nodiscard]] auto contents() const -> std::string {return buffer_.text();}
 
   ///
   /// Replace the text; the cursor is behind it, and the widget shows the beginning of the text or the end of it, where
   /// the cursor is
   ///
   /// @param[in]  text  The text, in UTF-8
-  void text(std::string_view text);
+  void contents(std::string_view text);
 
   ///
   /// Get the lines of the text, as characters
