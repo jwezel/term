@@ -4,7 +4,6 @@
 #include <cassert>
 #include <exception>
 #include <iostream>
-#include <ostream>
 #include <regex>
 #include <stdexcept>
 #include <system_error>
@@ -51,14 +50,14 @@ position_{
     position == VectorMin?
       cursor_
     :
-      position
+      position,
 },
 // Wide as the terminal is from the left edge of the display; high as the terminal is, because it scrolls
 maxSize_{
   min(
     expandTo == VectorMax? terminalSize_: expandTo,
     screen == Screen::alternate? terminalSize_: Vector{toDim(terminalSize_.x() - position_.x()), terminalSize_.y()}
-  )
+  ),
 },
 text_(Null, size == VectorMin? Vector{1, 1}: min(size, maxSize_))
 {
@@ -312,9 +311,9 @@ void Display::mouseMode(MouseMode mode) const {
     "\x1b[?9h\x1b[?1006h",
     "\x1b[?1000h\x1b[?1006h",
     "\x1b[?1002h\x1b[?1006h",
-    "\x1b[?1003h\x1b[?1006h"
+    "\x1b[?1003h\x1b[?1006h",
   };
-  write(sequence[static_cast<int>(mode)]); // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
+  write(sequence.at(static_cast<int>(mode))); // NOLINT(cppcoreguidelines-pro-bounds-constant-array-index)
 }
 
 } // namespace jwezel

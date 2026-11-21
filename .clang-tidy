@@ -21,6 +21,7 @@ Checks: >
   -readability-implicit-bool-conversion,
   -readability-isolate-declaration,
   -llvm-prefer-static-over-anonymous-namespace
+  -readability-avoid-nested-conditional-operator
 CheckOptions:
   readability-identifier-length.MinimumVariableNameLength: 2
   readability-identifier-length.IgnoredVariableNames: '_.*'
