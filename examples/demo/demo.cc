@@ -495,11 +495,11 @@ struct Demo {
       log("dialog: already open");
       return;
     }
-    // TODO(feature): modal windows, which the others do not get input while they are open
     const auto area{window_.area()};
     const Vector position{
       static_cast<Dim>(area.x1() + (width - Dialog::width) / 2), static_cast<Dim>(area.y1() + (height - Dialog::height) / 2)
     };
+    // Modal windows take the input exclusively while they are open
     dialog_.emplace(
       ui_, position, colored_? &dialogColors: nullptr,
       [this](bool accepted, const PersonRecord &person) {
@@ -515,6 +515,7 @@ struct Demo {
         });
       }
     );
+    dialog_->window().modal(true);
     log("dialog: opened");
   }
 

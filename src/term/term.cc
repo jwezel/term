@@ -138,7 +138,8 @@ void Terminal::runEvent() {
     if (change == MouseCapture::Change::began) {
       captureWindow_ = window;
     }
-    if (window) {
+    if (window and (!focusWindow_->modal() or window == focusWindow_)) {
+      // A modal window takes the input exclusively while it is open and focused; no other window gets input
       target = window;
     }
   }

@@ -135,9 +135,22 @@ struct Window: TextElement {
 
   [[nodiscard]] auto terminal() const {return terminal_;}
 
+  ///
+  /// Whether the window takes the input exclusively while it has the focus: a modal window, which no other window
+  /// gets input while it is open and focused.
+  [[nodiscard]] auto modal() const -> bool {return modal_;}
+
+  ///
+  /// Set whether the window takes the input exclusively while it has the focus
+  ///
+  /// @param[in]  modal  True for a modal window, which gets the input while it is open, and no other window gets it
+  ///                    while it has the focus
+  void modal(bool modal) {modal_ = modal;}
+
   private:
   struct TerminalInterface *terminal_;
   InputHandler *inputHandler_{};
+  bool modal_{false};
 };
 
 } // namespace jwezel

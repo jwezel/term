@@ -928,6 +928,15 @@ TEST_CASE("UI Window") {
         CHECK_EQ(term.focus(), &w2);
         send("\x1b[<0;30;5m");
       }
+      SUBCASE("Modal window") {
+        w2.modal(true); // the newest window is the modal one, and has the focus
+        CHECK(w2.modal());
+        CHECK_EQ(term.focus(), &w2);
+        send("\x1b[<0;7;7M"); // display (6, 6): a widget of w1, which is not modal
+        CHECK_EQ(term.focus(), &w2); // the other window did not take the focus while the modal one was open
+        send("X"); // the keyboard goes to the modal window
+        CHECK_EQ(other.lines()[0].size(), 3);
+      }
     }
     SUBCASE("Destroyed focused window hands focus to the desktop") {
       {
