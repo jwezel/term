@@ -148,6 +148,8 @@ struct TextInput: Widget {
 
   void scrollIntoView();
 
+  [[nodiscard]] auto alignmentOffset() const -> Vector;
+
   TextBuffer buffer_;
   Vector cursor_; // {column, line}
   Dim scrollX_ = 0;

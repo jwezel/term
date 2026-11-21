@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <string_view>
 #include <utility>
@@ -126,7 +127,12 @@ struct ListView: Widget {
     if (!(bounds & point)) {
       return static_cast<Index>(-1);
     }
-    const auto index{static_cast<i8>(first_) + position.y() - bounds.y1()};
+    const auto origin{contentPosition(Vector{bounds.width(), visibleRows()})};
+    const auto row{position.y() - bounds.y1() - origin.y()};
+    if (row < 0 or row >= visibleRows()) {
+      return static_cast<Index>(-1);
+    }
+    const auto index{static_cast<i8>(first_) + row};
     return index >= 0 and index < count_? static_cast<Index>(index): static_cast<Index>(-1);
   }
 
@@ -330,22 +336,40 @@ struct ListView: Widget {
     const Text left{glyphs.left}, right{glyphs.right};
     const Text mark{marker()};
     const auto contentStart{std::max(left.width(), mark.width())};
+    const auto origin{contentPosition(Vector{size.x(), visibleRows()})};
     const auto padding{toDim(contentStart + right.width())};
+    const auto textRoom{std::max(Dim{0}, toDim(size.x() - padding))};
     auto visible{canvas(backgroundRole())};
-    for (Dim row = 0; row < size.y(); ++row) {
+    for (Dim row = 0; row < visibleRows(); ++row) {
+      const auto screenRow{toDim(origin.y() + row)};
       const auto wideIndex{static_cast<i8>(first_) + row};
-      if (wideIndex < 0 or wideIndex >= count_) {
-        break;
-      }
       const auto index{static_cast<Index>(wideIndex)};
       const auto text{item(index)};
-      const auto width{std::max(Dim{0}, std::min(text.width(), toDim(size.x() - padding)))};
-      overlay(visible, left, Vector{0, row});
-      overlay(visible, right, Vector{toDim(size.x() - right.width()), row});
-      if (text.height() > 0 and width > 0) {
-        overlay(visible, text[Rectangle{0, 0, width, 1}], Vector{contentStart, row});
+      const auto difference{static_cast<int>(textRoom) - text.width()};
+      auto textOffset{Dim{0}};
+      switch (horizontalAlignment()) {
+        case ContentAlignment::center:
+        textOffset = toDim(difference / 2);
+        break;
+        case ContentAlignment::end:
+        textOffset = toDim(difference);
+        break;
+        case ContentAlignment::begin:
+        default:
+        break;
       }
-      const Rectangle rowArea{0, row, size.x(), toDim(row + 1)};
+      const auto clippedStart{std::max(Dim{0}, toDim(-std::min(0, static_cast<int>(textOffset))))};
+      const auto shownWidth{std::max(Dim{0}, std::min(toDim(text.width() - clippedStart), textRoom))};
+      overlay(visible, left, Vector{origin.x(), screenRow});
+      overlay(visible, right, Vector{toDim(size.x() - right.width()), screenRow});
+      if (text.height() > 0 and shownWidth > 0) {
+        overlay(
+          visible,
+          text[Rectangle{clippedStart, 0, toDim(clippedStart + shownWidth), 1}],
+          Vector{toDim(origin.x() + contentStart + std::max(Dim{0}, textOffset)), screenRow}
+        );
+      }
+      const Rectangle rowArea{0, screenRow, size.x(), toDim(screenRow + 1)};
       if (!itemEnabled(index)) {
         visible.setAttr(colors()[disabledRole()], rowArea, AttributeMode::replace);
       }
@@ -360,7 +384,7 @@ struct ListView: Widget {
         visible.setAttr(colors()[currentRole()], rowArea, AttributeMode::replace);
       }
       if (index == current_ and markerVisible() and mark.width() > 0) {
-        overlay(visible, mark, Vector{0, row});
+        overlay(visible, mark, Vector{origin.x(), screenRow});
       }
     }
     write(Vector{0, 0}, visible);
@@ -401,6 +425,14 @@ struct ListView: Widget {
   [[nodiscard]] virtual auto markerVisible() -> bool {return !marker().empty();}
 
   private:
+  [[nodiscard]] auto visibleRows() const -> Dim {
+    const auto size{area().size()};
+    const auto remaining{
+      std::max<std::int64_t>(0, static_cast<std::int64_t>(count_) - static_cast<std::int64_t>(first_))
+    };
+    return static_cast<Dim>(std::min<std::int64_t>(size.y(), remaining));
+  }
+
   void refreshData() {
     count_ = source_.size();
     if (count_ < 0) {

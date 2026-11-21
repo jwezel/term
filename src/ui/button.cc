@@ -72,10 +72,12 @@ void Button::render() {
   const auto &brackets{uiStyle().button[state]};
   const Text left{brackets.left}, right{brackets.right};
   auto visible{canvas(buttonRoles[state])};
+  const auto position{contentPosition(preferredSize())};
   for (Dim row = 0; row < text_.height(); ++row) {
-    overlay(visible, left, Vector{0, row});
-    overlay(visible, text_[Rectangle{0, row, text_.width(), toDim(row + 1)}], Vector{left.width(), row});
-    overlay(visible, right, Vector{toDim(left.width() + text_.width()), row});
+    const auto y{toDim(position.y() + row)};
+    overlay(visible, left, Vector{position.x(), y});
+    overlay(visible, text_[Rectangle{0, row, text_.width(), toDim(row + 1)}], Vector{toDim(position.x() + left.width()), y});
+    overlay(visible, right, Vector{toDim(position.x() + left.width() + text_.width()), y});
   }
   write(Vector{0, 0}, visible);
 }

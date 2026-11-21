@@ -8,8 +8,8 @@ namespace jwezel::ui {
 
 /// A passive text widget that does not take keyboard focus.
 ///
-/// Text is anchored at the top-left corner and clipped to the assigned area. A label's preferred size is its text
-/// content size.
+/// Content follows the widget's horizontal and vertical alignment settings. A label can name a non-owning buddy;
+/// parallel boxes then use the buddy's preferred size along their shared row or column axis.
 struct Label: Widget {
 
   ///
@@ -37,7 +37,7 @@ struct Label: Widget {
 
   auto operator=(Label &&) -> Label & = delete;
 
-  ~Label() override = default;
+  ~Label() override;
 
   /// Get the text currently displayed by the label.
   [[nodiscard]] auto content() const -> const Text & {return text_;}
@@ -48,14 +48,24 @@ struct Label: Widget {
   /// @param[in]  text  The text
   void content(const Text &text);
 
+  /// Get the widget this label describes, if any.
+  [[nodiscard]] auto buddy() const -> Widget * {return buddy_;}
+
+  /// Associate this label with its buddy without changing either widget's position.
+  ///
+  /// When the label and buddy are in separate boxes with the same orientation, the label's preferred size follows the
+  /// buddy on that box's main axis. The buddy is a weak reference and must outlive the label.
+  void buddy(Widget &widget);
+
   ///
   /// The size of the text, which is what a layout that sizes the label to its content uses
-  [[nodiscard]] auto preferredSize() -> Vector override {return text_.size();}
+  [[nodiscard]] auto preferredSize() -> Vector override;
 
   protected:
   void render() override;
 
   Text text_;
+  Widget *buddy_{nullptr}; // documented weak reference
 };
 
 } // namespace jwezel::ui

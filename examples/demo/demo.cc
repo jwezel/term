@@ -17,6 +17,7 @@
 #include <term/term.hh>
 #include <term/text.hh>
 #include <ui/action.hh>
+#include <ui/box.hh>
 #include <ui/button.hh>
 #include <ui/color_style.hh>
 #include <ui/drop_down.hh>
@@ -26,6 +27,8 @@
 #include <ui/menu.hh>
 #include <ui/text_area.hh>
 #include <ui/ui.hh>
+#include <ui/horizontal_box.hh>
+#include <ui/vertical_box.hh>
 #include <ui/window.hh>
 
 #include <deque>
@@ -65,6 +68,7 @@ using
   jwezel::RgbGray8,
   jwezel::RgbGray9,
   jwezel::RgbNone,
+  jwezel::RectangleDefault,
   jwezel::RgbWhite,
   jwezel::RgbYellow,
   jwezel::Terminal,
@@ -74,10 +78,15 @@ using
   jwezel::VectorMin,
   jwezel::bold,
   jwezel::ui::Action,
+  jwezel::ui::BoxLayout,
   jwezel::ui::Button,
+  jwezel::ui::Container,
+  jwezel::ui::ContentAlignment,
   jwezel::ui::ColorRoles,
   jwezel::ui::ColorStyle,
   jwezel::ui::DropDown,
+  jwezel::ui::HorizontalBox,
+  jwezel::ui::LayoutSize,
   jwezel::ui::Label,
   jwezel::ui::LineEdit,
   jwezel::ui::ListBox,
@@ -85,6 +94,8 @@ using
   jwezel::ui::MenuItem,
   jwezel::ui::TextArea,
   jwezel::ui::Ui,
+  jwezel::ui::UiStyle,
+  jwezel::ui::VerticalBox,
   jwezel::ui::Window;
 
 namespace {
@@ -137,6 +148,9 @@ constexpr ColorRoles<13> dialogRoles{
   {"popup.highlight", CharAttributes{RgbWhite, RgbBlue7, bold}},
 };
 constexpr ColorStyle dialogColors{dialogRoles};
+
+// A buddy label's punctuation is shared by the whole demo rather than included in each caption.
+constexpr UiStyle demoStyle{.labelSuffix = ":"};
 
 const Char desktopBackground{' ', RgbNone, RgbGray1};
 const Char mainBackground{' ', RgbNone, RgbBlue2};
@@ -208,46 +222,93 @@ struct PersonRecord {
 
 //~Dialog~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-auto leftLabel(Dim row) -> Rectangle {return Rectangle{3, row, 13, static_cast<Dim>(row + 1)};}
+/// A parallel label/editor column. The buddy relationship makes corresponding rows share their preferred heights.
+struct FieldColumn {
+  FieldColumn(Container &parent, size_t rows, bool stretchRows=false):
+  layout{
+    parent, RectangleDefault,
+    BoxLayout{.weights = {}, .sizes = {LayoutSize::fit, LayoutSize::stretch}, .alignments = {}, .spacing = 1}
+  },
+  labels{
+    layout, RectangleDefault,
+    BoxLayout{
+      .weights = {},
+      .sizes = std::vector<LayoutSize>(rows, stretchRows? LayoutSize::stretch: LayoutSize::fit),
+      .alignments = {}
+    }
+  },
+  editors{
+    layout, RectangleDefault,
+    BoxLayout{
+      .weights = {},
+      .sizes = std::vector<LayoutSize>(rows, stretchRows? LayoutSize::stretch: LayoutSize::fit),
+      .alignments = {}
+    }
+  }
+  {}
 
-auto leftInput(Dim row) -> Rectangle {return Rectangle{13, row, 34, static_cast<Dim>(row + 1)};}
+  HorizontalBox layout;
+  VerticalBox labels;
+  VerticalBox editors;
+};
 
-auto rightLabel(Dim row) -> Rectangle {return Rectangle{35, row, 45, static_cast<Dim>(row + 1)};}
+/// Two field columns arranged side by side.
+struct FieldPair {
+  FieldPair(Container &parent, size_t rows):
+  layout{
+    parent, RectangleDefault,
+    BoxLayout{
+      .weights = {},
+      .sizes = {LayoutSize::stretch, LayoutSize::stretch},
+      .alignments = {},
+      .spacing = 2
+    }
+  },
+  left{layout, rows},
+  right{layout, rows}
+  {}
 
-auto rightInput(Dim row) -> Rectangle {return Rectangle{45, row, 64, static_cast<Dim>(row + 1)};}
+  HorizontalBox layout;
+  FieldColumn left;
+  FieldColumn right;
+};
 
 /// A compact, consistently aligned label and single-line editor.
 struct TextField {
   TextField(
-    Window &parent,
-    const Rectangle &labelArea,
-    const Rectangle &inputArea,
+    Container &labelParent,
+    Container &inputParent,
     std::string_view caption,
     std::string_view initial={}
   ):
-  label{parent, labelArea, Text{caption}},
-  input{parent, inputArea, initial}
-  {}
+  input{inputParent, initial},
+  label{labelParent, Text{caption}}
+  {
+    label.buddy(input);
+    label.verticalAlignment(ContentAlignment::center);
+  }
 
   [[nodiscard]] auto value() const -> std::string {return input.contents();}
 
-  Label label;
   LineEdit input;
+  Label label;
 };
 
 /// A label and a choice list, for values that should come from a known set.
 struct ChoiceField {
   ChoiceField(
-    Window &parent,
-    const Rectangle &labelArea,
-    const Rectangle &inputArea,
+    Container &labelParent,
+    Container &inputParent,
     std::string_view caption,
     const std::vector<Text> &options,
     Dim selected=0
   ):
-  label{parent, labelArea, Text{caption}},
-  input{parent, inputArea, options, selected}
-  {}
+  input{inputParent, options, selected},
+  label{labelParent, Text{caption}}
+  {
+    label.buddy(input);
+    label.verticalAlignment(ContentAlignment::center);
+  }
 
   [[nodiscard]] auto value() const -> std::string {
     const auto selected{input.selected()};
@@ -258,8 +319,24 @@ struct ChoiceField {
     return result == "Select"? std::string{}: result;
   }
 
-  Label label;
   DropDown input;
+  Label label;
+};
+
+/// A label and a multi-line editor; the containing row may stretch both to the same height.
+struct NotesField {
+  NotesField(Container &labelParent, Container &inputParent):
+  input{inputParent, ""},
+  label{labelParent, Text{"Notes"}}
+  {
+    label.buddy(input);
+    label.verticalAlignment(ContentAlignment::center);
+  }
+
+  [[nodiscard]] auto value() const -> std::string {return input.contents();}
+
+  TextArea input;
+  Label label;
 };
 
 ///
@@ -273,58 +350,82 @@ struct Dialog {
   using Done = std::function<void(bool accepted, const PersonRecord &person)>;
 
   static constexpr Dim width{66};
-  static constexpr Dim height{21};
+  static constexpr Dim height{22};
 
-  Dialog(Ui &ui, const Vector &position, const ColorStyle *colors, const Done &done):
+  Dialog(Ui &ui, const Vector &position, const ColorStyle *colors, const UiStyle *style, const Done &done):
   window_{
     ui, dialogBackground,
     Rectangle{position, Vector{static_cast<Dim>(position.x() + width), static_cast<Dim>(position.y() + height)}},
-    Text{" New person & address "}, nullptr, colors
+    Text{" New person & address "}, nullptr, colors, style
+  },
+  body_{
+    window_, RectangleDefault,
+    BoxLayout{
+      .weights = {},
+      .sizes = {
+        LayoutSize::fit, LayoutSize::fit, LayoutSize::fit, LayoutSize::fit, LayoutSize::fit,
+        LayoutSize::fit, LayoutSize::fit, LayoutSize::stretch, LayoutSize::fit
+      },
+      .alignments = {},
+      .padding = 1
+    }
   },
   identityHeader_{
-    window_, Rectangle{3, 1, 64, 2}, Text{"PERSONAL  /  BIRTH DATE: YYYY-MM-DD", RgbBlue5, RgbNone, bold}
+    body_, Text{"PERSONAL  /  BIRTH DATE: YYYY-MM-DD", RgbBlue5, RgbNone, bold}
   },
+  personal_{body_, 4},
   title_{
-    window_, leftLabel(2), leftInput(2), "Title",
+    personal_.left.labels, personal_.left.editors, "Title",
     {Text{"Select"}, Text{"Mx."}, Text{"Ms."}, Text{"Mr."}, Text{"Dr."}, Text{"Prof."}}
   },
-  firstName_{window_, rightLabel(2), rightInput(2), "First name"},
-  middleName_{window_, leftLabel(3), leftInput(3), "Middle"},
-  lastName_{window_, rightLabel(3), rightInput(3), "Last name"},
-  preferredName_{window_, leftLabel(4), leftInput(4), "Preferred"},
+  firstName_{personal_.right.labels, personal_.right.editors, "First name"},
+  middleName_{personal_.left.labels, personal_.left.editors, "Middle"},
+  lastName_{personal_.right.labels, personal_.right.editors, "Last name"},
+  preferredName_{personal_.left.labels, personal_.left.editors, "Preferred"},
   pronouns_{
-    window_, rightLabel(4), rightInput(4), "Pronouns",
+    personal_.right.labels, personal_.right.editors, "Pronouns",
     {Text{"Select"}, Text{"she/her"}, Text{"he/him"}, Text{"they/them"}, Text{"use name"}}
   },
-  birthDate_{window_, leftLabel(5), leftInput(5), "Birth date"},
-  gender_{window_, rightLabel(5), rightInput(5), "Gender", {
+  birthDate_{personal_.left.labels, personal_.left.editors, "Birth date"},
+  gender_{personal_.right.labels, personal_.right.editors, "Gender", {
     Text{"Select"}, Text{"Woman"}, Text{"Man"}, Text{"Non-binary"}, Text{"Self-describe"}, Text{"Prefer not to say"}
   }},
-  contactHeader_{window_, Rectangle{3, 6, 64, 7}, Text{"CONTACT  /  HOW TO REACH THEM", RgbBlue5, RgbNone, bold}},
-  email_{window_, leftLabel(7), leftInput(7), "Email"},
-  phone_{window_, rightLabel(7), rightInput(7), "Phone"},
-  mobile_{window_, leftLabel(8), leftInput(8), "Mobile"},
-  website_{window_, rightLabel(8), rightInput(8), "Website"},
-  organization_{window_, leftLabel(9), leftInput(9), "Company"},
-  jobTitle_{window_, rightLabel(9), rightInput(9), "Job title"},
-  addressHeader_{window_, Rectangle{3, 10, 64, 11}, Text{"ADDRESS  /  WHERE THEY LIVE", RgbBlue5, RgbNone, bold}},
-  addressLine1_{window_, Rectangle{3, 11, 13, 12}, Rectangle{13, 11, 64, 12}, "Street"},
-  addressLine2_{window_, Rectangle{3, 12, 13, 13}, Rectangle{13, 12, 64, 13}, "Apt / unit"},
-  city_{window_, leftLabel(13), leftInput(13), "City"},
-  region_{window_, rightLabel(13), rightInput(13), "Region"},
-  postalCode_{window_, leftLabel(14), leftInput(14), "Post code"},
-  country_{window_, rightLabel(14), rightInput(14), "Country", {
+  contactHeader_{body_, Text{"CONTACT  /  HOW TO REACH THEM", RgbBlue5, RgbNone, bold}},
+  contact_{body_, 3},
+  email_{contact_.left.labels, contact_.left.editors, "Email"},
+  phone_{contact_.right.labels, contact_.right.editors, "Phone"},
+  mobile_{contact_.left.labels, contact_.left.editors, "Mobile"},
+  website_{contact_.right.labels, contact_.right.editors, "Website"},
+  organization_{contact_.left.labels, contact_.left.editors, "Company"},
+  jobTitle_{contact_.right.labels, contact_.right.editors, "Job title"},
+  addressHeader_{body_, Text{"ADDRESS  /  WHERE THEY LIVE", RgbBlue5, RgbNone, bold}},
+  address_{body_, 3},
+  addressLine1_{address_.left.labels, address_.left.editors, "Street"},
+  addressLine2_{address_.right.labels, address_.right.editors, "Apt / unit"},
+  city_{address_.left.labels, address_.left.editors, "City"},
+  region_{address_.right.labels, address_.right.editors, "Region"},
+  postalCode_{address_.left.labels, address_.left.editors, "Post code"},
+  country_{address_.right.labels, address_.right.editors, "Country", {
     Text{"United States"}, Text{"Canada"}, Text{"United Kingdom"}, Text{"Australia"}, Text{"New Zealand"},
     Text{"France"}, Text{"Germany"}, Text{"India"}, Text{"Japan"}, Text{"Other"}
   }},
-  emergencyHeader_{window_, Rectangle{3, 15, 64, 16}, Text{"IN CASE OF EMERGENCY", RgbBlue5, RgbNone, bold}},
-  emergencyName_{window_, leftLabel(16), leftInput(16), "Contact"},
-  emergencyPhone_{window_, rightLabel(16), rightInput(16), "Phone"},
-  notesLabel_{window_, Rectangle{3, 17, 13, 19}, Text{"Notes"}},
-  notes_{window_, Rectangle{13, 17, 64, 19}, ""},
-  hint_{window_, Rectangle{3, 19, 42, 20}, Text{"Tab moves  ·  Esc cancels", RgbGray4}},
-  ok_{window_, Rectangle{43, 19, 52, 20}, Text{"Save"}},
-  cancel_{window_, Rectangle{54, 19, 64, 20}, Text{"Cancel"}},
+  emergency_{body_, 1},
+  emergencyName_{emergency_.left.labels, emergency_.left.editors, "Emergency contact"},
+  emergencyPhone_{emergency_.right.labels, emergency_.right.editors, "Emergency phone"},
+  notes_{body_, 1, true},
+  notesField_{notes_.labels, notes_.editors},
+  footer_{
+    body_, RectangleDefault,
+    BoxLayout{
+      .weights = {},
+      .sizes = {LayoutSize::stretch, LayoutSize::fit, LayoutSize::fit},
+      .alignments = {},
+      .spacing = 1
+    }
+  },
+  hint_{footer_, Text{"Tab moves  ·  Esc cancels", RgbGray4}},
+  ok_{footer_, Text{"Save"}},
+  cancel_{footer_, Text{"Cancel"}},
   accept_{[this, done] {done(true, person());}, {Key::Enter}},
   reject_{[done] {done(false, {});}, {Key::Escape, '\x03'}}
   // Ctrl-C comes as a key as well, the terminal is in raw mode
@@ -374,12 +475,14 @@ struct Dialog {
       .country = country_.value(),
       .emergencyContact = emergencyName_.value(),
       .emergencyPhone = emergencyPhone_.value(),
-      .notes = notes_.contents()
+      .notes = notesField_.value()
     };
   }
 
   Window window_;
+  VerticalBox body_;
   Label identityHeader_;
+  FieldPair personal_;
   ChoiceField title_;
   TextField firstName_;
   TextField middleName_;
@@ -389,6 +492,7 @@ struct Dialog {
   TextField birthDate_;
   ChoiceField gender_;
   Label contactHeader_;
+  FieldPair contact_;
   TextField email_;
   TextField phone_;
   TextField mobile_;
@@ -396,17 +500,19 @@ struct Dialog {
   TextField organization_;
   TextField jobTitle_;
   Label addressHeader_;
+  FieldPair address_;
   TextField addressLine1_;
   TextField addressLine2_;
   TextField city_;
   TextField region_;
   TextField postalCode_;
   ChoiceField country_;
-  Label emergencyHeader_;
+  FieldPair emergency_;
   TextField emergencyName_;
   TextField emergencyPhone_;
-  Label notesLabel_;
-  TextArea notes_;
+  FieldColumn notes_;
+  NotesField notesField_;
+  HorizontalBox footer_;
   Label hint_;
   Button ok_;
   Button cancel_;
@@ -511,7 +617,10 @@ struct Demo {
   explicit Demo(Terminal &terminal):
   terminal_{terminal},
   ui_{terminal},
-  window_{ui_, mainBackground, Rectangle{margin, 1, static_cast<Dim>(margin + width), static_cast<Dim>(1 + height)}, Text{" jwezel UI demo "}, nullptr, &mainColors},
+  window_{
+    ui_, mainBackground, Rectangle{margin, 1, static_cast<Dim>(margin + width), static_cast<Dim>(1 + height)},
+    Text{" jwezel UI demo "}, nullptr, &mainColors, &demoStyle
+  },
   openDialog_{[this] {openDialog();}},
   openContacts_{[this] {openContacts();}},
   toggleColorsAction_{[this] {toggleColors();}},
@@ -583,7 +692,7 @@ struct Demo {
     };
     // Modal windows take the input exclusively while they are open
     dialog_.emplace(
-      ui_, position, colored_? &dialogColors: nullptr,
+      ui_, position, colored_? &dialogColors: nullptr, &demoStyle,
         [this](bool accepted, const PersonRecord &person) {
         if (accepted) {
           if (contacts_.size() < 127) {

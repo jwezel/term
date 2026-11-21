@@ -62,6 +62,7 @@ struct UiStyle {
   Brackets list{" ", " "}; ///< Glyphs surrounding each item in a list box.
   std::string_view listMarker{"🢒"}; ///< Marker shown before the current item in caret mode.
   ItemSelectionStyle itemSelectionStyle{ItemSelectionStyle::highlight}; ///< Default current-item style for list boxes.
+  std::string_view labelSuffix{}; ///< Suffix shown after the text of a label that has a buddy.
 };
 
 ///

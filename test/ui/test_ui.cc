@@ -61,6 +61,8 @@ namespace {
 
 using jwezel::ui::ColorRoles, jwezel::ui::ColorStyle, jwezel::ui::DecorationState;
 
+constexpr jwezel::ui::UiStyle colonStyle{.labelSuffix = ":"};
+
 // A decoration without any frame
 struct NoFrame: jwezel::ui::Decoration {
   [[nodiscard]] auto inset() const -> jwezel::Dim override {return 0;}
@@ -457,6 +459,99 @@ TEST_CASE("UI Window") {
         test4.patch(Text{"x"}, Vector{1, 1});
         CHECK_EQ(term.display().text(), test4); // nor of the second line
       }
+      SUBCASE("Content alignment positions and clips the same way") {
+        label.contentAlignment(
+          jwezel::ui::ContentAlignment::center,
+          jwezel::ui::ContentAlignment::center
+        );
+        auto centered{test};
+        centered.patch(Text{"Hello"}, Vector{7, 1});
+        CHECK_EQ(term.display().text(), centered);
+
+        label.contentAlignment(jwezel::ui::ContentAlignment::end, jwezel::ui::ContentAlignment::end);
+        auto atEnd{test};
+        atEnd.patch(Text{"Hello"}, Vector{14, 2});
+        CHECK_EQ(term.display().text(), atEnd);
+
+        auto clipped{jwezel::ui::Label(w1, Rectangle{1, 4, 4, 5}, Text{"Hello"})};
+        clipped.horizontalAlignment(jwezel::ui::ContentAlignment::center);
+        auto centeredClip{atEnd};
+        centeredClip.patch(Text{"ell"}, Vector{1, 4});
+        CHECK_EQ(term.display().text(), centeredClip);
+
+        clipped.horizontalAlignment(jwezel::ui::ContentAlignment::end);
+        auto endClip{atEnd};
+        endClip.patch(Text{"llo"}, Vector{1, 4});
+        CHECK_EQ(term.display().text(), endClip);
+      }
+    }
+    SUBCASE("Buddy labels share rows across parallel columns") {
+      w1.style(&colonStyle);
+      auto columns{
+        jwezel::ui::HorizontalBox(
+          w1,
+          Rectangle{1, 1, 19, 10},
+          jwezel::ui::BoxLayout{
+            .weights = {},
+            .sizes = {jwezel::ui::LayoutSize::fit, jwezel::ui::LayoutSize::stretch},
+            .alignments = {}
+          }
+        )
+      };
+      auto labels{
+        jwezel::ui::VerticalBox(
+          columns, jwezel::RectangleDefault,
+          jwezel::ui::BoxLayout{
+            .weights = {},
+            .sizes = {jwezel::ui::LayoutSize::fit, jwezel::ui::LayoutSize::fit},
+            .alignments = {}
+          }
+        )
+      };
+      auto editors{
+        jwezel::ui::VerticalBox(
+          columns, jwezel::RectangleDefault,
+          jwezel::ui::BoxLayout{
+            .weights = {},
+            .sizes = {jwezel::ui::LayoutSize::fit, jwezel::ui::LayoutSize::fit},
+            .alignments = {}
+          }
+        )
+      };
+      auto firstInput{jwezel::ui::TextArea(editors, "one\ntwo")};
+      auto secondInput{jwezel::ui::LineEdit(editors, "second")};
+      auto firstLabel{jwezel::ui::Label(labels, Text{"First"})};
+      auto secondLabel{jwezel::ui::Label(labels, Text{"Second"})};
+      firstLabel.buddy(firstInput);
+      secondLabel.buddy(secondInput);
+
+      CHECK_EQ(firstLabel.preferredSize().x(), 6);
+      CHECK_EQ(secondLabel.preferredSize().x(), 7);
+      const auto firstColon{Vector{jwezel::toDim(firstLabel.bounds().x1() + 5), firstLabel.bounds().y1()}};
+      const auto secondColon{Vector{jwezel::toDim(secondLabel.bounds().x1() + 6), secondLabel.bounds().y1()}};
+      CHECK_EQ(
+        term.display().text()[firstColon], Char{':' }
+      );
+      CHECK_EQ(
+        term.display().text()[secondColon], Char{':' }
+      );
+
+      CHECK_EQ(firstLabel.bounds().y1(), firstInput.bounds().y1());
+      CHECK_EQ(firstLabel.bounds().y2(), firstInput.bounds().y2());
+      CHECK_EQ(secondLabel.bounds().y1(), secondInput.bounds().y1());
+      CHECK_EQ(secondLabel.bounds().y2(), secondInput.bounds().y2());
+      CHECK_EQ(firstLabel.bounds().y2(), secondInput.bounds().y1());
+
+      firstInput.contents("one");
+      CHECK_EQ(firstLabel.bounds().height(), 1);
+      CHECK_EQ(firstLabel.bounds().y2(), secondInput.bounds().y1());
+
+      firstInput.contents("one\ntwo\nthree");
+      CHECK_EQ(firstLabel.bounds().height(), 3);
+      CHECK_EQ(firstLabel.bounds().y2(), secondInput.bounds().y1());
+
+      auto standalone{jwezel::ui::Label(w1, Rectangle{1, 9, 12, 10}, Text{"Standalone"})};
+      CHECK_EQ(term.display().text()[Vector{11, 9}], Char{' '});
     }
     SUBCASE("Label in box") {
       auto box{jwezel::ui::VerticalBox(w1, Rectangle{1, 1, 19, 9})};
@@ -576,11 +671,24 @@ TEST_CASE("UI Window") {
       }
     }
     SUBCASE("Text input") {
-      auto input{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, "Hello")};
+      auto input{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 4}, "Hello")};
       auto test2{test};
       test2.patch(Text{"Hello"}, Vector{1, 1});
       CHECK_EQ(term.display().text(), test2);
       CHECK_EQ(term.display().caret(), Vector{6, 1});
+      SUBCASE("Content alignment moves text and caret together") {
+        input.contentAlignment(jwezel::ui::ContentAlignment::center, jwezel::ui::ContentAlignment::center);
+        auto centered{test};
+        centered.patch(Text{"Hello"}, Vector{7, 2});
+        CHECK_EQ(term.display().text(), centered);
+        CHECK_EQ(term.display().caret(), Vector{12, 2});
+
+        input.contentAlignment(jwezel::ui::ContentAlignment::end, jwezel::ui::ContentAlignment::end);
+        auto atEnd{test};
+        atEnd.patch(Text{"Hello"}, Vector{13, 3});
+        CHECK_EQ(term.display().text(), atEnd);
+        CHECK_EQ(term.display().caret(), Vector{18, 3});
+      }
       SUBCASE("Type") {
         REQUIRE_NE(fputs("X", inputWrite), EOF);
         REQUIRE_FALSE(fflush(inputWrite));

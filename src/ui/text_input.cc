@@ -205,12 +205,24 @@ void TextInput::scrollIntoView() {
   }
 }
 
+auto TextInput::alignmentOffset() const -> Vector {
+  auto width{Dim{1}}; // includes the cursor cell behind the last character
+  for (const auto &line: buffer_.lines()) {
+    width = std::max(width, toDim(line.size() + 1));
+  }
+  const Vector content{width, acceptsEnter()? std::max(Dim{1}, buffer_.lineCount()): Dim{1}};
+  const auto size{area().size()};
+  const auto aligned{contentPosition(content)};
+  return Vector{content.x() <= size.x()? aligned.x(): Dim{0}, content.y() <= size.y()? aligned.y(): Dim{0}};
+}
+
 void TextInput::render() {
   const auto size{area().size()};
   if (size.x() <= 0 or size.y() <= 0) {
     return;
   }
   auto visible{canvas(inputRoles[static_cast<size_t>(widgetState())])};
+  const auto offset{alignmentOffset()};
   for (Dim row = 0; row < size.y() and toDim(scrollY_ + row) < buffer_.lineCount(); ++row) {
     const auto &line{buffer_.line(toDim(scrollY_ + row))};
     // The part of the line that is in the area; a line can be shorter than the part that is scrolled away
@@ -222,7 +234,7 @@ void TextInput::render() {
     for (Dim column = 0; column < length; ++column) {
       characters.data[0][static_cast<size_t>(column)] = Char{line[static_cast<size_t>(scrollX_ + column)]};
     }
-    overlay(visible, characters, Vector{0, row});
+    overlay(visible, characters, Vector{offset.x(), toDim(offset.y() + row)});
   }
   if (auto *root{this->root()}; root->focus() == this) {
     root->updateCaret(); // before writing, so the display parks the cursor at the new caret afterwards
@@ -239,7 +251,11 @@ auto TextInput::caret() const -> std::optional<Vector> {
     return std::nullopt;
   }
   const auto position{area().position()};
-  return Vector{toDim(position.x() + cursor_.x() - scrollX_), toDim(position.y() + cursor_.y() - scrollY_)};
+  const auto offset{alignmentOffset()};
+  return Vector{
+    toDim(position.x() + offset.x() + cursor_.x() - scrollX_),
+    toDim(position.y() + offset.y() + cursor_.y() - scrollY_)
+  };
 }
 
 } // namespace jwezel::ui

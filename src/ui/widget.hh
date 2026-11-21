@@ -9,6 +9,7 @@
 #include <term/surface.hh>
 
 #include <optional>
+#include <vector>
 
 namespace jwezel::ui {
 
@@ -23,6 +24,16 @@ enum class FocusPolicy: u1 {
   click,  ///< Only a click on the widget gives it the focus
   tab,    ///< Only Tab and Shift-Tab give it the focus
   strong  ///< Both
+};
+
+/// Where a widget positions its content when its area and content have different sizes.
+///
+/// `begin`, `center`, and `end` mean left/center/right on the horizontal axis and top/center/bottom on the vertical
+/// axis. The same rule applies to extra space and clipping: centered content loses (or gains) space on both sides.
+enum class ContentAlignment: u1 {
+  begin,
+  center,
+  end
 };
 
 ///
@@ -42,6 +53,17 @@ struct Widget: TextElement, ui::Element, ActionHost
   Widget(const Rectangle &area, const Char &background, Container &parent);
 
   void move(const Rectangle &area) override;
+
+  /// Get or set horizontal content alignment (left, center, or right).
+  [[nodiscard]] auto horizontalAlignment() const -> ContentAlignment {return horizontalAlignment_;}
+  void horizontalAlignment(ContentAlignment alignment);
+
+  /// Get or set vertical content alignment (top, center, or bottom).
+  [[nodiscard]] auto verticalAlignment() const -> ContentAlignment {return verticalAlignment_;}
+  void verticalAlignment(ContentAlignment alignment);
+
+  /// Set both content alignments.
+  void contentAlignment(ContentAlignment horizontal, ContentAlignment vertical);
 
   [[nodiscard]] auto bounds() -> Rectangle override {return bounds_;}
 
@@ -145,6 +167,9 @@ struct Widget: TextElement, ui::Element, ActionHost
   /// What the content does not specify, like colors, is what is on the canvas.
   static void overlay(Text &canvas, const Text &content, const Vector &position);
 
+  /// Position a content-sized rectangle inside the widget area, including negative offsets when clipping is needed.
+  [[nodiscard]] auto contentPosition(const Vector &contentSize) const -> Vector;
+
   ///
   /// Render the widget content into its text buffer
   ///
@@ -155,10 +180,18 @@ struct Widget: TextElement, ui::Element, ActionHost
   /// constructor as well.
   virtual void render() {}
 
+  /// Notify layouts that the preferred size may have changed.
+  void layoutChanged() override;
+
 
   private:
   Rectangle bounds_; // area relative to the root
   FocusPolicy focusPolicy_{FocusPolicy::strong};
+  ContentAlignment horizontalAlignment_{ContentAlignment::begin};
+  ContentAlignment verticalAlignment_{ContentAlignment::begin};
+  std::vector<Widget *> layoutDependents_; // weak labels whose preferred size follows this widget
+
+  friend struct Label;
 };
 
 } // namespace jwezel::ui

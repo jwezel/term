@@ -53,6 +53,31 @@ void Widget::move(const Rectangle &area) {
   TextElement::move(area + root()->origin());
 }
 
+void Widget::horizontalAlignment(ContentAlignment alignment) {
+  if (horizontalAlignment_ == alignment) {
+    return;
+  }
+  horizontalAlignment_ = alignment;
+  render();
+}
+
+void Widget::verticalAlignment(ContentAlignment alignment) {
+  if (verticalAlignment_ == alignment) {
+    return;
+  }
+  verticalAlignment_ = alignment;
+  render();
+}
+
+void Widget::contentAlignment(ContentAlignment horizontal, ContentAlignment vertical) {
+  if (horizontalAlignment_ == horizontal and verticalAlignment_ == vertical) {
+    return;
+  }
+  horizontalAlignment_ = horizontal;
+  verticalAlignment_ = vertical;
+  render();
+}
+
 auto Widget::inputWindow() -> jwezel::Window * {
   return &root()->host();
 }
@@ -96,6 +121,35 @@ auto Widget::canvas(std::string_view role) -> Text {
 
 void Widget::overlay(Text &canvas, const Text &content, const Vector &position) {
   canvas.patch(content, position, AttributeMode::merge, AttributeMode::default_, AttributeMode::replace);
+}
+
+auto Widget::contentPosition(const Vector &contentSize) const -> Vector {
+  const auto offset = [](Dim available, Dim content, ContentAlignment alignment) -> Dim {
+    const auto difference{static_cast<int>(available) - content};
+    switch (alignment) {
+      case ContentAlignment::center:
+      return toDim(difference / 2);
+      case ContentAlignment::end:
+      return toDim(difference);
+      case ContentAlignment::begin:
+      default:
+      return 0;
+    }
+  };
+  const auto size{area().size()};
+  return Vector{
+    offset(size.x(), contentSize.x(), horizontalAlignment_),
+    offset(size.y(), contentSize.y(), verticalAlignment_)
+  };
+}
+
+void Widget::layoutChanged() {
+  for (auto *dependent: layoutDependents_) {
+    if (dependent and dependent->parent()) {
+      dependent->parent()->layoutChanged();
+    }
+  }
+  ui::Element::layoutChanged();
 }
 
 auto Widget::moveEvent(const Rectangle &area) -> bool {

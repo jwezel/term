@@ -296,16 +296,39 @@ void PopupChoice::render() {
   const auto &glyphs{uiStyle().dropDown[state]};
   const Text left{glyphs.left}, right{glyphs.right};
   auto visible{canvas(dropDownRoles[state])};
+  const auto position{contentPosition(Vector{size.x(), 1})};
   const auto framed{size.x() >= left.width() + right.width()};
   const auto textWidth{framed? toDim(size.x() - left.width() - right.width()): size.x()};
   if (framed) {
-    overlay(visible, left, Vector{0, 0});
-    overlay(visible, right, Vector{toDim(size.x() - right.width()), 0});
+    overlay(visible, left, position);
+    overlay(visible, right, Vector{toDim(size.x() - right.width()), position.y()});
   }
   if (const auto *shown{closedText()}; shown) {
-    const auto width{std::min(shown->width(), textWidth)};
-    if (shown->height() > 0 and width > 0) {
-      overlay(visible, (*shown)[Rectangle{0, 0, width, 1}], Vector{framed? left.width(): Dim{0}, 0});
+    const auto width{shown->width()};
+    const auto extra{static_cast<int>(textWidth) - width};
+    auto aligned{Dim{0}};
+    switch (horizontalAlignment()) {
+      case ContentAlignment::center:
+      aligned = toDim(extra / 2);
+      break;
+      case ContentAlignment::end:
+      aligned = toDim(extra);
+      break;
+      case ContentAlignment::begin:
+      default:
+      break;
+    }
+    const auto clippedStart{std::max(Dim{0}, toDim(-std::min(0, static_cast<int>(aligned))))};
+    const auto shownWidth{std::max(Dim{0}, std::min(toDim(width - clippedStart), textWidth))};
+    if (shown->height() > 0 and shownWidth > 0) {
+      overlay(
+        visible,
+        (*shown)[Rectangle{clippedStart, 0, toDim(clippedStart + shownWidth), 1}],
+        Vector{
+          toDim(position.x() + (framed? left.width(): Dim{0}) + std::max(Dim{0}, aligned)),
+          position.y()
+        }
+      );
     }
   }
   write(Vector{0, 0}, visible);

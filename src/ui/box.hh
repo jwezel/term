@@ -93,6 +93,9 @@ struct Box: Container {
   /// Get the box's assigned area relative to its root.
   [[nodiscard]] auto bounds() -> Rectangle override {return area_;}
 
+  /// Get the direction in which this box arranges its children.
+  [[nodiscard]] auto orientation() const -> Orientation {return orientation_;}
+
   private:
   [[nodiscard]] auto weight(Dim index) const -> double;
 

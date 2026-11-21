@@ -21,6 +21,21 @@ divides the available main-axis space between stretching children according to t
 at the beginning, center, or end of the cross axis instead of stretching. `layoutChanged()` notifies the nearest box
 when content changes the preferred size.
 
+## Content alignment and label buddies
+
+`Widget::horizontalAlignment()` and `Widget::verticalAlignment()` position content within the area assigned by a
+layout. `ContentAlignment::begin`, `center`, and `end` mean left/center/right horizontally and top/center/bottom
+vertically. The same anchor governs both extra room and clipping: centered content shares the difference across both
+sides. Scrollable editors and lists retain their viewport/caret behavior when their documents exceed the available
+area.
+
+A label can be linked with `label.buddy(widget)`. The link is non-owning, so the buddy must outlive the label. When a
+label and buddy are in separate boxes with the same orientation, the label's preferred size follows the buddy along
+the boxes' main axis. Two vertical boxes can therefore form parallel label and editor columns with matching row
+heights; each field still belongs to the column layout that places it. `UiStyle::labelSuffix` adds the same suffix to
+buddy labels only, so applications can set punctuation once without changing standalone labels. The expanded person
+form in `examples/demo/demo.cc` uses this pattern.
+
 ## Text, cells, and documents
 
 `jwezel::Char` represents a terminal cell: a Unicode code point plus foreground, background, and attributes.
