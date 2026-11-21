@@ -64,13 +64,59 @@ Use an `Action` when an operation should have both a visible control and a keybo
 the button and its window, or use a window action for default Enter / Escape behavior. An action is a value that must
 outlive every host to which it is registered.
 
-## 4. Keep application data in the application
+## 4. Show lazy data in a list box
+
+A list source can be a small type with a `size()` and an `operator[]`; the size's signed return type selects the index
+width. Here the rows are generated on demand, and `i1` is sufficient for at most 127 entries:
+
+```cpp
+#include <ui/list_box.hh>
+
+struct ContactSource {
+  const std::vector<Person> &people;
+  auto size() const -> jwezel::i1 {return static_cast<jwezel::i1>(people.size());}
+  auto operator[](jwezel::i1 index) const -> jwezel::Text {
+    return jwezel::Text{people[static_cast<std::size_t>(index)].name};
+  }
+};
+
+jwezel::ui::ListBox<jwezel::i1> contacts{
+  window, area, jwezel::ui::listSource(ContactSource{people})
+};
+```
+
+This is a multi-select list by default. Use `onSelection()` for per-item additions/removals and query
+`contacts.selection()` for the complete set. In `SelectionMode::single`, listen with `onSelect()` instead: a
+`SelectEvent` is a one-choice replacement, whereas a `SelectionEvent` is one delta in a multi-selection. See
+[`SelectEvent` versus `SelectionEvent`](\ref concepts) and the [source concepts](\ref concepts).
+
+## 5. Use actions for menus
+
+Menu items keep weak references to `Action`s, so declare each action before the menu and keep it alive for the menu's
+lifetime. A chosen item closes the popup before invoking the action:
+
+```cpp
+#include <ui/menu.hh>
+
+jwezel::ui::Action save{[&] { saveDocument(); }};
+jwezel::ui::Action quit{[&] { ui.stop(); }};
+jwezel::ui::Menu menu{
+  window,
+  {{jwezel::Text{"Save"}, &save}, {jwezel::Text{"Quit"}, &quit}}
+};
+```
+
+An action that is disabled, or a null action, is shown as unavailable and skipped during navigation. Unlike a
+drop-down, choosing a menu item triggers its action rather than emitting `SelectEvent`.
+
+## 6. Keep application data in the application
 
 Widgets edit and display input; they are not the application's data model. Read a `LineEdit` with `contents()`, or use
 `TextArea` with a `TextBuffer` for multi-line documents. Copy values into your own record type when the application
 accepts them. This keeps validation, persistence, and domain behavior independent of rendering.
 
-For a larger working example, build `demo` and run `./build/demo`. It includes a menu, a detailed person-and-address
-dialog, a text area, focus traversal, and an event log.
+For a larger working example, build `demo` and run `./build/demo`. It includes an action-backed menu, a lazy contact
+list with a deliberately narrow index type, a detailed person-and-address dialog, a text area, focus traversal, and an
+event log.
 
 \example quick_start.cc

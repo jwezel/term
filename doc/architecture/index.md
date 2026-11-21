@@ -22,6 +22,15 @@ window, which routes it through the focused widget and its ancestors. A handler 
 event. When input is not consumed, window and widget `Action`s can trigger shortcuts such as Enter and Escape.
 Typed widget events are emitted separately for observers of actions such as a button press or text acceptance.
 
+## List and menu path
+
+List data is provided through `ListSource<Index>`, a value adapter over a lazy source, vector, function pair, or
+runtime interface. `ListView<Index>` owns the scrolling/current/selection mechanics and asks the source only for rows
+needed to render or measure it. `ListPopup` is the transient one-choice view shared by `DropDown` and `Menu`; a
+`ListBox` keeps its view visible and handles multi-item selection itself. Single-choice changes use `SelectEvent`,
+multi-selection deltas use `SelectionEvent`, and activation is an independent `ActivateEvent`. A menu closes its popup
+before dispatching the selected item's weakly referenced `Action`.
+
 ## Rendering path
 
 Widgets render `Text` and `Char` cells to their surface areas. Layout and geometry changes mark the affected regions;

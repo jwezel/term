@@ -16,7 +16,7 @@ constexpr CharAttributes NoAttributes{};
 // drop down are the focused widget, so they have it as well.
 constexpr CharAttributes focusTint{RgbNone, RgbGray5, {}, AttributeMode::mix};
 
-constexpr ColorRoles<17> defaultRoles{
+constexpr ColorRoles<24> defaultRoles{
   {"frame", CharAttributes{}},
   {"frame.active", CharAttributes{}},
   {"frame.inactive", CharAttributes{}},
@@ -34,6 +34,13 @@ constexpr ColorRoles<17> defaultRoles{
   {"dropdown.active", focusTint},
   {"popup", CharAttributes{}},
   {"popup.highlight", CharAttributes{RgbNone, RgbNone, reverse}},
+  {"popup.disabled", CharAttributes{RgbGray5}},
+  {"list", CharAttributes{}},
+  {"list.focus", focusTint},
+  {"list.selected", CharAttributes{RgbNone, RgbNone, reverse}},
+  {"list.current", CharAttributes{RgbNone, RgbNone, reverse}},
+  {"list.current.selected", CharAttributes{RgbNone, RgbNone, static_cast<Attributes>(bold | reverse)}},
+  {"list.disabled", CharAttributes{RgbGray5}},
 };
 
 constexpr ColorStyle defaultStyle{defaultRoles};

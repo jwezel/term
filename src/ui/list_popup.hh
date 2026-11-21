@@ -1,8 +1,10 @@
 #pragma once
 
+#include "list_view.hh"
 #include "widget.hh"
 
-#include <vector>
+#include <string_view>
+#include <utility>
 
 namespace jwezel::ui {
 
@@ -16,25 +18,37 @@ namespace jwezel::ui {
 /// glyphs that the UI style has for the items of a popup. The popup has the
 /// colors of the role `popup`, and the highlighted item those of
 /// `popup.highlight` (the default is reverse video) on top of that.
-struct ListPopup: Widget {
+///
+/// The items come from a `ListSource`, so the popup does not copy them: a drop-down that changes its items first
+/// closes the popup, and a source may be lazy.
+///
+/// @tparam     Index  The index type
+template<std::signed_integral Index = ListIndex>
+struct ListPopup: ListView<Index> {
   ///
   /// Create ListPopup
   ///
   /// @param      parent       The parent container, usually the root so that the popup
   ///                          is not subject to any layout
   /// @param      area         The area; as many rows as it has are visible at a time
-  /// @param      items        The items
+  /// @param      source       The items
   /// @param      highlighted  Index of the item to highlight
   /// @param      owner        The widget the popup belongs to, which gets its mouse input
   /// @param      background   The background
   ListPopup(
     Container &parent,
     const Rectangle &area,
-    const std::vector<Text> &items,
-    Dim highlighted,
+    ListSource<Index> source,
+    Index highlighted,
     Widget &owner,
     const Char &background = InheritBackground
-  );
+  ):
+  ListView<Index>{parent, area, std::move(source), highlighted, background},
+  owner_{owner}
+  {
+    this->focusPolicy(FocusPolicy::none); // the widget it belongs to has the focus
+    this->render();
+  }
 
   ListPopup(const ListPopup &) = delete;
 
@@ -50,7 +64,7 @@ struct ListPopup: Widget {
 
   ///
   /// Get the index of the highlighted item
-  [[nodiscard]] auto highlighted() const -> Dim {return highlighted_;}
+  [[nodiscard]] auto highlighted() const -> Index {return this->current();}
 
   ///
   /// Highlight an item
@@ -58,27 +72,20 @@ struct ListPopup: Widget {
   /// The index is limited to the existing items, and the list scrolls to show the item.
   ///
   /// @param[in]  index  The index
-  void highlight(Dim index);
-
-  ///
-  /// Get the item at a position
-  ///
-  /// @param[in]  position  A position relative to the root
-  ///
-  /// @return     The index of the item, or -1 if the position is not on an item
-  [[nodiscard]] auto itemAt(const Vector &position) -> Dim;
-
-  ///
-  /// Get the number of rows that are visible at a time
-  [[nodiscard]] auto rows() const -> Dim {return area().height();}
+  void highlight(Index index) {this->current(index);}
 
   protected:
-  void render() override;
+  [[nodiscard]] auto itemGlyphs() -> const Brackets & override {return this->uiStyle().popup;}
+
+  [[nodiscard]] auto backgroundRole() -> std::string_view override {return popupRole;}
+
+  [[nodiscard]] auto currentRole() -> std::string_view override {return popupHighlightRole;}
+
+  [[nodiscard]] auto selectedRole() -> std::string_view override {return popupHighlightRole;}
+
+  [[nodiscard]] auto disabledRole() -> std::string_view override {return popupDisabledRole;}
 
   private:
-  std::vector<Text> items_;
-  Dim highlighted_;
-  Dim first_{0}; // index of the first visible item
   Widget &owner_;
 };
 

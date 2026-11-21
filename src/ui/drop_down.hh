@@ -1,55 +1,12 @@
 #pragma once
 
-#include "list_popup.hh"
-#include "ui_event.hh"
+#include "list_event.hh"
+#include "popup_choice.hh"
 #include "widget.hh"
 
-#include <functional>
-#include <optional>
 #include <vector>
 
 namespace jwezel::ui {
-
-/// Notification that a drop-down item was chosen.
-///
-/// The drop down has selected the item when the event is emitted; `previous()` is what it had selected, so
-/// the choice changed something if `changed()`.
-struct SelectEvent: UiEvent {
-  /// Describe the selected value and the selection that preceded it.
-  /// @param cause Key or mouse-button input that selected the item.
-  /// @param index Index now selected.
-  /// @param previous Index selected before this event.
-  /// @param item Copy of the selected item text.
-  SelectEvent(const Cause &cause, Dim index, Dim previous, Text item):
-  UiEvent{cause},
-  index_{index},
-  previous_{previous},
-  item_{std::move(item)}
-  {}
-
-  ///
-  /// The index of the chosen item
-  [[nodiscard]] auto index() const -> Dim {return index_;}
-
-  ///
-  /// The index of the item that was selected before, which may be the same
-  [[nodiscard]] auto previous() const -> Dim {return previous_;}
-
-  ///
-  /// The chosen item
-  [[nodiscard]] auto item() const -> const Text & {return item_;}
-
-  ///
-  /// Whether another item than the selected one was chosen
-  [[nodiscard]] auto changed() const -> bool {return index_ != previous_;}
-
-  private:
-  Dim index_;
-  Dim previous_;
-  Text item_;
-
-  CLASS_ID(SelectEvent);
-};
 
 /// A focusable choice control with a transient list popup.
 ///
@@ -59,7 +16,7 @@ struct SelectEvent: UiEvent {
 ///
 /// Glyphs and colors come from the root's UI and color styles. A non-empty `caption()` changes only the closed-state
 /// label; it does not change the selected item or the choices.
-struct DropDown: Widget {
+struct DropDown: PopupChoice {
   ///
   /// Create DropDown with an explicit area
   ///
@@ -72,7 +29,7 @@ struct DropDown: Widget {
     Container &parent,
     const Rectangle &area,
     const std::vector<Text> &items = {},
-    Dim selected = 0,
+    ListIndex selected = 0,
     const Char &background = InheritBackground
   );
 
@@ -86,7 +43,7 @@ struct DropDown: Widget {
   explicit DropDown(
     Container &parent,
     const std::vector<Text> &items = {},
-    Dim selected = 0,
+    ListIndex selected = 0,
     const Char &background = InheritBackground
   );
 
@@ -103,49 +60,26 @@ struct DropDown: Widget {
   [[nodiscard]] auto items() const -> const std::vector<Text> & {return items_;}
 
   ///
+  /// Get an item, which must be in `[0, items().size())`
+  [[nodiscard]] auto operator[](ListIndex index) const -> const Text & {
+    return items_[static_cast<std::size_t>(index)];
+  }
+
+  ///
   /// Replace the items; the list is closed and the selection is limited to the new items
   void items(const std::vector<Text> &items);
-
-  ///
-  /// Get the caption, which is shown instead of the selected item while the list is closed
-  [[nodiscard]] auto caption() const -> const Text & {return caption_;}
-
-  ///
-  /// Show a fixed caption instead of the selected item while the list is closed
-  ///
-  /// This is what a menu does: it is called something, and what was chosen from it is not what it shows. The
-  /// caption does not change the items or the selection, and an empty one shows the selected item again.
-  ///
-  /// @param[in]  caption  The caption
-  void caption(const Text &caption);
 
   ///
   /// Get the index of the selected item
   ///
   /// @return     The index, or -1 if there are no items
-  [[nodiscard]] auto selected() const -> Dim {return selected_;}
+  [[nodiscard]] auto selected() const -> ListIndex {return selected_;}
 
   ///
   /// Select an item without invoking the select handlers
   ///
   /// The index is limited to the existing items.
-  void select(Dim index);
-
-  ///
-  /// Open the list; nothing happens if there are no items
-  void open();
-
-  ///
-  /// Close the list without choosing anything
-  void close();
-
-  [[nodiscard]] auto isOpen() const -> bool {return popup_.has_value();}
-
-  ///
-  /// Get the maximum number of items that are visible in the open list
-  [[nodiscard]] auto maxRows() const -> Dim {return maxRows_;}
-
-  void maxRows(Dim rows);
+  void select(ListIndex index);
 
   ///
   /// Register a select handler
@@ -158,38 +92,18 @@ struct DropDown: Widget {
   /// @return     Index of the handler
   auto onSelect(const Handler &handler) -> int;
 
-  ///
-  /// The open list does not follow a moved drop down, it is closed
-  void move(const Rectangle &area) override;
-
-  void focusChanged(bool focused) override;
-
-  void pressedElsewhere() override;
-
-  ///
-  /// The width of the widest item or of the caption, with the glyphs around it; one row
-  [[nodiscard]] auto preferredSize() -> Vector override;
-
   protected:
-  void render() override;
+  [[nodiscard]] auto popupItems() -> ListSource<ListIndex> override;
+
+  [[nodiscard]] auto popupSelected() const -> ListIndex override {return selected_;}
+
+  void popupActivate(ListIndex index, const Event &event) override;
+
+  [[nodiscard]] auto closedText() const -> const Text * override;
 
   private:
-  void registerHandlers();
-
-  auto handleKey(const Event &event) -> bool;
-
-  auto handleMouseButton(const Event &event) -> bool;
-
-  auto handleMouseMove(const Event &event) -> bool;
-
-  void choose(Dim index, const Event &event);
-
   std::vector<Text> items_;
-  Text caption_;
-  Dim selected_;
-  Dim maxRows_{8};
-  bool dragging_{false}; // the button that opened the list is still down
-  std::optional<ListPopup> popup_;
+  ListIndex selected_;
 };
 
 } // namespace jwezel::ui

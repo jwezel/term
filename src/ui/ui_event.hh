@@ -17,9 +17,10 @@ namespace jwezel::ui {
 /// `event.as<SelectEvent>()`.
 ///
 /// The event has a copy of the input event that caused it, so it is as valid as the event is. A mouse event has
-/// the position relative to the window, like the events elements are given.
+/// the position relative to the window, like the events elements are given. A list selection changed while dragging
+/// carries the mouse-move event that changed that item.
 struct UiEvent: BaseEvent {
-  using Cause = std::variant<KeyEvent, MouseButtonEvent>;
+  using Cause = std::variant<KeyEvent, MouseButtonEvent, MouseMoveEvent>;
 
   explicit UiEvent(Cause cause):
   cause_{std::move(cause)}
@@ -28,7 +29,7 @@ struct UiEvent: BaseEvent {
   ///
   /// Make the cause of an event from the input event that is handled
   ///
-  /// @throws     std::logic_error if the input event is neither a key nor a mouse button event
+  /// @throws     std::logic_error if the input event is not a key or mouse event
   [[nodiscard]] static auto causeOf(const Event &input) -> Cause {
     if (const auto *key{input.get<KeyEvent>()}; key) {
       return *key;
@@ -36,7 +37,10 @@ struct UiEvent: BaseEvent {
     if (const auto *mouse{input.get<MouseButtonEvent>()}; mouse) {
       return *mouse;
     }
-    throw std::logic_error(std::string{"An input event is neither key nor mouse button: "} + input.typeName());
+    if (const auto *mouse{input.get<MouseMoveEvent>()}; mouse) {
+      return *mouse;
+    }
+    throw std::logic_error(std::string{"An input event is not a key or mouse event: "} + input.typeName());
   }
 
   ///

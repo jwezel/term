@@ -4,46 +4,33 @@
 #include <algorithm>
 
 #include <term/event.hh>
-#include <term/keyboard.hh>
 
 namespace jwezel::ui {
 
 namespace {
 
-auto limit(Dim index, const std::vector<Text> &items) -> Dim {
-  return items.empty()? Dim{-1}: std::clamp(index, Dim{0}, toDim(items.size() - 1));
-}
-
-auto contains(const Rectangle &area, const Vector &position) -> bool {
-  return bool{area & Rectangle{position, position + Vector{1, 1}}};
+auto limit(ListIndex index, const std::vector<Text> &items) -> ListIndex {
+  return items.empty()? ListIndex{-1}: std::clamp(index, ListIndex{0}, static_cast<ListIndex>(items.size() - 1));
 }
 
 } // namespace
 
-DropDown::DropDown(Container &parent, const Rectangle &area, const std::vector<Text> &items, Dim selected, const Char &background):
-Widget{area, background, parent},
+DropDown::DropDown(Container &parent, const Rectangle &area, const std::vector<Text> &items, ListIndex selected, const Char &background):
+PopupChoice{parent, area, background},
 items_{items},
 selected_{limit(selected, items)}
 {
   render();
-  registerHandlers();
   layoutChanged();
 }
 
-DropDown::DropDown(Container &parent, const std::vector<Text> &items, Dim selected, const Char &background):
-Widget{RectangleDefault, background, parent},
+DropDown::DropDown(Container &parent, const std::vector<Text> &items, ListIndex selected, const Char &background):
+PopupChoice{parent, background},
 items_{items},
 selected_{limit(selected, items)}
 {
   render();
-  registerHandlers();
   layoutChanged();
-}
-
-void DropDown::registerHandlers() {
-  onKey([this](const ui::Element &, const Event &event) {return handleKey(event);});
-  onMouseButton([this](const ui::Element &, const Event &event) {return handleMouseButton(event);});
-  onMouseMove([this](const ui::Element &, const Event &event) {return handleMouseMove(event);});
 }
 
 void DropDown::items(const std::vector<Text> &items) {
@@ -54,231 +41,35 @@ void DropDown::items(const std::vector<Text> &items) {
   layoutChanged();
 }
 
-void DropDown::caption(const Text &caption) {
-  caption_ = caption;
-  render();
-  layoutChanged();
-}
-
-void DropDown::select(Dim index) {
+void DropDown::select(ListIndex index) {
   selected_ = limit(index, items_);
   render();
   layoutChanged();
-}
-
-void DropDown::open() {
-  if (popup_ or items_.empty()) {
-    return;
-  }
-  const auto self{bounds()};
-  auto width{self.width()};
-  const auto &glyphs{uiStyle().popup};
-  const auto padding{toDim(Text{glyphs.left}.width() + Text{glyphs.right}.width())};
-  for (const auto &item: items_) {
-    width = std::max(width, toDim(item.width() + padding));
-  }
-  const auto rows{std::min(toDim(items_.size()), std::max(Dim{1}, maxRows_))};
-  popup_.emplace(
-    *root(),
-    Rectangle{self.x1(), self.y2(), toDim(self.x1() + width), toDim(self.y2() + rows)},
-    items_,
-    std::max(selected_, Dim{0}),
-    *this,
-    background()
-  );
-  render(); // looks in use
-}
-
-void DropDown::close() {
-  const auto wasOpen{popup_.has_value()};
-  popup_.reset();
-  dragging_ = false;
-  if (wasOpen) {
-    render(); // does not look in use anymore
-  }
-}
-
-void DropDown::maxRows(Dim rows) {
-  maxRows_ = std::max(Dim{1}, rows);
 }
 
 auto DropDown::onSelect(const Handler &handler) -> int {
   return on<SelectEvent>(handler);
 }
 
-void DropDown::move(const Rectangle &area) {
-  close();
-  Widget::move(area);
+auto DropDown::popupItems() -> ListSource<ListIndex> {
+  return listSource(items_);
 }
 
-void DropDown::focusChanged(bool focused) {
-  if (!focused) {
-    close();
-  }
-  Widget::focusChanged(focused);
-}
-
-void DropDown::pressedElsewhere() {
-  close();
-}
-
-void DropDown::choose(Dim index, const Event &event) {
+void DropDown::popupActivate(ListIndex index, const Event &event) {
   const auto previous{selected_};
   select(index);
   close();
   emit(SelectEvent{UiEvent::causeOf(event), selected_, previous, items_[static_cast<size_t>(selected_)]});
 }
 
-auto DropDown::handleKey(const Event &event) -> bool {
-  const auto key{event.as<KeyEvent>().key()};
-  if (!popup_) {
-    if (key == ' ' or key == Key::Enter or key == Key::Down) {
-      open();
-      return true;
-    }
-    return false;
-  }
-  const auto current{popup_->highlighted()};
-  const auto last{toDim(items_.size() - 1)};
-  switch (key) {
-    case Key::Up:
-    popup_->highlight(toDim(current - 1));
-    break;
-
-    case Key::Down:
-    popup_->highlight(toDim(current + 1));
-    break;
-
-    case Key::Home:
-    popup_->highlight(0);
-    break;
-
-    case Key::End:
-    popup_->highlight(last);
-    break;
-
-    case Key::PageUp:
-    popup_->highlight(toDim(current - popup_->rows()));
-    break;
-
-    case Key::PageDown:
-    popup_->highlight(toDim(current + popup_->rows()));
-    break;
-
-    case Key::Enter:
-    case ' ':
-    choose(current, event);
-    break;
-
-    case Key::Escape:
-    close();
-    break;
-
-    default:
-    return false;
-  }
-  return true;
-}
-
-auto DropDown::handleMouseButton(const Event &event) -> bool {
-  const auto &mouse{event.as<MouseButtonEvent>()};
-  const auto position{mouse.position()};
-  if (mouse.modifiers().mod5) { // the wheel: button 1 is up, button 2 is down
-    if (popup_ and mouse.action() == MouseAction::Down) {
-      popup_->highlight(toDim(popup_->highlighted() + (mouse.button() == MouseButton::Button1? -1: 1)));
-      return true;
-    }
-    return false;
-  }
-  if (mouse.button() != MouseButton::Button1) {
-    return false;
-  }
-  const auto inside{contains(bounds(), position)};
-  if (mouse.action() == MouseAction::Down) {
-    if (popup_) {
-      if (const auto item{popup_->itemAt(position)}; item >= 0) {
-        choose(item, event);
-        return true;
-      }
-      if (inside) {
-        close();
-        return true;
-      }
-      return false;
-    }
-    if (inside) {
-      open();
-      dragging_ = popup_.has_value();
-      return true;
-    }
-    return false;
-  }
-  // The button was released: if it opened the list, letting go over an item chooses it, letting
-  // go over the drop down leaves the list open, and anywhere else closes it again
-  if (!dragging_) {
-    return false;
-  }
-  dragging_ = false;
-  if (popup_) {
-    if (const auto item{popup_->itemAt(position)}; item >= 0) {
-      choose(item, event);
-    } else if (!inside) {
-      close();
-    }
-  }
-  return true;
-}
-
-auto DropDown::handleMouseMove(const Event &event) -> bool {
-  if (!popup_) {
-    return false;
-  }
-  const auto item{popup_->itemAt(event.as<MouseMoveEvent>().position())};
-  if (item < 0 or item == popup_->highlighted()) {
-    return false;
-  }
-  popup_->highlight(item);
-  return true;
-}
-
-void DropDown::render() {
-  const auto size{area().size()};
-  if (size.x() <= 0 or size.y() <= 0) {
-    return;
-  }
-  const auto state{static_cast<size_t>(widgetState(popup_.has_value()))};
-  const auto &glyphs{uiStyle().dropDown[state]};
-  const Text left{glyphs.left}, right{glyphs.right};
-  auto visible{canvas(dropDownRoles[state])};
-  const auto framed{size.x() >= left.width() + right.width()};
-  const auto textWidth{framed? toDim(size.x() - left.width() - right.width()): size.x()};
-  if (framed) {
-    overlay(visible, left, Vector{0, 0});
-    overlay(visible, right, Vector{toDim(size.x() - right.width()), 0});
-  }
-  const Text *shown{};
+auto DropDown::closedText() const -> const Text * {
   if (caption_.width() > 0) {
-    shown = &caption_;
-  } else if (selected_ >= 0) {
-    shown = &items_[static_cast<size_t>(selected_)];
+    return &caption_;
   }
-  if (shown) {
-    const auto width{std::min(shown->width(), textWidth)};
-    if (shown->height() > 0 and width > 0) {
-      overlay(visible, (*shown)[Rectangle{0, 0, width, 1}], Vector{framed? left.width(): Dim{0}, 0});
-    }
+  if (selected_ >= 0) {
+    return &items_[static_cast<size_t>(selected_)];
   }
-  write(Vector{0, 0}, visible);
-}
-
-auto DropDown::preferredSize() -> Vector {
-  const auto &glyphs{uiStyle().dropDown[static_cast<size_t>(WidgetState::normal)]};
-  const auto padding{toDim(Text{glyphs.left}.width() + Text{glyphs.right}.width())};
-  auto width{caption_.width()};
-  for (const auto &item: items_) {
-    width = std::max(width, item.width());
-  }
-  return Vector{toDim(width + padding), 1};
+  return nullptr;
 }
 
 } // namespace jwezel::ui

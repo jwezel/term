@@ -18,6 +18,13 @@ enum class WidgetState: u1 {
   active  ///< The widget is in use, such as a pressed button or open drop-down.
 };
 
+///
+/// How a list box marks its current item
+enum class ItemSelectionStyle: u1 {
+  caret,    ///< Put the list marker before the current item.
+  highlight ///< Highlight the whole current row.
+};
+
 /// Number of visual states represented in state-indexed style arrays.
 inline constexpr std::size_t WidgetStates{3};
 
@@ -35,7 +42,7 @@ using BracketsByState = std::array<Brackets, WidgetStates>;
 ///
 /// Style of the user interface, without colors
 ///
-/// The style says what the elements of the UI look like: glyphs, and the decoration of windows. It is a plain
+/// The style says what the elements of the UI look like: glyphs, selection indication, and the decoration of windows. It is a plain
 /// value that is meant to be constant. Colors are a matter of the `ColorStyle`, which has a role for every
 /// widget and state. The default style looks like this, where the button has the focus
 /// when it is in angle brackets:
@@ -52,6 +59,9 @@ struct UiStyle {
     Brackets{"[ ", " ▼ ]"}, Brackets{"[ ", " ▼ ]"}, Brackets{"[ ", " ▼ ]"}
   };
   Brackets popup{" ", " "}; ///< Glyphs surrounding each item in a drop-down popup.
+  Brackets list{" ", " "}; ///< Glyphs surrounding each item in a list box.
+  std::string_view listMarker{"🢒"}; ///< Marker shown before the current item in caret mode.
+  ItemSelectionStyle itemSelectionStyle{ItemSelectionStyle::highlight}; ///< Default current-item style for list boxes.
 };
 
 ///
@@ -74,5 +84,19 @@ inline constexpr std::string_view labelRole{"label"};
 inline constexpr std::string_view popupRole{"popup"};
 /// Color role for the highlighted popup item.
 inline constexpr std::string_view popupHighlightRole{"popup.highlight"};
+/// Color role for a disabled popup item.
+inline constexpr std::string_view popupDisabledRole{"popup.disabled"};
+/// Color role for a list box.
+inline constexpr std::string_view listRole{"list"};
+/// Color role for a focused list box.
+inline constexpr std::string_view listFocusRole{"list.focus"};
+/// Color role for a selected list box item.
+inline constexpr std::string_view listSelectedRole{"list.selected"};
+/// Color role for the current list box item.
+inline constexpr std::string_view listCurrentRole{"list.current"};
+/// Color role for the current list box item when it is also selected.
+inline constexpr std::string_view listCurrentSelectedRole{"list.current.selected"};
+/// Color role for a disabled list box item.
+inline constexpr std::string_view listDisabledRole{"list.disabled"};
 
 } // namespace jwezel::ui

@@ -7,6 +7,8 @@
 #include "ui/horizontal_box.hh"
 #include "ui/label.hh"
 #include "ui/line_edit.hh"
+#include "ui/list_box.hh"
+#include "ui/menu.hh"
 #include "ui/text_area.hh"
 #include "ui/vertical_box.hh"
 #include "ui/widget.hh"
@@ -1474,6 +1476,245 @@ TEST_CASE("UI Window") {
     }
   }
 
+  SUBCASE("List box") {
+    CHECK_EQ(
+      jwezel::ui::defaultUiStyle().itemSelectionStyle,
+      jwezel::ui::ItemSelectionStyle::highlight
+    );
+    jwezel::ui::UiStyle overallStyle;
+    overallStyle.itemSelectionStyle = jwezel::ui::ItemSelectionStyle::caret;
+    auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 20, 12}, Text{"Title"}, nullptr, nullptr, &overallStyle)};
+    auto cancelled{0};
+    jwezel::ui::Action cancel{[&cancelled] {++cancelled;}, {jwezel::Key::Escape}};
+    w1.addAction(cancel);
+    const auto source{jwezel::ui::listSource(
+      []() -> jwezel::i1 {return 3;},
+      [](jwezel::i1 index) {return Text{std::to_string(index)};}
+    )};
+    auto list{jwezel::ui::ListBox<jwezel::i1>{w1, Rectangle{1, 1, 19, 5}, source}};
+    std::vector<std::pair<jwezel::ui::ListIndex, bool>> changes;
+    std::vector<jwezel::ui::ListIndex> activated;
+    std::vector<bool> mouseMoveCauses;
+    list.onSelection(
+      [&changes, &mouseMoveCauses](const jwezel::ui::Element &, const jwezel::Event &event) {
+        const auto &change{event.as<jwezel::ui::SelectionEvent>()};
+        changes.emplace_back(change.index(), change.selected());
+        mouseMoveCauses.push_back(change.input().type() == jwezel::MouseMoveEvent::type_);
+        return true;
+      }
+    );
+    list.onActivate(
+      [&activated](const jwezel::ui::Element &, const jwezel::Event &event) {
+        activated.push_back(event.as<jwezel::ui::ActivateEvent>().index());
+        return true;
+      }
+    );
+    auto send{
+      [&](const char *input) {
+        REQUIRE_NE(fputs(input, inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+      }
+    };
+    w1.focus(&list);
+    CHECK_EQ(list.itemSelectionStyle(), jwezel::ui::ItemSelectionStyle::caret);
+    CHECK_EQ(term.display().text().data[1][1].utf8(), "🢒");
+    CHECK_EQ(term.display().text().data[1][2].utf8(), "0"); // a wide caret leaves room for the item text
+    send(" ");
+    CHECK(list.selected(0));
+    CHECK_EQ(changes, std::vector<std::pair<jwezel::ui::ListIndex, bool>>{{0, true}});
+    send("\x1b[B");
+    CHECK_EQ(list.current(), 1);
+    CHECK_FALSE(list.selected(1)); // moving the current row does not select it in multiple mode
+    send(" ");
+    send("\x1b[1;2B"); // Shift-Down extends from the selection anchor
+    CHECK_EQ(list.current(), 2);
+    CHECK(list.selected(2));
+    send("\x1b[1;2A"); // and moving back shrinks the range again
+    CHECK_EQ(list.current(), 1);
+    CHECK_FALSE(list.selected(2));
+    send("\x0d");
+    CHECK_EQ(changes.size(), 5);
+    CHECK_EQ(changes[1], std::pair<jwezel::ui::ListIndex, bool>{0, false});
+    CHECK_EQ(changes[2], std::pair<jwezel::ui::ListIndex, bool>{1, true});
+    CHECK_EQ(changes[3], std::pair<jwezel::ui::ListIndex, bool>{2, true});
+    CHECK_EQ(changes[4], std::pair<jwezel::ui::ListIndex, bool>{2, false});
+    CHECK_EQ(activated, std::vector<jwezel::ui::ListIndex>{1});
+    CHECK_NE(term.display().text().data[2][1].attributes.attr & jwezel::bold, 0); // current + selected has its own role
+
+    const auto reversed{[&](int line) {
+      return (term.display().text().data[static_cast<size_t>(line)][1].attributes.attr & jwezel::reverse) != 0;
+    }};
+    list.clearSelection();
+    list.addSelection(0);
+    list.addSelection(2);
+    CHECK(reversed(1)); // every selected row is highlighted, not only the current one
+    CHECK_FALSE(reversed(2)); // caret mode does not highlight the unselected current row
+    CHECK(reversed(3));
+    list.itemSelectionStyle(jwezel::ui::ItemSelectionStyle::highlight);
+    CHECK_EQ(list.itemSelectionStyle(), jwezel::ui::ItemSelectionStyle::highlight);
+    CHECK(reversed(2)); // the per-list override highlights the current row
+    list.useUiItemSelectionStyle();
+    CHECK_EQ(list.itemSelectionStyle(), jwezel::ui::ItemSelectionStyle::caret);
+    CHECK_FALSE(reversed(2));
+
+    list.clearSelection();
+    list.current(0);
+    list.anchor(0);
+    changes.clear();
+    w1.focus(&list);
+    send("\x1b[1;2B"); // an initial range includes both the anchor row and the row reached
+    CHECK(list.selected(0));
+    CHECK(list.selected(1));
+    CHECK_EQ(changes, std::vector<std::pair<jwezel::ui::ListIndex, bool>>{{0, true}, {1, true}});
+    CHECK_NE(term.display().text().data[2][1].attributes.attr & jwezel::bold, 0);
+
+    changes.clear();
+    send(" "); // Space selects only the current row, like a plain click
+    CHECK_FALSE(list.selected(0));
+    CHECK(list.selected(1));
+    CHECK_EQ(changes, std::vector<std::pair<jwezel::ui::ListIndex, bool>>{{0, false}});
+
+    changes.clear();
+    send(" "); // Selecting the already selected current row keeps it selected
+    CHECK(list.selected(1));
+    CHECK(changes.empty());
+
+    changes.clear();
+    send("\x01"); // Ctrl+A selects all
+    CHECK(list.selected(0));
+    CHECK(list.selected(1));
+    CHECK(list.selected(2));
+    CHECK_EQ(changes, std::vector<std::pair<jwezel::ui::ListIndex, bool>>{{0, true}, {2, true}});
+
+    changes.clear();
+    send("\x1b"); // Escape clears a nonempty selection before reaching the window action
+    CHECK(list.selection().empty());
+    CHECK_EQ(cancelled, 0);
+    CHECK_EQ(changes, std::vector<std::pair<jwezel::ui::ListIndex, bool>>{{0, false}, {1, false}, {2, false}});
+    send("\x1b"); // with nothing selected, Escape remains the window's cancel action
+    CHECK_EQ(cancelled, 1);
+
+    // A plain drag replaces the selection, then selects the inclusive range under the pointer.
+    list.addSelection(0);
+    list.addSelection(2);
+    list.current(0);
+    list.anchor(0);
+    changes.clear();
+    mouseMoveCauses.clear();
+    send("\x1b[<0;3;3M"); // press on row 1
+    send("\x1b[<32;3;4M"); // drag to row 2
+    send("\x1b[<0;3;4m"); // release ends the gesture
+    CHECK_FALSE(list.selected(0));
+    CHECK(list.selected(1));
+    CHECK(list.selected(2));
+    CHECK_EQ(
+      changes,
+      std::vector<std::pair<jwezel::ui::ListIndex, bool>>{{0, false}, {1, true}, {2, false}, {2, true}}
+    );
+    CHECK_EQ(mouseMoveCauses, std::vector<bool>{false, false, false, true});
+
+    // Ctrl-drag extends from this gesture's press row, preserving selection outside its range.
+    list.clearSelection();
+    list.addSelection(1);
+    list.current(0);
+    list.anchor(0);
+    changes.clear();
+    mouseMoveCauses.clear();
+    send("\x1b[<16;3;4M"); // Ctrl-press on row 2; prior anchor remains row 0
+    send("\x1b[<32;3;3M"); // drag back to row 1; the prior anchor must not extend the range
+    send("\x1b[<16;3;3m");
+    CHECK_FALSE(list.selected(0)); // the previous anchor is not included
+    CHECK(list.selected(1));
+    CHECK(list.selected(2));
+    CHECK_EQ(changes, std::vector<std::pair<jwezel::ui::ListIndex, bool>>{{2, true}});
+    CHECK_EQ(mouseMoveCauses, std::vector<bool>{true});
+
+    changes.clear();
+    mouseMoveCauses.clear();
+    send("\x1b[<16;3;3M"); // Ctrl-click the unselected row 1
+    send("\x1b[<16;3;3m");
+    CHECK_FALSE(list.selected(1));
+    CHECK(list.selected(2));
+    CHECK_EQ(changes, std::vector<std::pair<jwezel::ui::ListIndex, bool>>{{1, false}});
+    CHECK_EQ(mouseMoveCauses, std::vector<bool>{false});
+
+    changes.clear();
+    mouseMoveCauses.clear();
+    send("\x1b[<16;3;3M"); // Ctrl-click the unselected row 1
+    send("\x1b[<16;3;3m");
+    CHECK(list.selected(1));
+    CHECK_EQ(changes, std::vector<std::pair<jwezel::ui::ListIndex, bool>>{{1, true}});
+    CHECK_EQ(mouseMoveCauses, std::vector<bool>{false});
+
+    auto single{jwezel::ui::ListBox<jwezel::i1>{
+      w1, Rectangle{1, 6, 19, 10}, source, jwezel::ui::SelectionMode::single
+    }};
+    std::vector<std::pair<jwezel::ui::ListIndex, jwezel::ui::ListIndex>> replacements;
+    single.onSelect(
+      [&replacements](const jwezel::ui::Element &, const jwezel::Event &event) {
+        const auto &selection{event.as<jwezel::ui::SelectEvent>()};
+        replacements.emplace_back(selection.index(), selection.previous());
+        return true;
+      }
+    );
+    w1.focus(&single);
+    send("\x1b[B");
+    CHECK_EQ(single.current(), 1);
+    CHECK(single.selected(1));
+    REQUIRE_EQ(replacements.size(), 1);
+    CHECK_EQ(replacements[0], std::pair<jwezel::ui::ListIndex, jwezel::ui::ListIndex>{1, 0});
+    single.select(2);
+    CHECK_EQ(replacements.size(), 1); // programmatic changes are silent
+
+    auto itemCalls{0};
+    const auto lazySource{jwezel::ui::listSource(
+      []() -> jwezel::i1 {return 100;},
+      [&itemCalls](jwezel::i1) {
+        ++itemCalls;
+        return Text{"row"};
+      }
+    )};
+    auto lazy{jwezel::ui::ListBox<jwezel::i1>{w1, Rectangle{1, 10, 19, 11}, lazySource}};
+    lazy.preferredScanLimit(2);
+    itemCalls = 0;
+    CHECK_EQ(lazy.preferredSize().y(), 8);
+    CHECK_EQ(itemCalls, 2); // preferred width does not scan all 100 rows
+  }
+
+  SUBCASE("Menu") {
+    auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 20, 12}, Text{"Title"})};
+    auto invoked{0};
+    auto unavailableInvoked{0};
+    jwezel::ui::Action run{[&invoked] {++invoked;}};
+    jwezel::ui::Action unavailable{[&unavailableInvoked] {++unavailableInvoked;}};
+    unavailable.enabled(false);
+    auto menu{jwezel::ui::Menu{
+      w1, Rectangle{1, 1, 14, 2},
+      std::vector<jwezel::ui::MenuItem>{{Text{"Run"}, &run}, {Text{"Unavailable"}, &unavailable}}
+    }};
+    menu.caption(Text{"Actions"});
+    auto send{
+      [&](const char *input) {
+        REQUIRE_NE(fputs(input, inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+      }
+    };
+    w1.focus(&menu);
+    send(" ");
+    CHECK(menu.isOpen());
+    send("\x1b[B"); // a disabled item is skipped
+    send("\x0d");
+    CHECK_FALSE(menu.isOpen());
+    CHECK_EQ(invoked, 1);
+    CHECK_EQ(unavailableInvoked, 0);
+    send(" ");
+    send("\x1b");
+    CHECK_FALSE(menu.isOpen());
+    CHECK_EQ(invoked, 1); // Escape closes without triggering an action
+  }
+
   SUBCASE("Window decoration") {
     auto send{
       [&](const char *input) {
@@ -2629,7 +2870,7 @@ TEST_CASE("UI Window") {
     SUBCASE("Select") {
       auto drop{jwezel::ui::DropDown(w1, Rectangle{1, 1, 19, 2}, fruit, 1)};
       std::vector<SelectEvent> chosen;
-      std::vector<Dim> selectedWhenTold;
+      std::vector<jwezel::ui::ListIndex> selectedWhenTold;
       drop.onSelect(
         [&](const Element &, const jwezel::Event &event) {
           chosen.push_back(event.as<SelectEvent>());
@@ -2726,12 +2967,21 @@ TEST_CASE("UI Window") {
       CHECK_THROWS_AS((void)press.as<SelectEvent>(), std::logic_error);
       CHECK_EQ(std::string(press.typeName()), "PressEvent");
     }
-    SUBCASE("Only input has a cause") {
+    SUBCASE("Key and mouse input have a cause") {
       CHECK_NOTHROW((void)UiEvent::causeOf(jwezel::Event{new KeyEvent{'a'}}));
-      CHECK_THROWS_AS(
-        (void)UiEvent::causeOf(jwezel::Event{new MouseMoveEvent{Vector{1, 1}}}),
-        std::logic_error
+      CHECK_NOTHROW(
+        (void)UiEvent::causeOf(
+          jwezel::Event{
+            new MouseButtonEvent{
+              jwezel::MouseButton::Button1,
+              jwezel::MouseModifiers{},
+              Vector{1, 1},
+              jwezel::MouseAction::Down
+            }
+          }
+        )
       );
+      CHECK_NOTHROW((void)UiEvent::causeOf(jwezel::Event{new MouseMoveEvent{Vector{1, 1}}}));
       CHECK_THROWS_AS((void)UiEvent::causeOf(jwezel::Event{}), std::logic_error);
     }
     SUBCASE("The generic registration is the one of the input events") {

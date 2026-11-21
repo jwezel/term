@@ -22,11 +22,14 @@
 #include <ui/drop_down.hh>
 #include <ui/label.hh>
 #include <ui/line_edit.hh>
+#include <ui/list_box.hh>
+#include <ui/menu.hh>
 #include <ui/text_area.hh>
 #include <ui/ui.hh>
 #include <ui/window.hh>
 
 #include <deque>
+#include <algorithm>
 #include <exception>
 #include <format>
 #include <functional>
@@ -34,6 +37,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 using
@@ -43,6 +47,7 @@ using
   jwezel::Event,
   jwezel::Key,
   jwezel::KeyEvent,
+  jwezel::i1,
   jwezel::Rectangle,
   jwezel::Rgb,
   jwezel::RgbBlack,
@@ -75,6 +80,9 @@ using
   jwezel::ui::DropDown,
   jwezel::ui::Label,
   jwezel::ui::LineEdit,
+  jwezel::ui::ListBox,
+  jwezel::ui::Menu,
+  jwezel::ui::MenuItem,
   jwezel::ui::TextArea,
   jwezel::ui::Ui,
   jwezel::ui::Window;
@@ -86,7 +94,7 @@ namespace {
 // window background shines through wherever a role has no background.
 
 // Dark blue main window
-constexpr ColorRoles<15> mainRoles{
+constexpr ColorRoles<21> mainRoles{
   {"frame", CharAttributes{RgbGray6}},
   {"frame.active", CharAttributes{RgbCyan7}},
   {"frame.inactive", CharAttributes{RgbGray4}},
@@ -102,6 +110,12 @@ constexpr ColorRoles<15> mainRoles{
   {"dropdown.focus", CharAttributes{RgbBlack, RgbCyan7}},
   {"popup", CharAttributes{RgbBlack, RgbGray8}},
   {"popup.highlight", CharAttributes{RgbWhite, RgbBlue7, bold}},
+  {"list", CharAttributes{RgbWhite, RgbBlue2}},
+  {"list.focus", CharAttributes{RgbWhite, RgbBlue2}},
+  {"list.selected", CharAttributes{RgbBlack, RgbCyan7, bold}},
+  {"list.current", CharAttributes{RgbWhite, RgbBlue7, bold}},
+  {"list.current.selected", CharAttributes{RgbBlack, RgbYellow, bold}},
+  {"list.disabled", CharAttributes{RgbGray6}},
 };
 constexpr ColorStyle mainColors{mainRoles};
 
@@ -400,6 +414,91 @@ struct Dialog {
   Action reject_; // the cancel action
 };
 
+/// Lazy view of the saved contacts. It deliberately implements only `operator[]` to demonstrate the source concept.
+struct ContactSource {
+  const std::vector<PersonRecord> &contacts;
+
+  // The demo caps saved contacts at 127, so i1 (int8_t) can represent the count and every row index.
+  [[nodiscard]] auto size() const -> i1 {return static_cast<i1>(contacts.size());}
+
+  [[nodiscard]] auto operator[](i1 index) const -> Text {
+    return Text{contacts[static_cast<std::size_t>(index)].summary()};
+  }
+};
+
+/// Separate window that showcases a lazy, byte-indexed, multi-selection contact list.
+struct ContactsWindow {
+  using Log = std::function<void(std::string)>;
+  using Done = std::function<void()>;
+
+  ContactsWindow(Ui &ui, const Rectangle &area, std::vector<PersonRecord> &contacts, const Log &log, const Done &done):
+  contacts_{contacts},
+  window_{ui, mainBackground, area, Text{" Saved contacts "}, nullptr, &mainColors},
+  heading_{window_, Rectangle{2, 1, 46, 2}, Text{"Space selects  Drag selects range"}},
+  source_{contacts},
+  list_{window_, Rectangle{2, 2, 46, 10}, jwezel::ui::listSource(source_)},
+  help_{window_, Rectangle{2, 10, 46, 11}, Text{"Delete removes 0 selected"}},
+  footer_{window_, Rectangle{2, 11, 46, 12}, Text{"Ctrl-drag extends  ·  Esc clears/closes"}},
+  removeSelected_{[this, log] {remove(log);}, {Key::Delete}},
+  close_{[done] {done();}, {Key::Escape}}
+  {
+    window_.addAction(removeSelected_);
+    window_.addAction(close_);
+    list_.onSelection([this, log](const jwezel::ui::Element &, const Event &event) {
+      const auto &selection{event.as<jwezel::ui::SelectionEvent>()};
+      log(std::format(
+        "contacts: {} #{} {}",
+        selection.selected()? "selected": "deselected",
+        selection.index(), plain(selection.item())
+      ));
+      updateHelp();
+      return true;
+    });
+    list_.onActivate([log](const jwezel::ui::Element &, const Event &event) {
+      const auto &activated{event.as<jwezel::ui::ActivateEvent>()};
+      log(std::format("contacts: activated #{} {}", activated.index(), plain(activated.item())));
+      return true;
+    });
+  }
+
+  ContactsWindow(const ContactsWindow &) = delete;
+  ContactsWindow(ContactsWindow &&) = delete;
+  auto operator=(const ContactsWindow &) -> ContactsWindow & = delete;
+  auto operator=(ContactsWindow &&) -> ContactsWindow & = delete;
+
+  private:
+  void updateHelp() {
+    help_.content(Text{std::format("Delete removes {} selected", list_.selection().size())});
+  }
+
+  void remove(const Log &log) {
+    std::vector<i1> indices;
+    for (const auto index: list_.selection()) {
+      indices.push_back(index);
+    }
+    if (indices.empty()) {
+      return;
+    }
+    list_.clearSelection();
+    for (auto index = indices.rbegin(); index != indices.rend(); ++index) {
+      contacts_.erase(contacts_.begin() + *index);
+    }
+    list_.refresh();
+    updateHelp();
+    log(std::format("contacts: removed {}", indices.size()));
+  }
+
+  std::vector<PersonRecord> &contacts_;
+  Window window_;
+  Label heading_;
+  ContactSource source_;
+  ListBox<i1> list_;
+  Label help_;
+  Label footer_;
+  Action removeSelected_;
+  Action close_;
+};
+
 //~Demo~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ///
@@ -413,7 +512,20 @@ struct Demo {
   terminal_{terminal},
   ui_{terminal},
   window_{ui_, mainBackground, Rectangle{margin, 1, static_cast<Dim>(margin + width), static_cast<Dim>(1 + height)}, Text{" jwezel UI demo "}, nullptr, &mainColors},
-  menu_{window_, Rectangle{2, 1, 20, 2}, std::vector<Text>{Text{"Address..."}, Text{"Toggle colors"}, Text{"Exit"}}, 0},
+  openDialog_{[this] {openDialog();}},
+  openContacts_{[this] {openContacts();}},
+  toggleColorsAction_{[this] {toggleColors();}},
+  exit_{[this] {quit();}},
+  quit_{[this] {quit();}, {'\x03'}}, // Ctrl-C comes as a key, the terminal is in raw mode
+  menu_{
+    window_, Rectangle{2, 1, 24, 2},
+    std::vector<MenuItem>{
+      {Text{"Address..."}, &openDialog_},
+      {Text{"Contacts..."}, &openContacts_},
+      {Text{"Toggle colors"}, &toggleColorsAction_},
+      {Text{"Exit"}, &exit_}
+    }
+  },
   title_{window_, Rectangle{22, 1, 62, 2}, Text{"Everything you see is a widget"}},
   notesLabel_{window_, Rectangle{2, 3, 62, 4}, Text{"Notes"}},
   notes_{
@@ -422,17 +534,8 @@ struct Demo {
   },
   eventsLabel_{window_, Rectangle{2, 11, 62, 12}, Text{"Events"}},
   events_{window_, Rectangle{2, 12, 62, 17}, Text{}},
-  hint_{window_, Rectangle{2, 18, 62, 19}, Text{"Tab: next  Space: menu  Esc: close dialog  Ctrl-C: quit"}},
-  quit_{[this] {quit();}, {'\x03'}} // Ctrl-C comes as a key, the terminal is in raw mode
+  hint_{window_, Rectangle{2, 18, 62, 19}, Text{"Tab: next  Space: menu  Esc: close  Ctrl-C: quit"}}
   {
-    // The menu is an ordinary drop down. Choosing an entry emits a select event, which says which entry it was
-    // and what chose it.
-    menu_.onSelect(
-      [this](const jwezel::ui::Element &, const Event &event) {
-        menuSelected(event.as<jwezel::ui::SelectEvent>());
-        return true;
-      }
-    );
     window_.addAction(quit_); // Tab and Shift-Tab go from the menu to the notes and back, without anybody saying so
     menu_.caption(Text{"Menu"}); // a menu shows what it is called, not what was chosen from it
     log("started");
@@ -469,27 +572,6 @@ struct Demo {
     ui_.post([this] {ui_.stop();});
   }
 
-  void menuSelected(const jwezel::ui::SelectEvent &selected) {
-    const auto index{selected.index()};
-    log(std::format("menu: select #{} \"{}\" ({})", index, plain(selected.item()), selected.input().typeName()));
-    switch (index) {
-      case 0:
-      openDialog();
-      break;
-
-      case 1:
-      toggleColors();
-      break;
-
-      case 2:
-      quit();
-      break;
-
-      default:
-      break;
-    }
-  }
-
   void openDialog() {
     if (dialog_) {
       log("dialog: already open");
@@ -502,10 +584,14 @@ struct Demo {
     // Modal windows take the input exclusively while they are open
     dialog_.emplace(
       ui_, position, colored_? &dialogColors: nullptr,
-      [this](bool accepted, const PersonRecord &person) {
+        [this](bool accepted, const PersonRecord &person) {
         if (accepted) {
-          contacts_.push_back(person);
-          log(std::format("saved: {}", person.summary()));
+          if (contacts_.size() < 127) {
+            contacts_.push_back(person);
+            log(std::format("saved: {}", person.summary()));
+          } else {
+            log("contacts: limit reached (127)");
+          }
         } else {
           log("contact: cancelled");
         }
@@ -517,6 +603,29 @@ struct Demo {
     );
     dialog_->window().modal(true);
     log("dialog: opened");
+  }
+
+  void openContacts() {
+    if (contactsWindow_) {
+      log("contacts: already open");
+      return;
+    }
+    const auto size{terminal_.display().size()};
+    const auto width{std::min(Dim{50}, static_cast<Dim>(size.x() - 2))};
+    const auto height{std::min(Dim{14}, static_cast<Dim>(size.y() - 2))};
+    const auto x{static_cast<Dim>((size.x() - width) / 2)};
+    const auto y{static_cast<Dim>((size.y() - height) / 2)};
+    contactsWindow_.emplace(
+      ui_, Rectangle{x, y, static_cast<Dim>(x + width), static_cast<Dim>(y + height)}, contacts_,
+      [this](std::string message) {log(message);},
+      [this] {
+        ui_.post([this] {
+          contactsWindow_.reset();
+          terminal_.focus(&window_);
+        });
+      }
+    );
+    log(std::format("contacts: opened ({} saved)", contacts_.size()));
   }
 
   void toggleColors() {
@@ -531,18 +640,23 @@ struct Demo {
   Terminal &terminal_;
   Ui ui_;
   Window window_;
-  DropDown menu_;
+  Action openDialog_;
+  Action openContacts_;
+  Action toggleColorsAction_;
+  Action exit_;
+  Action quit_;
+  Menu menu_;
   Label title_;
   Label notesLabel_;
   TextArea notes_;
   Label eventsLabel_;
   Label events_;
   Label hint_;
-  Action quit_;
   std::deque<std::string> lines_;
   std::vector<PersonRecord> contacts_;
   bool colored_{true};
   std::optional<Dialog> dialog_; // last: destroyed first
+  std::optional<ContactsWindow> contactsWindow_;
 };
 
 } // namespace
