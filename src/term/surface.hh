@@ -97,6 +97,21 @@ struct Surface {
     /// @return     The window, or nothing if the element is not part of a window
     [[nodiscard]] virtual auto inputWindow() -> Window * {return nullptr;}
 
+    ///
+    /// Whether the owner is what shows at a position on the surface this element is on
+    ///
+    /// This is what the caret uses to find out whether the element that owns it is covered. An
+    /// element device follows its content down to the element that is visible there.
+    ///
+    /// @param[in]  position  The position on the surface
+    /// @param[in]  owner     The element the caret belongs to
+    ///
+    /// @return     True if the owner is visible at the position
+    [[nodiscard]] virtual auto shows(const Vector &position, const Element *owner) const -> bool {
+      (void)position;
+      return this == owner;
+    }
+
     [[nodiscard]] auto fragments() -> auto & {return fragments_;}
 
     [[nodiscard]] auto fragments() const -> const auto & {return fragments_;}

@@ -28,7 +28,7 @@ auto Backdrop::text(const Rectangle &area) const -> Text {
 //~Window~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Window::Window(TerminalInterface *terminal, const Rectangle &area, const Char &background, Window *below):
-TextElement(terminal->surface(), area, background, below),
+ElementDevice(terminal->surface(), area, background, below),
 terminal_{terminal}
 {
   terminal->focus(this);

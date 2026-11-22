@@ -14,6 +14,7 @@ lib_args = ['-DBUILDING_TERM']
 
 sources = [
   'src/term/display.cc',
+  'src/term/element_device.cc',
   'src/term/geometry.cc',
   'src/term/keyboard.cc',
   'src/term/surface.cc',
@@ -45,6 +46,7 @@ sources = [
 ]
 headers = [
   'src/term/display.hh',
+  'src/term/element_device.hh',
   'src/term/geometry.hh',
   'src/term/keyboard.hh',
   'src/term/mouse_capture.hh',

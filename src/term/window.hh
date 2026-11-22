@@ -1,5 +1,6 @@
 #pragma once
 
+#include "element_device.hh"
 #include "geometry.hh"
 #include "surface.hh"
 #include "term/event.hh"
@@ -90,9 +91,10 @@ struct InputHandler {
 /// Window
 /// A rectangular, z-ordered region of a surface with its own input and focus routing.
 ///
-/// A window is drawn above the elements below it. Its terminal coordinates are managed by `Terminal`; UI windows
-/// additionally use the window as the root and coordinate origin of their widget trees.
-struct Window: TextElement {
+/// A window is drawn above the elements below it. Its terminal coordinates are managed by `Terminal`. A window is
+/// also an element device: elements on its content surface are clipped to the window and move with it, which is how
+/// a UI lives inside a window.
+struct Window: ElementDevice {
   Window(struct TerminalInterface *terminal, const Rectangle &area, const Char &background = Space, Window *below = 0);
 
   ~Window() override;

@@ -85,7 +85,7 @@ void Terminal::placeCaret() {
   bool visible{false};
   if (caretOwner_ and caretPosition_) {
     const auto *fragment{find(*caretPosition_)};
-    visible = fragment and fragment->element == caretOwner_;
+    visible = fragment and fragment->element->shows(*caretPosition_, caretOwner_);
   }
   display_.caret(visible? caretPosition_: std::nullopt);
 }

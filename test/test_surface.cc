@@ -1,5 +1,6 @@
 
 #include <term/device.hh>
+#include <term/element_device.hh>
 #include <term/geometry.hh>
 #include <util/string.hh>
 #include <term/surface.hh>
@@ -683,6 +684,79 @@ TEST_CASE("Surface model") {
       }
     }
     MESSAGE("seed ", seed, ": most fragments ", maxFragments, ", at worst ", worstRatio, " times those from scratch");
+  }
+}
+
+TEST_CASE("ElementDevice") {
+  Device dev;
+  Terminal term{dev};
+  Surface &scr{*term.surface()};
+  jwezel::ElementDevice device{&term, Rectangle{1, 1, 9, 5}, '.'_C};
+  REQUIRE_EQ(device.area(), Rectangle{1, 1, 9, 5});
+  CHECK_EQ(device.text(), Text{'.'_C, Vector{8, 4}});
+  CHECK_EQ(device.ownText(), Text{'.'_C, Vector{8, 4}});
+
+  SUBCASE("Own drawing") {
+    dev.updates_.clear();
+    device.write(Vector{1, 1}, "hello");
+    auto expected{Text{'.'_C, Vector{8, 4}}};
+    expected.patch(Text{"hello"}, Vector{1, 1});
+    CHECK_EQ(device.text(), expected);
+    CHECK_EQ(device.ownText(), expected);
+    CHECK_EQ(dev.updates_, Updates{{Vector{2, 2}, Text{"hello"}}});
+  }
+
+  SUBCASE("Content") {
+    dev.updates_.clear();
+    jwezel::TextElement child{&device.content(), Rectangle{2, 1, 6, 3}, '#'_C};
+    auto expected{Text{'.'_C, Vector{8, 4}}};
+    expected.patch(Text{'#'_C, Vector{4, 2}}, Vector{2, 1});
+    CHECK_EQ(device.text(), expected);
+    CHECK_EQ(device.ownText(), Text{'.'_C, Vector{8, 4}});
+    CHECK_EQ(dev.updates_, Updates{{Vector{3, 2}, Text{"####\n####"}}});
+    SUBCASE("Clipping") {
+      // The child is wider than the device; what is outside of the device is not shown
+      CHECK_EQ(device.content().position(&child), 1);
+      CHECK_EQ(child.surface(), &device.content());
+      child.move(Rectangle{4, 1, 12, 3});
+      CHECK_EQ(device.text().size(), Vector{8, 4});
+      CHECK_EQ(device.text()[Vector{4, 1}].rune, '#'_C.rune);
+      CHECK_EQ(device.text()[Vector{7, 2}].rune, '#'_C.rune);
+      CHECK_EQ(device.text()[Vector{0, 1}].rune, '.'_C.rune);
+      // and the device only passes on the part of the update that it shows
+      dev.updates_.clear();
+      child.write(Vector{0, 0}, Text{"abcdefgh"});
+      CHECK_EQ(dev.updates_, Updates{{Vector{5, 2}, Text{"abcd"}}});
+    }
+    SUBCASE("Covered child") {
+      jwezel::TextElement above{&device.content(), Rectangle{3, 1, 5, 2}, 'b'_C};
+      CHECK_EQ(device.text()[Vector{2, 1}].rune, '#'_C.rune);
+      CHECK_EQ(device.text()[Vector{3, 1}].rune, 'b'_C.rune);
+      CHECK_EQ(device.text()[Vector{4, 1}].rune, 'b'_C.rune);
+      CHECK_EQ(device.text()[Vector{5, 1}].rune, '#'_C.rune);
+      SUBCASE("Shows") {
+        CHECK(device.shows(Vector{1 + 3, 1 + 1}, &above));
+        CHECK_FALSE(device.shows(Vector{1 + 3, 1 + 1}, &child));
+        CHECK(device.shows(Vector{1 + 2, 1 + 1}, &child));
+        CHECK_FALSE(device.shows(Vector{1 + 0, 1 + 0}, &child));
+      }
+    }
+  }
+
+  SUBCASE("Occlusion") {
+    Window above{&term, Rectangle{3, 2, 7, 4}};
+    CHECK_EQ(scr.find(Vector{3, 2}), &above.fragments()[0]);
+    CHECK_EQ(scr.find(Vector{1, 1}), &device.fragments()[0]);
+    CHECK_EQ(device.text(), Text{'.'_C, Vector{8, 4}});
+  }
+
+  SUBCASE("Move") {
+    jwezel::TextElement child{&device.content(), Rectangle{2, 1, 6, 3}, '#'_C};
+    auto expected{device.text()};
+    device.move(Rectangle{2, 2, 10, 6});
+    CHECK_EQ(device.area(), Rectangle{2, 2, 10, 6});
+    CHECK_EQ(device.text(), expected);
+    CHECK_EQ(scr.find(Vector{2, 2}), &device.fragments()[0]);
   }
 }
 
