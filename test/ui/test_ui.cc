@@ -2766,6 +2766,15 @@ TEST_CASE("UI Window") {
       CHECK_EQ(area.scroll(), Vector{0, 2});
       CHECK_EQ(shown(Rectangle{1, 3, 19, 5}), "three             \nfour              \n");
     }
+    SUBCASE("A zero-width layout area does not scroll text off the left edge") {
+      auto box{jwezel::ui::VerticalBox(w1, Rectangle{1, 1, 1, 4})};
+      auto input{jwezel::ui::LineEdit(box)};
+      CHECK_EQ(input.scroll(), Vector{0, 0});
+      box.move(Rectangle{1, 1, 20, 4});
+      send("x");
+      CHECK_EQ(input.contents(), "x");
+      CHECK_EQ(cell(1, 1).rune, U'x');
+    }
     SUBCASE("Page Up and Page Down") {
       std::string document;
       for (auto i = 0; i < 20; ++i) {

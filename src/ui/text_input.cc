@@ -24,7 +24,6 @@ buffer_{text}
 
 void TextInput::start() {
   cursor_ = buffer_.end();
-  scrollIntoView();
   render();
   registerHandlers();
   layoutChanged();
@@ -35,7 +34,6 @@ void TextInput::contents(std::string_view text) {
   cursor_ = buffer_.end();
   scrollX_ = 0;
   scrollY_ = 0;
-  scrollIntoView();
   render();
   layoutChanged();
 }
@@ -101,7 +99,6 @@ auto TextInput::handleKey(const Event &event) -> bool {
       return false;
     }
   }
-  scrollIntoView();
   render();
   return true;
 }
@@ -191,17 +188,21 @@ auto TextInput::preferredSize() -> Vector {
 
 void TextInput::scrollIntoView() {
   const auto size{area().size()};
-  if (cursor_.x() < scrollX_) {
-    scrollX_ = cursor_.x();
+  if (size.x() > 0) {
+    if (cursor_.x() < scrollX_) {
+      scrollX_ = cursor_.x();
+    }
+    if (cursor_.x() >= toDim(scrollX_ + size.x())) {
+      scrollX_ = toDim(cursor_.x() - size.x() + 1);
+    }
   }
-  if (cursor_.x() >= toDim(scrollX_ + size.x())) {
-    scrollX_ = toDim(cursor_.x() - size.x() + 1);
-  }
-  if (cursor_.y() < scrollY_) {
-    scrollY_ = cursor_.y();
-  }
-  if (cursor_.y() >= toDim(scrollY_ + size.y())) {
-    scrollY_ = toDim(cursor_.y() - size.y() + 1);
+  if (size.y() > 0) {
+    if (cursor_.y() < scrollY_) {
+      scrollY_ = cursor_.y();
+    }
+    if (cursor_.y() >= toDim(scrollY_ + size.y())) {
+      scrollY_ = toDim(cursor_.y() - size.y() + 1);
+    }
   }
 }
 
@@ -217,6 +218,9 @@ auto TextInput::alignmentOffset() const -> Vector {
 }
 
 void TextInput::render() {
+  // A layout-managed input may first be drawn before its parent has assigned a usable area.
+  // Recheck the viewport after geometry changes, while leaving zero-sized axes alone.
+  scrollIntoView();
   const auto size{area().size()};
   if (size.x() <= 0 or size.y() <= 0) {
     return;
