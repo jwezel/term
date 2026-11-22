@@ -27,6 +27,7 @@ ninja -C release
 
 - `src/term/` implements terminal geometry, cells and text, input decoding, display updates, surfaces, and windows.
 - `src/ui/` implements widgets, containers, layout, focus, actions, events, and text input.
+- `src/ext_ui/` contains reusable composite widgets built on the core UI library.
 - `src/util/` contains shared utilities.
 - `examples/` contains standalone programs; `test/` contains doctest-based tests.
 

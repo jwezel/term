@@ -16,6 +16,7 @@
 #include <term/keyboard.hh>
 #include <term/term.hh>
 #include <term/text.hh>
+#include <ext_ui/list_editor.hh>
 #include <ui/action.hh>
 #include <ui/box.hh>
 #include <ui/button.hh>
@@ -173,8 +174,6 @@ struct PersonRecord {
   std::string firstName;
   std::string middleName;
   std::string lastName;
-  std::string preferredName;
-  std::string pronouns;
   std::string birthDate;
   std::string gender;
   std::string email;
@@ -189,8 +188,8 @@ struct PersonRecord {
   std::string region;
   std::string postalCode;
   std::string country;
-  std::string emergencyContact;
-  std::string emergencyPhone;
+  std::vector<std::string> traits;
+  std::vector<std::string> preferredTraits;
   std::string notes;
 
   [[nodiscard]] auto displayName() const -> std::string {
@@ -203,9 +202,6 @@ struct PersonRecord {
     if (result.empty()) {
       result = "Unnamed contact";
     }
-    if (!preferredName.empty()) {
-      result += std::format(" ({})", preferredName);
-    }
     return result;
   }
 
@@ -215,6 +211,10 @@ struct PersonRecord {
       if (!part.empty()) {
         result += std::format("  ·  {}", part);
       }
+    }
+    for (const auto &trait: traits) {
+      const auto preferred{std::find(preferredTraits.begin(), preferredTraits.end(), trait) != preferredTraits.end()};
+      result += std::format("  ·  {}{}", trait, preferred? " *": "");
     }
     return result;
   }
@@ -373,7 +373,7 @@ struct Dialog {
   identityHeader_{
     body_, Text{"PERSONAL  /  BIRTH DATE: YYYY-MM-DD", RgbBlue5, RgbNone, bold}
   },
-  personal_{body_, 4},
+  personal_{body_, 3},
   title_{
     personal_.left.labels, personal_.left.editors, "Title",
     {Text{"Select"}, Text{"Mx."}, Text{"Ms."}, Text{"Mr."}, Text{"Dr."}, Text{"Prof."}}
@@ -381,15 +381,23 @@ struct Dialog {
   firstName_{personal_.right.labels, personal_.right.editors, "First name"},
   middleName_{personal_.left.labels, personal_.left.editors, "Middle"},
   lastName_{personal_.right.labels, personal_.right.editors, "Last name"},
-  preferredName_{personal_.left.labels, personal_.left.editors, "Preferred"},
-  pronouns_{
-    personal_.right.labels, personal_.right.editors, "Pronouns",
-    {Text{"Select"}, Text{"she/her"}, Text{"he/him"}, Text{"they/them"}, Text{"use name"}}
-  },
   birthDate_{personal_.left.labels, personal_.left.editors, "Birth date"},
   gender_{personal_.right.labels, personal_.right.editors, "Gender", {
     Text{"Select"}, Text{"Woman"}, Text{"Man"}, Text{"Non-binary"}, Text{"Self-describe"}, Text{"Prefer not to say"}
   }},
+  traitsRow_{
+    body_, RectangleDefault,
+    BoxLayout{
+      .weights = {},
+      .sizes = {LayoutSize::fit, LayoutSize::stretch},
+      .alignments = {jwezel::ui::LayoutAlign::center, jwezel::ui::LayoutAlign::stretch},
+      .spacing = 1
+    }
+  },
+  traitsLabel_{traitsRow_, Text{"Traits"}},
+  traits_{
+    traitsRow_
+  },
   contactHeader_{body_, Text{"CONTACT  /  HOW TO REACH THEM", RgbBlue5, RgbNone, bold}},
   contact_{body_, 3},
   email_{contact_.left.labels, contact_.left.editors, "Email"},
@@ -409,9 +417,6 @@ struct Dialog {
     Text{"United States"}, Text{"Canada"}, Text{"United Kingdom"}, Text{"Australia"}, Text{"New Zealand"},
     Text{"France"}, Text{"Germany"}, Text{"India"}, Text{"Japan"}, Text{"Other"}
   }},
-  emergency_{body_, 1},
-  emergencyName_{emergency_.left.labels, emergency_.left.editors, "Emergency contact"},
-  emergencyPhone_{emergency_.right.labels, emergency_.right.editors, "Emergency phone"},
   notes_{body_, 1, true},
   notesField_{notes_.labels, notes_.editors},
   footer_{
@@ -423,13 +428,14 @@ struct Dialog {
       .spacing = 1
     }
   },
-  hint_{footer_, Text{"Tab moves  ·  Esc cancels", RgbGray4}},
+  hint_{footer_, Text{"Tab moves  ·  Ctrl-click marks preferred  ·  Esc cancels", RgbGray4}},
   ok_{footer_, Text{"Save"}},
   cancel_{footer_, Text{"Cancel"}},
   accept_{[this, done] {done(true, person());}, {Key::Enter}},
   reject_{[done] {done(false, {});}, {Key::Escape, '\x03'}}
   // Ctrl-C comes as a key as well, the terminal is in raw mode
   {
+    traitsLabel_.verticalAlignment(ContentAlignment::center);
     // Enter and Escape are actions of the whole window. Line edits leave Enter for the default action; the notes
     // field consumes it as a newline. The buttons trigger the same actions, and Tab follows field creation order.
     window_.addAction(accept_);
@@ -452,13 +458,19 @@ struct Dialog {
 
   private:
   [[nodiscard]] auto person() const -> PersonRecord {
+    auto traits{std::vector<std::string>{}};
+    for (const auto &trait: traits_.choices()) {
+      traits.push_back(plain(trait));
+    }
+    auto preferredTraits{std::vector<std::string>{}};
+    for (const auto &trait: traits_.selected()) {
+      preferredTraits.push_back(plain(trait));
+    }
     return PersonRecord{
       .title = title_.value(),
       .firstName = firstName_.value(),
       .middleName = middleName_.value(),
       .lastName = lastName_.value(),
-      .preferredName = preferredName_.value(),
-      .pronouns = pronouns_.value(),
       .birthDate = birthDate_.value(),
       .gender = gender_.value(),
       .email = email_.value(),
@@ -473,8 +485,8 @@ struct Dialog {
       .region = region_.value(),
       .postalCode = postalCode_.value(),
       .country = country_.value(),
-      .emergencyContact = emergencyName_.value(),
-      .emergencyPhone = emergencyPhone_.value(),
+      .traits = std::move(traits),
+      .preferredTraits = std::move(preferredTraits),
       .notes = notesField_.value()
     };
   }
@@ -487,10 +499,11 @@ struct Dialog {
   TextField firstName_;
   TextField middleName_;
   TextField lastName_;
-  TextField preferredName_;
-  ChoiceField pronouns_;
   TextField birthDate_;
   ChoiceField gender_;
+  HorizontalBox traitsRow_;
+  Label traitsLabel_;
+  jwezel::ui::ListEditor traits_;
   Label contactHeader_;
   FieldPair contact_;
   TextField email_;
@@ -507,9 +520,6 @@ struct Dialog {
   TextField region_;
   TextField postalCode_;
   ChoiceField country_;
-  FieldPair emergency_;
-  TextField emergencyName_;
-  TextField emergencyPhone_;
   FieldColumn notes_;
   NotesField notesField_;
   HorizontalBox footer_;

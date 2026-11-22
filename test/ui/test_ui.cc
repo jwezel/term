@@ -3109,6 +3109,7 @@ TEST_CASE("UI Window") {
       CHECK_EQ(keys, 1);
     }
   }
+
   REQUIRE_FALSE(fclose(inputRead));
   REQUIRE_FALSE(fclose(inputWrite));
 }
