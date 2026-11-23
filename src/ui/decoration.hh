@@ -10,24 +10,7 @@
 
 namespace jwezel::ui {
 
-/// How much of a window's frame its content has to keep clear of, on each side
-///
-/// The insets are counted from the edges of the window: the content area starts `left` columns from the left edge,
-/// `top` rows from the top, and so on, and is as large as the window minus the insets on every side.
-struct Insets {
-  Dim left;   ///< The inset from the left edge
-  Dim top;    ///< The inset from the top edge
-  Dim right;  ///< The inset from the right edge
-  Dim bottom; ///< The inset from the bottom edge
-
-  [[nodiscard]] auto operator==(const Insets &other) const -> bool {
-    return left == other.left and top == other.top and right == other.right and bottom == other.bottom;
-  }
-
-  [[nodiscard]] auto operator!=(const Insets &other) const -> bool {
-    return !(*this == other);
-  }
-};
+using Insets = jwezel::Insets; ///< How much of a window's frame its content has to keep clear of, on each side
 
 ///
 /// State of a decorated window or frame

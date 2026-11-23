@@ -44,19 +44,6 @@ void Window::move(const Rectangle &area) {
   Root::move(area);
 }
 
-auto Window::content() const -> Rectangle {
-  const auto insets{framing_.insets()};
-  const auto size{area().size()};
-  const auto width{std::max(Dim{0}, toDim(size.x() - insets.left - insets.right))};
-  const auto height{std::max(Dim{0}, toDim(size.y() - insets.top - insets.bottom))};
-  return Rectangle{Vector{0, 0}, Vector{width, height}};
-}
-
-auto Window::contentOrigin() const -> Vector {
-  const auto insets{framing_.insets()};
-  return Vector{insets.left, insets.top};
-}
-
 auto Window::decoration() const -> const Decoration & {
   if (decoration_) {
     return *decoration_;
@@ -75,6 +62,8 @@ void Window::decoration(const Decoration *decoration) {
 void Window::decorate() {
   framing_.decoration = &decoration(); // the decoration is re-resolved here so that a style change shows
   framing_.colors = &Root::colors();
+  const auto insets{framing_.insets()}; // the client area follows the content area of the frame
+  clientInsets(Insets{insets.left, insets.top, insets.right, insets.bottom});
   write(Vector{0, 0}, framing_.draw(area().size(), background()));
 }
 

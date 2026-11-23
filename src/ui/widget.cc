@@ -15,15 +15,14 @@ auto resolvedBackground(const Char &background, Container &parent) -> Char {
   return background == InheritBackground? parent.root()->host().background(): background;
 }
 
-Widget::Widget(const Rectangle &area, const Char &background, Container &parent, WidgetPlacement placement):
+Widget::Widget(const Rectangle &area, const Char &background, Container &parent):
 TextElement{
-  placement == WidgetPlacement::host? parent.root()->host().surface(): &parent.root()->client().content(),
-  placement == WidgetPlacement::host? area + parent.root()->displayOrigin(): area,
+  &parent.root()->client().content(),
+  area == RectangleDefault? area: area + parent.root()->contentOrigin(),
   resolvedBackground(background, parent)
 },
 ui::Element{&parent},
-bounds_{area},
-placement_{placement}
+bounds_{area}
 {
   layoutManaged(area == RectangleDefault);
   parent.add(*this);
@@ -42,9 +41,8 @@ Widget::~Widget() {
 }
 
 void Widget::move(const Rectangle &area) {
-  auto *root{this->root()};
-  root->ensure(area); // the host window must be large enough to show the area
-  TextElement::move(placement_ == WidgetPlacement::host? area + root->displayOrigin(): area);
+  root()->ensure(area); // the host window must be large enough to show the area
+  TextElement::move(area + root()->contentOrigin());
 }
 
 void Widget::horizontalAlignment(ContentAlignment alignment) {
@@ -152,7 +150,7 @@ void Widget::layoutChanged() {
 
 auto Widget::moveEvent(const Rectangle &area) -> bool {
   TextElement::moveEvent(area);
-  bounds_ = placement_ == WidgetPlacement::host? area - root()->displayOrigin(): area;
+  bounds_ = area - root()->contentOrigin();
   render();
   return true;
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "list_popup.hh"
+#include "popup_window.hh"
 #include "widget.hh"
 
 #include <cstddef>
@@ -133,6 +134,20 @@ struct PopupChoice: Widget {
   Dim maxRows_{8};
   std::size_t scanLimit_{256};
   bool dragging_{false}; // the button that opened the popup is still down
+  ///
+  /// The position of a mouse event relative to the popup widget
+  ///
+  /// Mouse events of the control are in content coordinates of its root, while the popup widget is in its own
+  /// popup window, whose content coordinates start where the popup sits in the control's content.
+  ///
+  /// @param[in]  position  The position, in content coordinates of the control's root
+  ///
+  /// @return     The position, relative to the popup widget
+  [[nodiscard]] auto popupPosition(const Vector &position) const -> Vector {
+    return popupWindow_? position - popupArea_.position(): position;
+  }
+  Rectangle popupArea_;                    ///< Area of the popup in the content of the control's root
+  std::optional<PopupWindow> popupWindow_; ///< declared before the popup, which is destroyed first
   std::optional<ListPopup<>> popup_;
 };
 

@@ -91,23 +91,22 @@ struct Root: Container, InputHandler, ActionHost {
   [[nodiscard]] auto root() -> Root * override {return this;}
 
   ///
-  /// Get the client device the elements of this root are drawn into
+  /// Get the device the elements of this root are drawn into
   ///
-  /// The device holds the content area of the host window, which is where the elements of the root are clipped,
-  /// and draws its own background below the elements.
-  [[nodiscard]] auto client() -> ElementDevice & {return client_;}
-  [[nodiscard]] auto client() const -> const ElementDevice & {return client_;}
+  /// It is the host window itself: an element device whose content surface holds the widgets.
+  [[nodiscard]] auto client() -> ElementDevice & {return host_;}
+  [[nodiscard]] auto client() const -> const ElementDevice & {return host_;}
 
   ///
   /// Get the content area, in content-relative coordinates: the content starts at its own origin, which the
   /// area position says, and the widgets are clipped to it from there
   ///
-  /// By default this is the content of the host window, which is the whole host window for the desktop and the
-  /// content of a window for a window-hosted root.
+  /// By default this is the client area of the host window, which is the whole host window for the desktop and
+  /// the content of a window for a window-hosted root.
   ///
   /// @return     The content area, relative to the content origin
   [[nodiscard]] virtual auto content() const -> Rectangle {
-    return Rectangle{Vector{0, 0}, host_.area().size()};
+    return Rectangle{Vector{0, 0}, host_.clientArea().size()};
   }
 
   /// Get the display position where the content area starts
@@ -115,7 +114,7 @@ struct Root: Container, InputHandler, ActionHost {
   /// The content area starts there, which the frame of a window puts after its insets.
   ///
   /// @return     The position of the content area on the display
-  [[nodiscard]] virtual auto contentOrigin() const -> Vector;
+  [[nodiscard]] auto contentOrigin() const -> Vector {return host_.clientArea().position();}
 
   /// Get the display position of the content origin
   ///
@@ -216,7 +215,6 @@ struct Root: Container, InputHandler, ActionHost {
 
   std::vector<Widget *> chain_; // weak references, in order of the focus
   jwezel::Window &host_;
-  ElementDevice client_; // the client area the elements of this root are drawn into
   const ColorStyle *colors_;  // weak reference, nullptr for the default
   const UiStyle *style_;      // weak reference, nullptr for the default
   Widget *focus_{}; // weak reference to the focused widget

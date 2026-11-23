@@ -102,6 +102,8 @@ struct Terminal: Surface, jwezel::TerminalInterface {
   auto operator=(Terminal &&) -> Terminal & = delete;
   void focus(struct Window */*window*/) override {}
   auto surface() -> Surface * override { return this;}
+
+  [[nodiscard]] auto size() const -> Vector override {return jwezel::VectorMax;}
   auto expand(const Vector &/*size*/) -> bool override {return false;}
   auto contract() -> bool override {return false;}
   void moveWindow(Window &/*window*/, const Rectangle & /*area*/) override {}

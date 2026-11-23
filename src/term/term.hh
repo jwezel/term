@@ -113,6 +113,8 @@ struct Terminal: Surface, TerminalInterface {
 
   [[nodiscard]] auto surface() -> Surface * override {return this;}
 
+  [[nodiscard]] auto size() const -> Vector override {return display_.size();}
+
   ///
   /// Possibly expand display and screen
   ///

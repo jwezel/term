@@ -35,16 +35,14 @@ struct ListView: Widget {
   /// @param      source      The items
   /// @param      currentIndex  Index of the current item
   /// @param      background  The background
-  /// @param      placement   Whether the view is drawn inside the host window's content or above the host window
   ListView(
     Container &parent,
     const Rectangle &area,
     ListSource<Index> source,
     Index currentIndex = Index{0},
-    const Char &background = InheritBackground,
-    WidgetPlacement placement = WidgetPlacement::content
+    const Char &background = InheritBackground
   ):
-  Widget{area, background, parent, placement},
+  Widget{area, background, parent},
   source_{std::move(source)}
   {
     refreshData();

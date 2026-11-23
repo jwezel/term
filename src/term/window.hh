@@ -92,10 +92,21 @@ struct InputHandler {
 /// A rectangular, z-ordered region of a surface with its own input and focus routing.
 ///
 /// A window is drawn above the elements below it. Its terminal coordinates are managed by `Terminal`. A window is
-/// also an element device: elements on its content surface are clipped to the window and move with it, which is how
-/// a UI lives inside a window.
+/// also an element device: elements on its client surface are clipped to the window's client area and move with it,
+/// which is how a UI lives inside a window. The client area is the window minus its insets, which a decorated window
+/// sets so that its widgets keep clear of the frame.
+///
+/// A window can be transient to another one, like a popup that belongs to a window: the transient never takes the
+/// terminal focus itself, which its owner keeps, and while the owner has the focus the terminal routes input that
+/// lands on the transient to it.
 struct Window: ElementDevice {
-  Window(struct TerminalInterface *terminal, const Rectangle &area, const Char &background = Space, Window *below = 0);
+  Window(
+    struct TerminalInterface *terminal,
+    const Rectangle &area,
+    const Char &background = Space,
+    Window *below = 0,
+    Window *transient = 0
+  );
 
   ~Window() override;
 
@@ -133,6 +144,40 @@ struct Window: ElementDevice {
   /// Set the input handler (weak reference, nullptr for none)
   void inputHandler(InputHandler *handler) {inputHandler_ = handler;}
 
+  ///
+  /// Get the device the widgets of a UI in this window are drawn into
+  ///
+  ///
+  /// Set how much of the window the content area keeps clear of, on each side
+  ///
+  /// A decorated window sets the insets of its decoration, so that the UI places its widgets inside the frame.
+  ///
+  /// @param[in]  insets  The insets, from the edges of the window
+  void clientInsets(const Insets &insets);
+
+  ///
+  /// Get how much of the window the content area keeps clear of, on each side
+  [[nodiscard]] auto clientInsets() const -> const Insets & {return insets_;}
+
+  ///
+  /// Get the content area, relative to the window
+  ///
+  /// @return     The area inside the insets, clamped to the window
+  [[nodiscard]] auto clientArea() const -> Rectangle;
+
+  ///
+  /// Make this window transient to another one (weak reference, nullptr for none)
+  ///
+  /// A transient window is a popup-like window that belongs to its owner: the owner keeps the terminal focus, and
+  /// while it has it the transient gets the input that lands on it.
+  ///
+  /// @param[in]  owner  The window the transient belongs to
+  void transient(Window *owner) {transient_ = owner;}
+
+  ///
+  /// Get the window this one is transient to, or nullptr if it is not
+  [[nodiscard]] auto transient() const -> Window * {return transient_;}
+
   [[nodiscard]] auto inputWindow() -> Window * override {return this;}
 
   [[nodiscard]] auto terminal() const {return terminal_;}
@@ -153,6 +198,8 @@ struct Window: ElementDevice {
   struct TerminalInterface *terminal_;
   InputHandler *inputHandler_{};
   bool modal_{false};
+  Window *transient_{}; // weak reference; the window this one is transient to
+  Insets insets_;
 };
 
 } // namespace jwezel

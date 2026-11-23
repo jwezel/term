@@ -95,6 +95,9 @@ void Terminal::placeCaret() {
 }
 
 void Terminal::focus(Window *window) {
+  if (window and window->transient()) {
+    window = window->transient(); // a transient cannot have the terminal focus; its owner has it
+  }
   if (window == focusWindow_) {
     return;
   }
@@ -141,9 +144,14 @@ void Terminal::runEvent() {
     };
     if (change == MouseCapture::Change::began) {
       captureWindow_ = window;
+    } else if (captureWindow_ and window != captureWindow_ and (!window or window->transient() != captureWindow_)) {
+      // While a button is down, the motion and the release stay with the window that got the press,
+      // except when the mouse is over a transient of it, like an open popup
+      window = captureWindow_;
     }
-    if (window and (!focusWindow_->modal() or window == focusWindow_)) {
-      // A modal window takes the input exclusively while it is open and focused; no other window gets input
+    if (window and (!focusWindow_->modal() or window == focusWindow_ or window->transient() == focusWindow_)) {
+      // A modal window takes the input exclusively while it is open and focused; no other window gets input,
+      // but a transient of the modal window does: it belongs to it
       target = window;
     }
   }

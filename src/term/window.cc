@@ -3,6 +3,7 @@
 #include "text.hh"
 #include "window.hh"
 
+#include <algorithm>
 #include <format>
 
 namespace jwezel {
@@ -27,9 +28,10 @@ auto Backdrop::text(const Rectangle &area) const -> Text {
 
 //~Window~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Window::Window(TerminalInterface *terminal, const Rectangle &area, const Char &background, Window *below):
+Window::Window(TerminalInterface *terminal, const Rectangle &area, const Char &background, Window *below, Window *transient):
 ElementDevice(terminal->surface(), area, background, below),
-terminal_{terminal}
+terminal_{terminal},
+transient_{transient}
 {
   terminal->focus(this);
 }
@@ -43,6 +45,22 @@ Window::operator string() const {
 void Window::move(const Rectangle &area) {
   terminal()->moveWindow(*this, area);
   TextElement::move(area);
+}
+
+auto Window::clientInsets(const Insets &insets) -> void {
+  if (insets == insets_) {
+    return;
+  }
+  const auto previous{area()};
+  insets_ = insets;
+  geometryEvent(previous); // the content area changed; the UI root re-layouts
+}
+
+auto Window::clientArea() const -> Rectangle {
+  const auto size{area().size()};
+  const auto width{std::max(Dim{0}, toDim(size.x() - insets_.left - insets_.right))};
+  const auto height{std::max(Dim{0}, toDim(size.y() - insets_.top - insets_.bottom))};
+  return Rectangle{Vector{insets_.left, insets_.top}, Vector{toDim(insets_.left + width), toDim(insets_.top + height)}};
 }
 
 auto Window::event(const Event &event) -> bool {

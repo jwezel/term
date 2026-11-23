@@ -42,10 +42,11 @@ using BracketsByState = std::array<Brackets, WidgetStates>;
 ///
 /// Where a popup of a choice control opens
 ///
-/// `inside` opens it inside the content of the window that owns it, `window` as a transient of the window that owns it.
+/// `inside` opens the popup as a widget inside the window, clipped to the content area; it flips above the control
+/// when there is not enough room below. `window` opens it in a transient window of its own, above the owner window.
 enum class PopupPlacement: u1 {
-  inside, ///< The popup opens inside the content of the window that owns it
-  window ///< The popup opens as a transient of the window that owns it
+  inside, ///< Inside the content of the owner window, flipped above the control when needed
+  window  ///< In a transient window above the owner window
 };
 
 ///
@@ -72,7 +73,7 @@ struct UiStyle {
   std::string_view listMarker{"🢒"}; ///< Marker shown before the current item in caret mode.
   ItemSelectionStyle itemSelectionStyle{ItemSelectionStyle::highlight}; ///< Default current-item style for list boxes.
   std::string_view labelSuffix{}; ///< Suffix shown after the text of a label that has a buddy.
-  PopupPlacement popupPlacement{PopupPlacement::window}; ///< Where a popup of a choice control opens.
+  PopupPlacement popupPlacement{PopupPlacement::inside}; ///< Where a popup of a choice control opens.
 };
 
 ///

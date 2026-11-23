@@ -55,21 +55,13 @@ struct Window: jwezel::Window, Root {
   ~Window() override = default;
 
   ///
-  /// The area inside the frame, in content-relative coordinates
-  [[nodiscard]] auto content() const -> Rectangle override;
-
-  ///
-  /// Get the display position where the content area starts
-  ///
-  /// The content area starts there, which the frame of a window puts after its insets.
-  ///
-  /// @return     The position of the content area on the display
-  [[nodiscard]] auto contentOrigin() const -> Vector override;
-
-  ///
   /// Move window on the display; children keep their content-relative areas
   /// and follow
   void move(const Rectangle &area) override;
+
+  ///
+  /// Get the content area of the root, inside the frame
+  [[nodiscard]] auto content() const -> Rectangle override {return Root::content();}
 
   [[nodiscard]] auto title() const -> const Text & {return framing_.title;}
 

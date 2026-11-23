@@ -35,7 +35,7 @@ auto Element::event(const Event &event) -> bool {
   switch (event.type()) {
 
     case MouseMoveEvent::type_: {
-      const auto displayToContent{root()->host().area().position() + root()->client().area().position()};
+      const auto displayToContent{root()->displayOrigin()};
       return mouseMoveEvent(
         Event{new MouseMoveEvent{event.as<MouseMoveEvent>().position() - displayToContent}}
       );
@@ -44,7 +44,7 @@ auto Element::event(const Event &event) -> bool {
 
     case MouseButtonEvent::type_: {
       const auto &buttonEvent{event.as<MouseButtonEvent>()};
-      const auto displayToContent{root()->host().area().position() + root()->client().area().position()};
+      const auto displayToContent{root()->displayOrigin()};
       return mouseButtonEvent(
         Event{
           new MouseButtonEvent{

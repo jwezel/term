@@ -45,18 +45,6 @@ enum class ContentAlignment: u1 {
 inline const Char InheritBackground{NoneRune};
 
 ///
-/// Where a widget is drawn
-///
-/// `content` draws the widget inside the content of its root's host window, clipped to that content. `host` draws
-/// it on the surface of the host window itself, above the window and not clipped by it: a transient, like the
-/// popup of a drop-down that may extend beyond the window. The widget's `bounds()` are in both cases relative to
-/// the content of the root; a host-placed widget is translated to its display position when it is drawn.
-enum class WidgetPlacement: u1 {
-  content, ///< Inside the content of the host window, clipped by it
-  host     ///< Above the host window, at the display position of its bounds
-};
-
-///
 /// Base class of all widgets
 ///
 /// A widget can host actions, which have their shortcuts work while the widget has the focus.
@@ -68,12 +56,10 @@ struct Widget: TextElement, ui::Element, ActionHost
   /// @param      area       The area, relative to the content of the root
   /// @param      background The background
   /// @param      parent     The parent container
-  /// @param      placement  Whether the widget is drawn inside the host window's content or above the host window
   Widget(
     const Rectangle &area,
     const Char &background,
-    Container &parent,
-    WidgetPlacement placement = WidgetPlacement::content
+    Container &parent
   );
 
   void move(const Rectangle &area) override;
@@ -90,9 +76,6 @@ struct Widget: TextElement, ui::Element, ActionHost
   void contentAlignment(ContentAlignment horizontal, ContentAlignment vertical);
 
   [[nodiscard]] auto bounds() -> Rectangle override {return bounds_;}
-
-  /// Where the widget is drawn: inside the host window's content, or above the host window
-  [[nodiscard]] auto placement() const -> WidgetPlacement {return placement_;}
 
   [[nodiscard]] auto inputWindow() -> jwezel::Window * override;
 
@@ -211,7 +194,6 @@ struct Widget: TextElement, ui::Element, ActionHost
 
   private:
   Rectangle bounds_; // area relative to the content of the root
-  WidgetPlacement placement_; // where the widget is drawn
   FocusPolicy focusPolicy_{FocusPolicy::strong};
   ContentAlignment horizontalAlignment_{ContentAlignment::begin};
   ContentAlignment verticalAlignment_{ContentAlignment::begin};

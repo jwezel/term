@@ -52,16 +52,41 @@ void PopupChoice::open() {
     width = std::max(width, toDim(source[static_cast<ListIndex>(position)].width() + padding));
   }
   const auto rows{count > static_cast<ListIndex>(maxRows_)? maxRows_: static_cast<Dim>(count)};
-  const auto area{Rectangle{self.x1(), self.y2(), toDim(self.x1() + width), toDim(self.y2() + rows)}}; // below the control
-  popup_.emplace(
-    *root(),
-    area,
-    std::move(source),
-    std::max(popupSelected(), ListIndex{0}),
-    *this,
-    background(),
-    uiStyle().popupPlacement == PopupPlacement::window? WidgetPlacement::host: WidgetPlacement::content
-  );
+  auto *root{this->root()};
+  if (uiStyle().popupPlacement == PopupPlacement::inside) {
+    // The popup is a widget inside the same window, clipped to the content area; it flips above the control when
+    // there is not enough room below
+    const auto content{root->content()};
+    const auto below{toDim(content.y2() - self.y2())}; // rows available below the control
+    const auto above{toDim(self.y1() - content.y1())}; // rows available above the control
+    const auto popupRows{std::min(rows, std::max(below, above))};
+    const auto flip{below < popupRows and above > below};
+    const auto py{flip? toDim(self.y1() - popupRows): self.y2()};
+    popupArea_ = Rectangle{self.x1(), py, toDim(self.x1() + width), toDim(py + popupRows)};
+    popup_.emplace(
+      *root,
+      popupArea_,
+      std::move(source),
+      std::max(popupSelected(), ListIndex{0}),
+      *this
+    );
+  } else {
+    // The popup opens in a transient window of its own, above the owner window
+    auto &terminal{*root->host().terminal()};
+    const auto ownerDisplay{root->displayOrigin()};
+    const auto x{toDim(ownerDisplay.x() + self.x1())};
+    const auto y{toDim(ownerDisplay.y() + self.y2())};
+    popupArea_ = Rectangle{Vector{self.x1(), self.y2()}, Vector{toDim(self.x1() + width), toDim(self.y2() + rows)}};
+    popupWindow_.emplace(terminal, Rectangle{Vector{x, y}, Vector{toDim(x + width), toDim(y + rows)}}, background(), root->host(),
+                         &root->colors(), &root->style());
+    popup_.emplace(
+      *popupWindow_,
+      Rectangle{Vector{0, 0}, Vector{width, rows}},
+      std::move(source),
+      std::max(popupSelected(), ListIndex{0}),
+      *this
+    );
+  }
   popup_->itemEnabled([this](ListIndex index) {return popupItemEnabled(index);});
   if (!popupItemEnabled(popup_->highlighted())) {
     if (const auto first{firstEnabled()}; first >= 0) {
@@ -73,7 +98,8 @@ void PopupChoice::open() {
 
 void PopupChoice::close() {
   const auto wasOpen{popup_.has_value()};
-  popup_.reset();
+  popup_.reset();       // the popup widget is gone while the window it is in is still there
+  popupWindow_.reset(); // the window takes its root with it, after all of its widgets are gone
   dragging_ = false;
   if (wasOpen) {
     render();
@@ -240,7 +266,7 @@ auto PopupChoice::handleMouseButton(const Event &event) -> bool {
   const auto inside{contains(bounds(), position)};
   if (mouse.action() == MouseAction::Down) {
     if (popup_) {
-      if (const auto item{popup_->itemAt(position)}; item >= 0) {
+      if (const auto item{popup_->itemAt(popupPosition(position))}; item >= 0) {
         if (popupItemEnabled(item)) {
           popupActivate(item, event);
         }
@@ -267,7 +293,7 @@ auto PopupChoice::handleMouseButton(const Event &event) -> bool {
   }
   dragging_ = false;
   if (popup_) {
-    if (const auto item{popup_->itemAt(position)}; item >= 0) {
+    if (const auto item{popup_->itemAt(popupPosition(position))}; item >= 0) {
       if (popupItemEnabled(item)) {
         popupActivate(item, event);
       }
@@ -282,7 +308,7 @@ auto PopupChoice::handleMouseMove(const Event &event) -> bool {
   if (!popup_) {
     return false;
   }
-  const auto item{popup_->itemAt(event.as<MouseMoveEvent>().position())};
+  const auto item{popup_->itemAt(popupPosition(event.as<MouseMoveEvent>().position()))};
   if (item < 0 or item == popup_->highlighted() or !popupItemEnabled(item)) {
     return false;
   }

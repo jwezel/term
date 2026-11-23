@@ -390,14 +390,14 @@ TEST_CASE("UI Window") {
       };
       auto entry{jwezel::ui::LineEdit(box, "ab")};
       auto rest{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
-      CHECK_EQ(entry.area(), (Rectangle{1, 1, 4, 11})); // three wide
-      CHECK_EQ(rest.area(), (Rectangle{4, 1, 19, 11}));
+      CHECK_EQ(entry.area(), (Rectangle{2, 2, 5, 12})); // three wide; window-relative (content + insets)
+      CHECK_EQ(rest.area(), (Rectangle{5, 2, 20, 12}));
       w1.focus(&entry);
       REQUIRE_NE(fputs("c", inputWrite), EOF);
       REQUIRE_FALSE(fflush(inputWrite));
       term.runEvent();
-      CHECK_EQ(entry.area(), (Rectangle{1, 1, 5, 11})); // four now, and the rest moved over
-      CHECK_EQ(rest.area(), (Rectangle{5, 1, 19, 11}));
+      CHECK_EQ(entry.area(), (Rectangle{2, 2, 6, 12})); // four now, and the rest moved over
+      CHECK_EQ(rest.area(), (Rectangle{6, 2, 20, 12}));
       CHECK_EQ(entry.preferredSize(), Vector{4, 1});
     }
     SUBCASE("A box asks its children for the size") {
@@ -418,9 +418,9 @@ TEST_CASE("UI Window") {
       auto rest{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, outer)};
       CHECK_EQ(inner.preferredSize(), Vector{3, 1});
       CHECK_EQ(inner.bounds(), (Rectangle{1, 1, 19, 2}));
-      CHECK_EQ(a.area(), (Rectangle{1, 1, 2, 2}));
-      CHECK_EQ(b.area(), (Rectangle{2, 1, 4, 2}));
-      CHECK_EQ(rest.area(), (Rectangle{1, 3, 19, 11}));
+      CHECK_EQ(a.area(), (Rectangle{2, 2, 3, 3})); // window-relative (content + insets)
+      CHECK_EQ(b.area(), (Rectangle{3, 2, 5, 3}));
+      CHECK_EQ(rest.area(), (Rectangle{2, 4, 20, 12}));
     }
     SUBCASE("Background") {
       auto w2{jwezel::ui::Window(ui_, '#'_C, Rectangle{2, 2, 22, 14}, Text{"B"}, nullptr, &plain)};
@@ -1222,7 +1222,7 @@ TEST_CASE("UI Window") {
       CHECK_EQ(w1.content(), Rectangle{0, 0, 28, 13}); // content-relative
       CHECK_EQ(box.bounds(), Rectangle{0, 0, 28, 13});
       CHECK_EQ(input.bounds(), Rectangle{0, 0, 28, 13});
-      CHECK_EQ(input.area(), Rectangle{0, 0, 28, 13}); // content-relative (same as bounds for layout-managed widgets)
+      CHECK_EQ(input.area(), Rectangle{1, 1, 29, 14}); // window-relative (bounds + insets)
       CHECK_EQ(fixed.bounds(), Rectangle{1, 1, 3, 2}); // keeps its original content-relative bounds
       CHECK_EQ(w1.text().size(), Vector{30, 15}); // frame resized
       CHECK_EQ(term.display().caret(), Vector{5, 2}); // end of "Hi"
@@ -1236,15 +1236,15 @@ TEST_CASE("UI Window") {
     SUBCASE("Move only") {
       w1.move(Rectangle{6, 4, 26, 16});
       CHECK_EQ(box.bounds(), Rectangle{0, 0, 18, 10}); // content-relative: nothing changed
-      CHECK_EQ(input.area(), Rectangle{0, 0, 18, 10}); // content-relative
-      CHECK_EQ(fixed.area(), Rectangle{1, 1, 3, 2}); // content-relative (widget's bounds)
+      CHECK_EQ(input.area(), Rectangle{1, 1, 19, 11}); // window-relative (bounds + insets)
+      CHECK_EQ(fixed.area(), Rectangle{2, 2, 4, 3}); // window-relative (bounds + insets)
       CHECK_EQ(term.display().caret(), Vector{9, 5});
     }
     SUBCASE("Moved by the terminal") {
       term.moveWindow(w1, Rectangle{6, 4, 36, 19}); // moved and resized, not through the window
       CHECK_EQ(box.bounds(), Rectangle{0, 0, 28, 13}); // content-relative, window is 30x15, content is 28x13
-      CHECK_EQ(input.area(), Rectangle{0, 0, 28, 13}); // content-relative
-      CHECK_EQ(fixed.area(), Rectangle{1, 1, 3, 2}); // content-relative
+      CHECK_EQ(input.area(), Rectangle{1, 1, 29, 14}); // window-relative (bounds + insets)
+      CHECK_EQ(fixed.area(), Rectangle{2, 2, 4, 3}); // window-relative (bounds + insets)
       CHECK_EQ(w1.text().size(), Vector{30, 15}); // frame resized
     }
     SUBCASE("Without room for content") {
@@ -1533,6 +1533,8 @@ TEST_CASE("UI Window") {
       }
     }
     SUBCASE("Destroyed while open") {
+      constexpr jwezel::ui::UiStyle windowPopup{.popupPlacement = jwezel::ui::PopupPlacement::window};
+      w1.style(&windowPopup);
       {
         auto temp{jwezel::ui::DropDown(w1, Rectangle{0, 7, 18, 8}, fruit)};
         w1.focus(&temp);
@@ -1563,6 +1565,8 @@ TEST_CASE("UI Window") {
       CHECK_EQ(chosen, 0); // programmatic selection is not a choice
     }
     SUBCASE("In a box") {
+      constexpr jwezel::ui::UiStyle windowPopup{.popupPlacement = jwezel::ui::PopupPlacement::window};
+      w1.style(&windowPopup);
       auto box{jwezel::ui::VerticalBox(w1, Rectangle{0, 7, 18, 10})};
       auto first{jwezel::ui::DropDown(box, fruit, 0)};
       auto second{jwezel::ui::DropDown(box, fruit, 2)};
@@ -1574,6 +1578,35 @@ TEST_CASE("UI Window") {
       send(" ");
       CHECK(second.isOpen());
       CHECK_EQ(row(11), Text{padded(" Apple")}); // opens below the second one
+    }
+    SUBCASE("Inside the window") {
+      constexpr jwezel::ui::UiStyle insideStyle{.popupPlacement = jwezel::ui::PopupPlacement::inside};
+      w1.style(&insideStyle);
+      SUBCASE("Below when there is room") {
+        send(" "); // the first drop down at row 0
+        CHECK(drop.isOpen());
+        CHECK_EQ(row(2), Text{padded(" Apple")});
+        CHECK_EQ(row(3), Text{padded(" Banana")});
+        CHECK_EQ(row(4), Text{padded(" Cherry")});
+        send("\x1b");
+      }
+      SUBCASE("Flipped above when below runs out") {
+        // field2 is at content row 5; there are 10 content rows (0–9), so below has 4 rows, above has 5
+        w1.focus(&field2);
+        send("\t"); // Tab to get back to the drop down from field2 — but let's just open field2's nothing
+        // Actually, let's make a drop-down near the bottom
+        auto bottom{jwezel::ui::DropDown(w1, Rectangle{0, 8, 18, 9}, fruit, 0)};
+        w1.focus(&bottom);
+        send(" ");
+        CHECK(bottom.isOpen());
+        // Content rows 0–9; control at row 8; below has 1 row (row 9), above has 8 rows
+        // The popup flips above: 3 items at rows 5, 6, 7
+        CHECK_EQ(row(6), Text{padded(" Apple")});
+        CHECK_EQ(row(7), Text{padded(" Banana")});
+        CHECK_EQ(row(8), Text{padded(" Cherry")});
+        send("\x1b");
+        CHECK_FALSE(bottom.isOpen());
+      }
     }
   }
 
@@ -2129,6 +2162,11 @@ TEST_CASE("UI Window") {
         CHECK_EQ(shown(Rectangle{1, 3, 7, 4}), Text{"< No >"});
       }
       SUBCASE("The drop down") {
+        constexpr jwezel::ui::UiStyle windowRound{
+          .button = roundStyle.button, .dropDown = roundStyle.dropDown, .popup = roundStyle.popup,
+          .popupPlacement = jwezel::ui::PopupPlacement::window
+        };
+        w1.style(&windowRound);
         const auto plain{[&](const Rectangle &area) {return std::string(shown(area));}}; // without the highlight
         CHECK_EQ(plain(Rectangle{1, 9, 19, 10}), "( Banana       v )\n");
         click(2, 9);
@@ -2139,6 +2177,11 @@ TEST_CASE("UI Window") {
         CHECK_EQ(plain(Rectangle{1, 9, 19, 10}), "( Banana       v )\n");
       }
       SUBCASE("The popup is as wide as the glyphs and the items need") {
+        constexpr jwezel::ui::UiStyle windowRound{
+          .button = roundStyle.button, .dropDown = roundStyle.dropDown, .popup = roundStyle.popup,
+          .popupPlacement = jwezel::ui::PopupPlacement::window
+        };
+        w1.style(&windowRound);
         drop.items({Text{"A very long item of the list"}, Text{"B"}});
         click(2, 9);
         REQUIRE(drop.isOpen());
@@ -2146,7 +2189,11 @@ TEST_CASE("UI Window") {
         CHECK_EQ(std::string(shown(Rectangle{1, 11, 31, 12})), "|B                           |\n");
       }
       SUBCASE("The glyphs of the popup can have any width") {
-        w1.style(&wideStyle);
+        constexpr jwezel::ui::UiStyle windowWide{
+          .popup = wideStyle.popup,
+          .popupPlacement = jwezel::ui::PopupPlacement::window
+        };
+        w1.style(&windowWide);
         drop.items({Text{"A very long item of the list"}, Text{"B"}});
         click(2, 9);
         REQUIRE(drop.isOpen());

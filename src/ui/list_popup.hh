@@ -28,24 +28,22 @@ struct ListPopup: ListView<Index> {
   ///
   /// Create ListPopup
   ///
-  /// @param      parent       The parent container, usually the root so that the popup
-  ///                          is not subject to any layout
+  /// @param      parent       The parent container, usually the root of the popup's own
+  ///                          window so that the popup is not subject to any layout
   /// @param      area         The area; as many rows as it has are visible at a time
   /// @param      source       The items
   /// @param      highlighted  Index of the item to highlight
   /// @param      owner        The widget the popup belongs to, which gets its mouse input
   /// @param      background   The background
-  /// @param      placement    Whether the popup is drawn inside the host window's content or above the host window
   ListPopup(
     Container &parent,
     const Rectangle &area,
     ListSource<Index> source,
     Index highlighted,
     Widget &owner,
-    const Char &background = InheritBackground,
-    WidgetPlacement placement = WidgetPlacement::host
+    const Char &background = InheritBackground
   ):
-  ListView<Index>{parent, area, std::move(source), highlighted, background, placement},
+  ListView<Index>{parent, area, std::move(source), highlighted, background},
   owner_{owner}
   {
     this->focusPolicy(FocusPolicy::none); // the widget it belongs to has the focus

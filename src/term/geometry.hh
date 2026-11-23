@@ -633,6 +633,25 @@ struct Rectangle {
 /// @return     Rectangle from centering operation
 [[nodiscard]] auto centered(const Vector &one, const Vector &other) -> Rectangle;
 
+/// How much of a window's frame its content has to keep clear of, on each side
+///
+/// The insets are counted from the edges of the window: the content area starts `left` columns from the left edge,
+/// `top` rows from the top, and so on, and is as large as the window minus the insets on every side.
+struct Insets {
+  Dim left{};   ///< The inset from the left edge
+  Dim top{};    ///< The inset from the top edge
+  Dim right{};  ///< The inset from the right edge
+  Dim bottom{}; ///< The inset from the bottom edge
+
+  [[nodiscard]] auto operator==(const Insets &other) const -> bool {
+    return left == other.left and top == other.top and right == other.right and bottom == other.bottom;
+  }
+
+  [[nodiscard]] auto operator!=(const Insets &other) const -> bool {
+    return !(*this == other);
+  }
+};
+
 extern const Rectangle RectangleDefault;
 extern const Rectangle RectangleMax;
 extern const Vector VectorMin;

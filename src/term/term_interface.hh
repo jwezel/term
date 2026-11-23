@@ -13,6 +13,12 @@ struct TerminalInterface {
 
   [[nodiscard]] virtual auto surface() -> Surface * = 0;
 
+  ///
+  /// Get the size of the display
+  ///
+  /// @return     The size of the display
+  [[nodiscard]] virtual auto size() const -> Vector = 0;
+
   virtual void focus(struct Window *window) = 0;
 
   ///
