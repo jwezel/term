@@ -171,13 +171,13 @@ if doxygen.found()
     header_inputs += '"' + join_paths(meson.project_source_root(), header) + '"'
   endforeach
   doc_pages = [
-    'doc/index.md',
-    'doc/introduction.md',
-    'doc/tutorial.md',
-    'doc/concepts.md',
-    'doc/extensions.md',
-    'doc/developer.md',
-    'doc/architecture/index.md'
+    'docs/index.md',
+    'docs/introduction.md',
+    'docs/tutorial.md',
+    'docs/concepts.md',
+    'docs/extensions.md',
+    'docs/developer.md',
+    'docs/architecture/index.md'
   ]
   page_inputs = []
   foreach page : doc_pages
@@ -186,8 +186,8 @@ if doxygen.found()
   doc_config.set('HEADER_INPUTS', ' '.join(header_inputs))
   doc_config.set('DOC_INPUTS', ' '.join(page_inputs))
   doc_config.set_quoted('EXAMPLE_DIR', join_paths(meson.project_source_root(), 'examples/quick_start'))
-  doc_config.set_quoted('IMAGE_DIR', join_paths(meson.project_source_root(), 'doc/images'))
-  doc_config.set_quoted('MAIN_PAGE', join_paths(meson.project_source_root(), 'doc/index.md'))
+  doc_config.set_quoted('IMAGE_DIR', join_paths(meson.project_source_root(), 'docs/images'))
+  doc_config.set_quoted('MAIN_PAGE', join_paths(meson.project_source_root(), 'docs/index.md'))
   doxyfile = configure_file(
     input: 'Doxyfile.in',
     output: 'Doxyfile',
@@ -195,22 +195,22 @@ if doxygen.found()
   )
   doc_inputs = files(
     'Doxyfile.in',
-    'doc/build_docs.py',
-    'doc/index.md',
-    'doc/introduction.md',
-    'doc/tutorial.md',
-    'doc/concepts.md',
-    'doc/extensions.md',
-    'doc/developer.md',
-    'doc/architecture/index.md',
+    'docs/build_docs.py',
+    'docs/index.md',
+    'docs/introduction.md',
+    'docs/tutorial.md',
+    'docs/concepts.md',
+    'docs/extensions.md',
+    'docs/developer.md',
+    'docs/architecture/index.md',
     'examples/quick_start/quick_start.cc',
-    'doc/images/quick_start.png'
+    'docs/images/quick_start.png'
   )
   custom_target(
     'docs',
     input: doxyfile,
     output: 'docs',
-    command: [find_program('python3'), files('doc/build_docs.py'), doxygen, '@INPUT@', '@OUTPUT@'],
+    command: [find_program('python3'), files('docs/build_docs.py'), doxygen, '@INPUT@', '@OUTPUT@'],
     depend_files: headers + doc_inputs,
     build_by_default: false
   )

@@ -91,14 +91,14 @@ int main() {
 }
 ```
 
-![Screenshot of the running quick-start terminal UI](doc/images/quick_start.png)
+![Screenshot of the running quick-start terminal UI](docs/images/quick_start.png)
 
-The [tutorial](doc/tutorial.md) builds on this example with layouts, typed events, and text input.
+The [tutorial](docs/tutorial.md) builds on this example with layouts, typed events, and text input.
 
 Documentation
 -------------
 
-The [manual and API reference](doc/index.md) cover architecture, concepts, tutorials, and the public C++ headers.
+The [manual and API reference](docs/index.md) cover architecture, concepts, tutorials, and the public C++ headers.
 With Doxygen installed, generate the browsable HTML version using `ninja -C build docs`; open `build/html/index.html`.
 
 

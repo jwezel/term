@@ -76,7 +76,7 @@
 - **Documentation:** Generate a Doxygen HTML manual and API reference. Keep
     concise API contracts next to declarations in public headers; put
     tutorials, long conceptual explanations, and developer guidance in Markdown
-    under `doc/`. Link manual pages with Doxygen page references. Keep docs
+    under `docs/`. Link manual pages with Doxygen page references. Keep docs
     optional in Meson when Doxygen is unavailable.
 - **README teaser:** Keep a very short, complete, compiled `quick_start` example
     in the README Usage section, followed immediately by a screenshot captured
