@@ -10,28 +10,20 @@
 
 namespace jwezel::ui {
 
-namespace {
-
-// Area on the display; an area that is left to the layout stays unassigned
-auto displayArea(const Rectangle &area, Container &parent) -> Rectangle {
-  return area == RectangleDefault? area: area + parent.root()->origin();
-}
-
 // The background of the widget, which is the one of the window unless it has one of its own
 auto resolvedBackground(const Char &background, Container &parent) -> Char {
   return background == InheritBackground? parent.root()->host().background(): background;
 }
 
-} // namespace
-
-Widget::Widget(const Rectangle &area, const Char &background, Container &parent):
+Widget::Widget(const Rectangle &area, const Char &background, Container &parent, WidgetPlacement placement):
 TextElement{
-  parent.root()->host().surface(),
-  displayArea(area, parent),
+  placement == WidgetPlacement::host? parent.root()->host().surface(): &parent.root()->client().content(),
+  placement == WidgetPlacement::host? area + parent.root()->displayOrigin(): area,
   resolvedBackground(background, parent)
 },
 ui::Element{&parent},
-bounds_{area}
+bounds_{area},
+placement_{placement}
 {
   layoutManaged(area == RectangleDefault);
   parent.add(*this);
@@ -50,7 +42,9 @@ Widget::~Widget() {
 }
 
 void Widget::move(const Rectangle &area) {
-  TextElement::move(area + root()->origin());
+  auto *root{this->root()};
+  root->ensure(area); // the host window must be large enough to show the area
+  TextElement::move(placement_ == WidgetPlacement::host? area + root->displayOrigin(): area);
 }
 
 void Widget::horizontalAlignment(ContentAlignment alignment) {
@@ -80,6 +74,10 @@ void Widget::contentAlignment(ContentAlignment horizontal, ContentAlignment vert
 
 auto Widget::inputWindow() -> jwezel::Window * {
   return &root()->host();
+}
+
+auto Widget::tabbable() -> bool {
+  return (focusPolicy_ == FocusPolicy::tab or focusPolicy_ == FocusPolicy::strong) and root()->visible(*this);
 }
 
 void Widget::focusPolicy(FocusPolicy policy) {
@@ -154,7 +152,7 @@ void Widget::layoutChanged() {
 
 auto Widget::moveEvent(const Rectangle &area) -> bool {
   TextElement::moveEvent(area);
-  bounds_ = area - root()->origin();
+  bounds_ = placement_ == WidgetPlacement::host? area - root()->displayOrigin(): area;
   render();
   return true;
 }

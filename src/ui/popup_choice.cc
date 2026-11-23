@@ -52,13 +52,15 @@ void PopupChoice::open() {
     width = std::max(width, toDim(source[static_cast<ListIndex>(position)].width() + padding));
   }
   const auto rows{count > static_cast<ListIndex>(maxRows_)? maxRows_: static_cast<Dim>(count)};
+  const auto area{Rectangle{self.x1(), self.y2(), toDim(self.x1() + width), toDim(self.y2() + rows)}}; // below the control
   popup_.emplace(
     *root(),
-    Rectangle{self.x1(), self.y2(), toDim(self.x1() + width), toDim(self.y2() + rows)},
+    area,
     std::move(source),
     std::max(popupSelected(), ListIndex{0}),
     *this,
-    background()
+    background(),
+    uiStyle().popupPlacement == PopupPlacement::window? WidgetPlacement::host: WidgetPlacement::content
   );
   popup_->itemEnabled([this](ListIndex index) {return popupItemEnabled(index);});
   if (!popupItemEnabled(popup_->highlighted())) {
@@ -66,7 +68,7 @@ void PopupChoice::open() {
       popup_->highlight(first);
     }
   }
-  render(); // looks in use
+  render();
 }
 
 void PopupChoice::close() {
@@ -74,7 +76,7 @@ void PopupChoice::close() {
   popup_.reset();
   dragging_ = false;
   if (wasOpen) {
-    render(); // does not look in use anymore
+    render();
   }
 }
 
@@ -248,6 +250,7 @@ auto PopupChoice::handleMouseButton(const Event &event) -> bool {
         close();
         return true;
       }
+      close();
       return false;
     }
     if (inside) {

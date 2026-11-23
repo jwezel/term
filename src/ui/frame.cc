@@ -12,35 +12,32 @@ Frame::Frame(
   const ColorStyle *colors
 ):
 Widget(area, background, parent),
-decoration_(decoration),
-colors_(colors),
-content_(content),
-title_(title)
+framing_{},
+content_(content)
 {
+  framing_.decoration = decoration;
+  framing_.title = title;
+  framing_.state = DecorationState::inactive;
+  framing_.colors = colors;
   focusPolicy(FocusPolicy::none);
   render();
 }
 
 void Frame::state(DecorationState state) {
-  if (state != state_) {
-    state_ = state;
+  if (state != framing_.state) {
+    framing_.state = state;
     render();
   }
 }
 
 void Frame::title(const Text &title) {
-  title_ = title;
+  framing_.title = title;
   render();
 }
 
 void Frame::render() {
   fill(background()); // nothing of an earlier frame may remain
-  write(
-    Vector{0, 0},
-    (decoration_? *decoration_: defaultDecoration()).draw(
-      area().size(), state_, title_, background(), colors_? *colors_: defaultColorStyle()
-    )
-  );
+  write(Vector{0, 0}, framing_.draw(area().size(), background()));
 }
 
 } // namespace jwezel::ui

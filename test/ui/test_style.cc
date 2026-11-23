@@ -146,11 +146,11 @@ TEST_CASE("Box decoration") {
   };
   using enum DecorationState;
   SUBCASE("Inset") {
-    CHECK_EQ(box.inset(), 1);
+    CHECK_EQ(box.insets(), jwezel::ui::Insets{1, 1, 1, 1});
   }
   SUBCASE("The default is the default decoration") {
     CHECK_EQ(&defaultDecoration(), &defaultDecoration());
-    CHECK_EQ(defaultDecoration().inset(), 1);
+    CHECK_EQ(defaultDecoration().insets(), jwezel::ui::Insets{1, 1, 1, 1});
     CHECK_EQ(
       picture(defaultDecoration().draw(Vector{6, 3}, active, Text{"A"}, blank, defaultColorStyle())),
       draw(box, Vector{6, 3}, active, Text{"A"})

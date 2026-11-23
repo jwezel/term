@@ -16,6 +16,7 @@ namespace jwezel::ui {
 Root::Root(jwezel::Window &host, const ColorStyle *colors, const UiStyle *style):
 Container{nullptr},
 host_{host},
+client_{&host.content(), Rectangle{Vector{0, 0}, host.area().size()}, host.background()},
 colors_{colors},
 style_{style}
 {
@@ -150,6 +151,11 @@ void Root::forget(Widget &widget) {
 
 auto Root::add(Element &child) -> Container & {
   Container::add(child);
+  // Ensure the host window is large enough for the child's area
+  if (!child.layoutManaged()) {
+    ensure(child.bounds());
+    layout(); // resize the client to match the expanded host
+  }
   if (child.layoutManaged()) {
     if (const auto area{content()}; area.width() > 0 and area.height() > 0) {
       child.move(area);
@@ -163,6 +169,7 @@ void Root::move(const Rectangle &area) {
 }
 
 void Root::layout() {
+  client_.move(content() + contentOrigin()); // the client area of the host window is where the elements are clipped
   const auto area{content()};
   for (auto *child: children()) {
     if (!child->layoutManaged()) {
@@ -172,6 +179,14 @@ void Root::layout() {
     }
   }
   updateCaret();
+}
+
+auto Root::contentOrigin() const -> Vector {
+  return Vector{0, 0};
+}
+
+void Root::ensure(const Rectangle &area) {
+  host_.terminal()->expand(displayOrigin() + area.position2());
 }
 
 void Root::handleGeometry(const Rectangle &/*previous*/) {
@@ -191,6 +206,34 @@ void Root::handleBlur() {
   }
 }
 
+///
+/// Whether any part of the widget shows on the display
+///
+/// A widget is covered where an element of its own window covers it, which its fragments already say,
+/// and where another window covers the window. The widget is visible where a fragment of it, mapped to
+/// the display, overlaps a visible fragment of the window.
+///
+auto Root::visible(const Widget &widget) const -> bool {
+  // A host-placed widget is already on the surface of the host window, in display coordinates; a content widget is
+  // mapped from the client to the display
+  const auto offset{
+    widget.placement() == WidgetPlacement::host?
+      Vector{0, 0}
+    :
+      client().area().position() + host_.area().position()
+  };
+  for (const auto &widgetFragment: widget.fragments()) {
+    const auto at{widgetFragment.area.position() + offset};
+    const Rectangle shown{at, at + widgetFragment.area.size()};
+    for (const auto &windowFragment: host_.fragments()) {
+      if (windowFragment.area.intersects(shown)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 auto Root::handleEvent(const Event &event) -> bool {
   if (event.type() == MouseMoveEvent::type_ or event.type() == MouseButtonEvent::type_) {
     const auto position{event.as<MouseEvent>().position()};
@@ -204,13 +247,24 @@ auto Root::handleEvent(const Event &event) -> bool {
       widget = grab_;
     } else {
       // Mouse input only concerns what is visible at the position: nothing covered
-      // by another element, and nothing of another window
-      const auto *fragment{host_.surface()->find(position)};
-      auto *element{fragment? fragment->element: nullptr};
-      widget = dynamic_cast<Widget *>(element);
-      own = element == &host_ or (widget and widget->root() == this);
-      if (!own) {
-        widget = nullptr;
+      // by another element, and nothing of another window. A widget placed above the host window is on the
+      // surface of the host window itself; the other widgets are in the client content. A click that finds no
+      // widget is on the frame, on the empty client area, or on the underlay beneath the widgets: it is this
+      // window's own, because the terminal routes it here only when the window is what shows there
+      const auto *hostFragment{host_.surface()->find(position)};
+      auto *hostElement{hostFragment? hostFragment->element: nullptr};
+      if (auto *transient{dynamic_cast<Widget *>(hostElement)};
+          transient and transient->placement() == WidgetPlacement::host and transient->root() == this) {
+        widget = transient;
+      } else {
+        const auto clientPosition{position - host_.area().position() - client().area().position()};
+        const auto *fragment{client().content().find(clientPosition)};
+        auto *element{fragment? fragment->element: nullptr};
+        widget = dynamic_cast<Widget *>(element);
+        own = not widget or widget->root() == this;
+        if (!own) {
+          widget = nullptr;
+        }
       }
     }
     auto *target{widget? widget->eventTarget(): nullptr};
@@ -235,7 +289,7 @@ auto Root::handleEvent(const Event &event) -> bool {
   }
   // Other input goes to the focused widget, unless it is completely covered
   auto handled{false};
-  if (focus_ and !focus_->fragments().empty()) {
+  if (focus_ and visible(*focus_)) {
     handled = focus_->event(event);
   }
   if (!handled and event.type() == KeyEvent::type_) {

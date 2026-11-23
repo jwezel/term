@@ -33,6 +33,10 @@ minimumSize_{display_.size()},
 running_{false}
 {}
 
+Terminal::~Terminal() {
+  contract_ = false; // the display is going away; do not resize the desktop while it is being removed
+}
+
 void Terminal::addElement(Surface::Element *element, Surface::Element * below) {
   if (element != &backdrop_) {
     expand(element->area().position2());

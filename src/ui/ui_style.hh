@@ -40,6 +40,15 @@ struct Brackets {
 using BracketsByState = std::array<Brackets, WidgetStates>;
 
 ///
+/// Where a popup of a choice control opens
+///
+/// `inside` opens it inside the content of the window that owns it, `window` as a transient of the window that owns it.
+enum class PopupPlacement: u1 {
+  inside, ///< The popup opens inside the content of the window that owns it
+  window ///< The popup opens as a transient of the window that owns it
+};
+
+///
 /// Style of the user interface, without colors
 ///
 /// The style says what the elements of the UI look like: glyphs, selection indication, and the decoration of windows. It is a plain
@@ -63,6 +72,7 @@ struct UiStyle {
   std::string_view listMarker{"🢒"}; ///< Marker shown before the current item in caret mode.
   ItemSelectionStyle itemSelectionStyle{ItemSelectionStyle::highlight}; ///< Default current-item style for list boxes.
   std::string_view labelSuffix{}; ///< Suffix shown after the text of a label that has a buddy.
+  PopupPlacement popupPlacement{PopupPlacement::window}; ///< Where a popup of a choice control opens.
 };
 
 ///

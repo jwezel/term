@@ -10,6 +10,25 @@
 
 namespace jwezel::ui {
 
+/// How much of a window's frame its content has to keep clear of, on each side
+///
+/// The insets are counted from the edges of the window: the content area starts `left` columns from the left edge,
+/// `top` rows from the top, and so on, and is as large as the window minus the insets on every side.
+struct Insets {
+  Dim left;   ///< The inset from the left edge
+  Dim top;    ///< The inset from the top edge
+  Dim right;  ///< The inset from the right edge
+  Dim bottom; ///< The inset from the bottom edge
+
+  [[nodiscard]] auto operator==(const Insets &other) const -> bool {
+    return left == other.left and top == other.top and right == other.right and bottom == other.bottom;
+  }
+
+  [[nodiscard]] auto operator!=(const Insets &other) const -> bool {
+    return !(*this == other);
+  }
+};
+
 ///
 /// State of a decorated window or frame
 ///
@@ -69,10 +88,13 @@ struct Decoration {
   virtual ~Decoration() = default;
 
   ///
-  /// Get the width of the frame
+  /// Get the insets of the decoration, from the edges of the window
   ///
-  /// The content of a decorated window has to keep clear of this much on all sides.
-  [[nodiscard]] virtual auto inset() const -> Dim = 0;
+  /// The content of a decorated window has to keep clear of the frame on all sides that the decoration draws, in
+  /// which the title of a title line is the top line.
+  ///
+  /// @return     The insets, per side
+  [[nodiscard]] virtual auto insets() const -> Insets = 0;
 
   ///
   /// Draw the decoration
@@ -94,6 +116,54 @@ struct Decoration {
     const Char &background,
     const ColorStyle &colors
   ) const -> Text = 0;
+};
+
+auto defaultDecoration() -> const Decoration &;
+
+///
+/// How a window or frame is decorated, and how much room its content has
+///
+/// A framing is the whole of what a decoration means for a window: the decoration itself, the title it shows in
+/// its state, and the colors it asks for. Both a window and a frame hold one, so that what they frame and how they
+/// frame it cannot disagree.
+struct Framing {
+  ///
+  /// Create a framing
+  ///
+  /// @param[in]  decoration  The decoration, or `nullptr` for the default one
+  /// @param[in]  title       The title (only the first line is used)
+  /// @param[in]  state       The state of the decoration
+  /// @param[in]  colors      The color style, or `nullptr` for the default one
+  Framing(const Decoration *decoration=nullptr, const Text &title={}, DecorationState state=DecorationState::inactive, const ColorStyle *colors=nullptr):
+  decoration(decoration),
+  title(title),
+  state(state),
+  colors(colors)
+  {}
+
+  ///
+  /// Get the insets of the framing: how much the content of the window has to keep clear of its frame
+  ///
+  /// @return     The insets, per side
+  [[nodiscard]] auto insets() const -> Insets {
+    return (decoration? *decoration: defaultDecoration()).insets();
+  }
+
+  ///
+  /// Draw the frame of a window of the given size
+  ///
+  /// @param[in]  size  The size of the window
+  /// @param[in]  background  The background of the window
+  ///
+  /// @return     The frame
+  [[nodiscard]] auto draw(const Vector &size, const Char &background) const -> Text {
+    return (decoration? *decoration: defaultDecoration()).draw(size, state, title, background, colors? *colors: defaultColorStyle());
+  }
+
+  const Decoration *decoration; // weak reference, nullptr for the default one
+  Text title;                     // the title, only the first line is used
+  DecorationState state;         // the state the decoration draws in
+  const ColorStyle *colors;      // weak reference, nullptr for the default one
 };
 
 ///
@@ -126,7 +196,7 @@ struct BoxDecoration: Decoration {
     Alignment titleAlignment = Alignment::left
   );
 
-  [[nodiscard]] auto inset() const -> Dim override {return 1;}
+  [[nodiscard]] auto insets() const -> Insets override;
 
   [[nodiscard]] auto draw(
     const Vector &size,
@@ -142,10 +212,46 @@ struct BoxDecoration: Decoration {
 };
 
 ///
-/// Get the decoration that is used where none is given
+/// Decoration with a title line and no frame
 ///
-/// All places that take an optional decoration resolve a missing one here, which makes this the one place to
-/// change when there is a global style.
-auto defaultDecoration() -> const Decoration &;
+/// The content of the window has to keep clear of the title line only, which the insets say, and the title is
+/// drawn in the top line of the window.
+struct TitleLineDecoration: Decoration {
+  ///
+  /// Create TitleLineDecoration
+  ///
+  /// The frame is the title line, and the content starts below it.
+  TitleLineDecoration() = default;
+
+  [[nodiscard]] auto insets() const -> Insets override {return Insets{0, 1, 0, 0};}
+
+  [[nodiscard]] auto draw(
+    const Vector &size,
+    DecorationState state,
+    const Text &title,
+    const Char &background,
+    const ColorStyle &colors
+  ) const -> Text override;
+};
+
+///
+/// Decoration without any frame
+///
+/// The content of the window fills it entirely, which the insets say.
+struct NoDecoration: Decoration {
+  ///
+  /// Create NoDecoration
+  NoDecoration() = default;
+
+  [[nodiscard]] auto insets() const -> Insets override {return Insets{0, 0, 0, 0};}
+
+  [[nodiscard]] auto draw(
+    const Vector &size,
+    DecorationState /*state*/,
+    const Text & /*title*/,
+    const Char & /*background*/,
+    const ColorStyle & /*colors*/
+  ) const -> Text override;
+};
 
 } // namespace jwezel::ui

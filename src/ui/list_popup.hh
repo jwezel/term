@@ -35,15 +35,17 @@ struct ListPopup: ListView<Index> {
   /// @param      highlighted  Index of the item to highlight
   /// @param      owner        The widget the popup belongs to, which gets its mouse input
   /// @param      background   The background
+  /// @param      placement    Whether the popup is drawn inside the host window's content or above the host window
   ListPopup(
     Container &parent,
     const Rectangle &area,
     ListSource<Index> source,
     Index highlighted,
     Widget &owner,
-    const Char &background = InheritBackground
+    const Char &background = InheritBackground,
+    WidgetPlacement placement = WidgetPlacement::host
   ):
-  ListView<Index>{parent, area, std::move(source), highlighted, background},
+  ListView<Index>{parent, area, std::move(source), highlighted, background, placement},
   owner_{owner}
   {
     this->focusPolicy(FocusPolicy::none); // the widget it belongs to has the focus

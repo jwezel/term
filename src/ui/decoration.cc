@@ -21,6 +21,10 @@ borders_{inactive, active}, // by state
 titleAlignment_{titleAlignment}
 {}
 
+auto BoxDecoration::insets() const -> Insets {
+  return Insets{1, 1, 1, 1};
+}
+
 auto BoxDecoration::draw(
   const Vector &size,
   DecorationState state,
@@ -61,6 +65,39 @@ auto BoxDecoration::draw(
     }
   }
   return result;
+}
+
+auto TitleLineDecoration::draw(
+  const Vector &size,
+  DecorationState state,
+  const Text &title,
+  const Char &background,
+  const ColorStyle &colors
+) const -> Text {
+  Text result{Untouched, size};
+  if (size.y() > 0 and !title.data.empty()) {
+    const auto &line{title.data[0]};
+    const auto available{toDim(size.x())}; // the line can be as wide as the window
+    const auto length{std::min(available, toDim(line.size()))};
+    const auto &role{colors[titleRole(state)]};
+    for (Dim i = 0; i < length; ++i) {
+      const auto &character{line[static_cast<std::size_t>(i)]};
+      auto &cell{result.data[0][static_cast<std::size_t>(i)]};
+      // the role puts its attributes onto the title line, and what the title has to say for itself onto that
+      cell = layer(layer(background, Char{character.rune, role}), Char{character.rune, character.attributes});
+    }
+  }
+  return result;
+}
+
+auto NoDecoration::draw(
+  const Vector &size,
+  DecorationState /*state*/,
+  const Text & /*title*/,
+  const Char & /*background*/,
+  const ColorStyle & /*colors*/
+) const -> Text {
+  return Text{Untouched, size};
 }
 
 auto defaultDecoration() -> const Decoration & {

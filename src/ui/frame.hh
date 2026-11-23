@@ -49,11 +49,11 @@ struct Frame: Widget {
 
   auto operator=(Frame &&) -> Frame & = delete;
 
-  [[nodiscard]] auto state() const -> DecorationState {return state_;}
+  [[nodiscard]] auto state() const -> DecorationState {return framing_.state;}
 
   void state(DecorationState state);
 
-  [[nodiscard]] auto title() const -> const Text & {return title_;}
+  [[nodiscard]] auto title() const -> const Text & {return framing_.title;}
 
   void title(const Text &title);
 
@@ -61,11 +61,8 @@ struct Frame: Widget {
   void render() override;
 
   private:
-  const Decoration *decoration_; // weak reference, nullptr for the default
-  const ColorStyle *colors_;     // weak reference, nullptr for the default
+  Framing framing_;
   ui::Element *content_;         // weak reference
-  Text title_;
-  DecorationState state_{DecorationState::inactive};
 };
 
 } // namespace jwezel::ui

@@ -6,6 +6,7 @@
 #include "ui_style.hh"
 
 #include <term/geometry.hh>
+#include <term/element_device.hh>
 #include <term/mouse_capture.hh>
 #include <term/window.hh>
 
@@ -34,11 +35,11 @@ struct Widget;
 /// previous widget that can have it (see `FocusPolicy`). The order is the one in which the widgets were created,
 /// which `tabOrder` can change.
 ///
-/// All areas of the elements in a root are relative to the host window. The
-/// root always follows the size and position of the host window: when it
+/// All areas of the elements in a root are relative to the host window's content area, which is the client
+/// area of the window: the frame is not part of it, so a window that frames its content keeps the widgets out of
+/// its frame. The root always follows the size and position of the host window: when it
 /// changes, the elements are laid out again. Elements that were created
-/// without an area fill the content area of the root, the others keep their
-/// area.
+/// without an area fill the content area of the root, the others keep their area.
 struct Root: Container, InputHandler, ActionHost {
   ///
   /// Create a UI root hosted by an existing terminal window.
@@ -90,12 +91,56 @@ struct Root: Container, InputHandler, ActionHost {
   [[nodiscard]] auto root() -> Root * override {return this;}
 
   ///
-  /// Get the area that elements without an area of their own fill
+  /// Get the client device the elements of this root are drawn into
   ///
-  /// By default this is the whole host window, the area of the desktop for example.
+  /// The device holds the content area of the host window, which is where the elements of the root are clipped,
+  /// and draws its own background below the elements.
+  [[nodiscard]] auto client() -> ElementDevice & {return client_;}
+  [[nodiscard]] auto client() const -> const ElementDevice & {return client_;}
+
   ///
-  /// @return     The content area, relative to the host window
-  [[nodiscard]] virtual auto content() const -> Rectangle {return Rectangle{Vector{0, 0}, host_.area().size()};}
+  /// Get the content area, in content-relative coordinates: the content starts at its own origin, which the
+  /// area position says, and the widgets are clipped to it from there
+  ///
+  /// By default this is the content of the host window, which is the whole host window for the desktop and the
+  /// content of a window for a window-hosted root.
+  ///
+  /// @return     The content area, relative to the content origin
+  [[nodiscard]] virtual auto content() const -> Rectangle {
+    return Rectangle{Vector{0, 0}, host_.area().size()};
+  }
+
+  /// Get the display position where the content area starts
+  ///
+  /// The content area starts there, which the frame of a window puts after its insets.
+  ///
+  /// @return     The position of the content area on the display
+  [[nodiscard]] virtual auto contentOrigin() const -> Vector;
+
+  /// Get the display position of the content origin
+  ///
+  /// @return     The position on the display where the content area starts
+  [[nodiscard]] auto displayOrigin() const -> Vector {return host_.area().position() + contentOrigin();}
+
+  ///
+  /// Make sure the host window is large enough to show an area of the content
+  ///
+  /// The terminal grows the host window and the display when the area needs more room. A widget that is moved
+  /// calls this, so a layout or an explicit move can grow the window it is in.
+  ///
+  /// @param[in]  area  The area, relative to the content
+  virtual void ensure(const Rectangle &area);
+
+  ///
+  /// Whether any part of the widget shows on the display
+  ///
+  /// A widget is covered where an element of its own window covers it, which its fragments already say, and where
+  /// another window covers the window. A host-placed widget is already on the surface of the host window.
+  ///
+  /// @param[in]  widget  The widget
+  ///
+  /// @return     Whether any part of the widget is visible
+  [[nodiscard]] auto visible(const Widget &widget) const -> bool;
 
   auto add(Element &child) -> Container & override;
 
@@ -171,6 +216,7 @@ struct Root: Container, InputHandler, ActionHost {
 
   std::vector<Widget *> chain_; // weak references, in order of the focus
   jwezel::Window &host_;
+  ElementDevice client_; // the client area the elements of this root are drawn into
   const ColorStyle *colors_;  // weak reference, nullptr for the default
   const UiStyle *style_;      // weak reference, nullptr for the default
   Widget *focus_{}; // weak reference to the focused widget

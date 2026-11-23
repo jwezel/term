@@ -254,7 +254,13 @@ auto TextInput::caret() const -> std::optional<Vector> {
   ) {
     return std::nullopt;
   }
-  const auto position{area().position()};
+  // The caret is asked for by the display, so it is in display coordinates: a widget inside the content has to be
+  // mapped through the client and the window, a widget above the window already has its area in display coordinates
+  auto *root{const_cast<TextInput &>(*this).root()}; // the root is only asked where the widget is drawn
+  const auto displayOffset{
+    placement() == WidgetPlacement::host? Vector{0, 0}: root->client().area().position() + root->host().area().position()
+  };
+  const auto position{area().position() + displayOffset};
   const auto offset{alignmentOffset()};
   return Vector{
     toDim(position.x() + offset.x() + cursor_.x() - scrollX_),

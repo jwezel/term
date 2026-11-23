@@ -34,20 +34,23 @@ auto Element::root() /*NOLINT(misc-no-recursion)*/ -> Root * {
 auto Element::event(const Event &event) -> bool {
   switch (event.type()) {
 
-    case MouseMoveEvent::type_:
-    return mouseMoveEvent(
-      Event{new MouseMoveEvent{event.as<MouseMoveEvent>().position() - root()->origin()}}
-    );
+    case MouseMoveEvent::type_: {
+      const auto displayToContent{root()->host().area().position() + root()->client().area().position()};
+      return mouseMoveEvent(
+        Event{new MouseMoveEvent{event.as<MouseMoveEvent>().position() - displayToContent}}
+      );
+    }
     break;
 
     case MouseButtonEvent::type_: {
       const auto &buttonEvent{event.as<MouseButtonEvent>()};
+      const auto displayToContent{root()->host().area().position() + root()->client().area().position()};
       return mouseButtonEvent(
         Event{
           new MouseButtonEvent{
             buttonEvent.button(),
             buttonEvent.modifiers(),
-            buttonEvent.position() - root()->origin(),
+            buttonEvent.position() - displayToContent,
             buttonEvent.action()
           }
         }

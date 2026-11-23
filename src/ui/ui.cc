@@ -8,7 +8,9 @@ namespace jwezel::ui {
 Ui::Ui(Terminal &terminal):
 terminal_{terminal},
 desktop_{terminal.desktop()}
-{}
+{
+  desktop_.layout();
+}
 
 void Ui::run() {
   terminal_.start();

@@ -31,11 +31,13 @@ Window::Window(
 ):
 jwezel::Window{&ui.terminal(), DefaultSize(ui, area), background},
 Root{static_cast<jwezel::Window &>(*this), colors, style},
-title_{title},
-decoration_{decoration},
-state_{ui.terminal().focus() == static_cast<jwezel::Window *>(this)? DecorationState::active: DecorationState::inactive}
+framing_{}
 {
+  decoration_ = decoration;
+  framing_.title = title;
+  framing_.state = ui.terminal().focus() == static_cast<jwezel::Window *>(this)? DecorationState::active: DecorationState::inactive;
   decorate();
+  layout(); // the client device takes the content area of the frame
 }
 
 void Window::move(const Rectangle &area) {
@@ -43,30 +45,24 @@ void Window::move(const Rectangle &area) {
 }
 
 auto Window::content() const -> Rectangle {
+  const auto insets{framing_.insets()};
   const auto size{area().size()};
-  const auto inset{decoration().inset()};
-  return Rectangle{
-    inset,
-    inset,
-    std::max(inset, toDim(size.x() - inset)),
-    std::max(inset, toDim(size.y() - inset))
-  };
+  const auto width{std::max(Dim{0}, toDim(size.x() - insets.left - insets.right))};
+  const auto height{std::max(Dim{0}, toDim(size.y() - insets.top - insets.bottom))};
+  return Rectangle{Vector{0, 0}, Vector{width, height}};
+}
+
+auto Window::contentOrigin() const -> Vector {
+  const auto insets{framing_.insets()};
+  return Vector{insets.left, insets.top};
 }
 
 auto Window::decoration() const -> const Decoration & {
   if (decoration_) {
     return *decoration_;
   }
-  return style().decoration? *style().decoration: defaultDecoration();
-}
-
-void Window::decorate() {
-  write(Vector{0, 0}, decoration().draw(area().size(), state_, title_, background(), colors()));
-}
-
-void Window::title(const Text &title) {
-  title_ = title;
-  decorate();
+  const auto &style{Root::style()};
+  return style.decoration? *style.decoration: defaultDecoration();
 }
 
 void Window::decoration(const Decoration *decoration) {
@@ -74,6 +70,17 @@ void Window::decoration(const Decoration *decoration) {
   fill(background()); // nothing of the frame of the previous decoration may remain
   decorate();
   layout();
+}
+
+void Window::decorate() {
+  framing_.decoration = &decoration(); // the decoration is re-resolved here so that a style change shows
+  framing_.colors = &Root::colors();
+  write(Vector{0, 0}, framing_.draw(area().size(), background()));
+}
+
+void Window::title(const Text &title) {
+  framing_.title = title;
+  decorate();
 }
 
 void Window::restyle() {
@@ -84,8 +91,8 @@ void Window::restyle() {
 }
 
 void Window::state(DecorationState state) {
-  if (state != state_) {
-    state_ = state;
+  if (state != framing_.state) {
+    framing_.state = state;
     decorate();
   }
 }

@@ -55,15 +55,23 @@ struct Window: jwezel::Window, Root {
   ~Window() override = default;
 
   ///
-  /// Move window on the display; children keep their window-relative areas
+  /// The area inside the frame, in content-relative coordinates
+  [[nodiscard]] auto content() const -> Rectangle override;
+
+  ///
+  /// Get the display position where the content area starts
+  ///
+  /// The content area starts there, which the frame of a window puts after its insets.
+  ///
+  /// @return     The position of the content area on the display
+  [[nodiscard]] auto contentOrigin() const -> Vector override;
+
+  ///
+  /// Move window on the display; children keep their content-relative areas
   /// and follow
   void move(const Rectangle &area) override;
 
-  ///
-  /// The area inside the frame
-  [[nodiscard]] auto content() const -> Rectangle override;
-
-  [[nodiscard]] auto title() const -> const Text & {return title_;}
+  [[nodiscard]] auto title() const -> const Text & {return framing_.title;}
 
   void title(const Text &title);
 
@@ -77,7 +85,7 @@ struct Window: jwezel::Window, Root {
 
   ///
   /// Get the state, which is active while the window has the focus
-  [[nodiscard]] auto state() const -> DecorationState {return state_;}
+  [[nodiscard]] auto state() const -> DecorationState {return framing_.state;}
 
   ///
   /// Draw the frame and all elements again
@@ -94,9 +102,8 @@ struct Window: jwezel::Window, Root {
 
   void decorate();
 
-  Text title_;
-  const Decoration *decoration_; // weak reference, nullptr for the one of the style
-  DecorationState state_;
+  Framing framing_;
+  const Decoration *decoration_{}; // weak reference; nullptr for the one of the UI style
 };
 
 } // namespace jwezel::ui

@@ -65,7 +65,7 @@ constexpr jwezel::ui::UiStyle colonStyle{.labelSuffix = ":"};
 
 // A decoration without any frame
 struct NoFrame: jwezel::ui::Decoration {
-  [[nodiscard]] auto inset() const -> jwezel::Dim override {return 0;}
+  [[nodiscard]] auto insets() const -> jwezel::ui::Insets override {return jwezel::ui::Insets{0, 0, 0, 0};}
 
   [[nodiscard]] auto draw(
     const Vector &size, DecorationState, const Text &, const Char &, const ColorStyle &
@@ -163,20 +163,20 @@ TEST_CASE("UI Window") {
     CHECK_EQ(w1.text(), test);
     CHECK_EQ(term.display().text(), test);
     SUBCASE("Widget") {
-      auto w2{jwezel::ui::Widget(Rectangle{1, 1, 8, 2}, ' '_C, w1)};
+      auto w2{jwezel::ui::Widget(Rectangle{0, 0, 7, 1}, ' '_C, w1)};
       w2.write(Vector{0, 0}, Text{"xxxxxxxxxxxxx"});
       auto test2{test};
       test2.patch(Text{"xxxxxxx"}, Vector{1, 1});
       CHECK_EQ(term.display().text(), test2);
       SUBCASE("Move widget") {
-        w2.move(Rectangle{2, 1, 9, 2});
+        w2.move(Rectangle{1, 0, 8, 1});
         auto test3{test};
         test3.patch(Text{"xxxxxxx"}, Vector{2, 1});
         CHECK_EQ(term.display().text(), test3);
       }
       SUBCASE("Mouse input") {
         bool called{false};
-        REQUIRE_NE(fputs("\x1b[<0;3;2M", inputWrite), EOF);
+        REQUIRE_NE(fputs("\x1b[<0;3;2M", inputWrite), EOF); // row 2 (1-based) = widget at content row 0
         REQUIRE_FALSE(fflush(inputWrite));
         CAPTURE(ftell(inputWrite));
         w2.onMouseButton(
@@ -212,77 +212,77 @@ TEST_CASE("UI Window") {
       }
     }
     SUBCASE("Vertical box") {
-      auto box{jwezel::ui::VerticalBox(w1, Rectangle{1, 1, 19, 11})};
+      auto box{jwezel::ui::VerticalBox(w1, Rectangle{0, 0, 18, 10})};
       auto w2{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
       auto w3{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
       auto w4{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
-      CHECK_EQ(w2.area(), (Rectangle{1, 1, 19, 4}));
-      CHECK_EQ(w3.area(), (Rectangle{1, 4, 19, 8}));
-      CHECK_EQ(w4.area(), (Rectangle{1, 8, 19, 11}));
+      CHECK_EQ(w2.bounds(), (Rectangle{0, 0, 18, 3}));
+      CHECK_EQ(w3.bounds(), (Rectangle{0, 3, 18, 7}));
+      CHECK_EQ(w4.bounds(), (Rectangle{0, 7, 18, 10}));
     }
     SUBCASE("Vertical spacing") {
-      auto box{jwezel::ui::VerticalBox(w1, Rectangle{1, 1, 19, 11}, jwezel::ui::BoxLayout{.spacing = 1})};
+      auto box{jwezel::ui::VerticalBox(w1, Rectangle{0, 0, 18, 10}, jwezel::ui::BoxLayout{.spacing = 1})};
       auto w2{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
       auto w3{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
       auto w4{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
-      CHECK_EQ(w2.area(), (Rectangle{1, 1, 19, 4}));
-      CHECK_EQ(w3.area(), (Rectangle{1, 5, 19, 7}));
-      CHECK_EQ(w4.area(), (Rectangle{1, 8, 19, 11}));
+      CHECK_EQ(w2.bounds(), (Rectangle{0, 0, 18, 3}));
+      CHECK_EQ(w3.bounds(), (Rectangle{0, 4, 18, 6}));
+      CHECK_EQ(w4.bounds(), (Rectangle{0, 7, 18, 10}));
     }
     SUBCASE("Vertical padding") {
       auto box{
-        jwezel::ui::VerticalBox(w1, Rectangle{1, 1, 19, 11}, jwezel::ui::BoxLayout{.spacing = 1, .padding = 1})
+        jwezel::ui::VerticalBox(w1, Rectangle{0, 0, 18, 10}, jwezel::ui::BoxLayout{.spacing = 1, .padding = 1})
       };
       auto w2{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
       auto w3{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
       auto w4{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
-      CHECK_EQ(w2.area(), (Rectangle{2, 2, 18, 4}));
-      CHECK_EQ(w3.area(), (Rectangle{2, 5, 18, 7}));
-      CHECK_EQ(w4.area(), (Rectangle{2, 8, 18, 10}));
+      CHECK_EQ(w2.bounds(), (Rectangle{1, 1, 17, 3}));
+      CHECK_EQ(w3.bounds(), (Rectangle{1, 4, 17, 6}));
+      CHECK_EQ(w4.bounds(), (Rectangle{1, 7, 17, 9}));
     }
     SUBCASE("Vertical weights") {
-      auto box{jwezel::ui::VerticalBox(w1, Rectangle{1, 1, 19, 11}, jwezel::ui::BoxLayout{.weights = {1, 2, 3}})};
+      auto box{jwezel::ui::VerticalBox(w1, Rectangle{0, 0, 18, 10}, jwezel::ui::BoxLayout{.weights = {1, 2, 3}})};
       auto w2{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
       auto w3{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
       auto w4{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
-      CHECK_EQ(w2.area(), (Rectangle{1, 1, 19, 3}));
-      CHECK_EQ(w3.area(), (Rectangle{1, 3, 19, 6}));
-      CHECK_EQ(w4.area(), (Rectangle{1, 6, 19, 11}));
+      CHECK_EQ(w2.bounds(), (Rectangle{0, 0, 18, 2}));
+      CHECK_EQ(w3.bounds(), (Rectangle{0, 2, 18, 5}));
+      CHECK_EQ(w4.bounds(), (Rectangle{0, 5, 18, 10}));
     }
     SUBCASE("Horizontal box") {
-      auto box{jwezel::ui::HorizontalBox(w1, Rectangle{1, 1, 19, 11})};
+      auto box{jwezel::ui::HorizontalBox(w1, Rectangle{0, 0, 18, 10})};
       auto w2{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
       auto w3{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
       auto w4{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
-      CHECK_EQ(w2.area(), (Rectangle{1, 1, 7, 11}));
-      CHECK_EQ(w3.area(), (Rectangle{7, 1, 13, 11}));
-      CHECK_EQ(w4.area(), (Rectangle{13, 1, 19, 11}));
+      CHECK_EQ(w2.bounds(), (Rectangle{0, 0, 6, 10}));
+      CHECK_EQ(w3.bounds(), (Rectangle{6, 0, 12, 10}));
+      CHECK_EQ(w4.bounds(), (Rectangle{12, 0, 18, 10}));
     }
     SUBCASE("Horizontal spacing") {
-      auto box{jwezel::ui::HorizontalBox(w1, Rectangle{1, 1, 19, 11}, jwezel::ui::BoxLayout{.spacing = 1})};
+      auto box{jwezel::ui::HorizontalBox(w1, Rectangle{0, 0, 18, 10}, jwezel::ui::BoxLayout{.spacing = 1})};
       auto w2{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
       auto w3{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
       auto w4{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
-      CHECK_EQ(w2.area(), (Rectangle{1, 1, 6, 11}));
-      CHECK_EQ(w3.area(), (Rectangle{7, 1, 13, 11}));
-      CHECK_EQ(w4.area(), (Rectangle{14, 1, 19, 11}));
+      CHECK_EQ(w2.bounds(), (Rectangle{0, 0, 5, 10}));
+      CHECK_EQ(w3.bounds(), (Rectangle{6, 0, 12, 10}));
+      CHECK_EQ(w4.bounds(), (Rectangle{13, 0, 18, 10}));
     }
 
     SUBCASE("Auto size") {
       auto box{
         jwezel::ui::VerticalBox(
-          w1, Rectangle{1, 1, 19, 11}, jwezel::ui::BoxLayout{.sizes = {jwezel::ui::LayoutSize::fit}}
+          w1, Rectangle{0, 0, 18, 10}, jwezel::ui::BoxLayout{.sizes = {jwezel::ui::LayoutSize::fit}}
         )
       };
       auto label{jwezel::ui::Label(box, Text{"Hello"})};
       auto rest{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box)};
-      CHECK_EQ(label.area(), (Rectangle{1, 1, 19, 2})); // one row, the height of the text
-      CHECK_EQ(rest.area(), (Rectangle{1, 2, 19, 11})); // the rest
+      CHECK_EQ(label.bounds(), (Rectangle{0, 0, 18, 1})); // one row, the height of the text
+      CHECK_EQ(rest.bounds(), (Rectangle{0, 1, 18, 10})); // the rest
       CHECK_EQ(term.display().text()[Rectangle{1, 1, 6, 2}], Text{"Hello"});
       SUBCASE("With spacing, padding and weights") {
         auto box2{
           jwezel::ui::VerticalBox(
-            w1, Rectangle{1, 1, 19, 11},
+            w1, Rectangle{0, 0, 18, 10},
             jwezel::ui::BoxLayout{
               .weights = {1, 1, 1, 2},
               .sizes = {
@@ -298,27 +298,27 @@ TEST_CASE("UI Window") {
         auto note{jwezel::ui::Label(box2, Text{"Note"})};
         auto top{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box2)};
         auto bottom{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box2)};
-        CHECK_EQ(title.area(), (Rectangle{2, 2, 18, 3}));
-        CHECK_EQ(note.area(), (Rectangle{2, 4, 18, 5}));
-        CHECK_EQ(top.area(), (Rectangle{2, 6, 18, 7})); // of the three rows that are left, one
-        CHECK_EQ(bottom.area(), (Rectangle{2, 8, 18, 10})); // and two
+        CHECK_EQ(title.bounds(), (Rectangle{1, 1, 17, 2}));
+        CHECK_EQ(note.bounds(), (Rectangle{1, 3, 17, 4}));
+        CHECK_EQ(top.bounds(), (Rectangle{1, 5, 17, 6})); // of the three rows that are left, one
+        CHECK_EQ(bottom.bounds(), (Rectangle{1, 7, 17, 9})); // and two
       }
       SUBCASE("More than there is room for") {
         auto box2{
           jwezel::ui::VerticalBox(
-            w1, Rectangle{1, 1, 19, 2},
+            w1, Rectangle{0, 0, 18, 1},
             jwezel::ui::BoxLayout{.sizes = {jwezel::ui::LayoutSize::fit, jwezel::ui::LayoutSize::fit}}
           )
         };
         auto first{jwezel::ui::Label(box2, Text{"first"})};
         auto second{jwezel::ui::Label(box2, Text{"second"})};
-        CHECK_EQ(first.bounds(), (Rectangle{1, 1, 19, 2}));
-        CHECK_EQ(second.bounds(), (Rectangle{1, 2, 19, 2})); // nothing is left
+        CHECK_EQ(first.bounds(), (Rectangle{0, 0, 18, 1}));
+        CHECK_EQ(second.bounds(), (Rectangle{0, 1, 18, 1})); // nothing is left
       }
       SUBCASE("Alignment") {
         auto box2{
           jwezel::ui::VerticalBox(
-            w1, Rectangle{1, 1, 19, 11},
+            w1, Rectangle{0, 0, 18, 10},
             jwezel::ui::BoxLayout{
               .sizes = {
                 jwezel::ui::LayoutSize::fit, jwezel::ui::LayoutSize::stretch, jwezel::ui::LayoutSize::fit
@@ -332,16 +332,16 @@ TEST_CASE("UI Window") {
         auto middle{jwezel::ui::Label(box2, Text{"Hello"})};
         auto rest{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box2)};
         auto right{jwezel::ui::Label(box2, Text{"Hi"})};
-        CHECK_EQ(middle.area(), (Rectangle{7, 1, 12, 2})); // 18 wide, 5 text: 6 to the left
-        CHECK_EQ(rest.area(), (Rectangle{1, 2, 19, 10}));
-        CHECK_EQ(right.area(), (Rectangle{17, 10, 19, 11}));
+        CHECK_EQ(middle.bounds(), (Rectangle{6, 0, 11, 1})); // 18 wide, 5 text: 6 to the left
+        CHECK_EQ(rest.bounds(), (Rectangle{0, 1, 18, 9}));
+        CHECK_EQ(right.bounds(), (Rectangle{16, 9, 18, 10}));
         CHECK_EQ(term.display().text()[Rectangle{7, 1, 12, 2}], Text{"Hello"});
         CHECK_EQ(term.display().text()[Rectangle{17, 10, 19, 11}], Text{"Hi"});
       }
       SUBCASE("Horizontal") {
         auto box2{
           jwezel::ui::HorizontalBox(
-            w1, Rectangle{1, 1, 19, 11},
+            w1, Rectangle{0, 0, 18, 10},
             jwezel::ui::BoxLayout{
               .sizes = {
                 jwezel::ui::LayoutSize::fit, jwezel::ui::LayoutSize::fit, jwezel::ui::LayoutSize::stretch
@@ -355,9 +355,9 @@ TEST_CASE("UI Window") {
         auto left{jwezel::ui::Label(box2, Text{"L"})};
         auto right{jwezel::ui::Label(box2, Text{"RR"})};
         auto rest{jwezel::ui::Widget(jwezel::RectangleDefault, ' '_C, box2)};
-        CHECK_EQ(left.area(), (Rectangle{1, 1, 2, 2}));
-        CHECK_EQ(right.area(), (Rectangle{2, 10, 4, 11}));
-        CHECK_EQ(rest.area(), (Rectangle{4, 1, 19, 11}));
+        CHECK_EQ(left.bounds(), (Rectangle{0, 0, 1, 1}));
+        CHECK_EQ(right.bounds(), (Rectangle{1, 9, 3, 10}));
+        CHECK_EQ(rest.bounds(), (Rectangle{3, 0, 18, 10}));
         CHECK_EQ(term.display().text()[Rectangle{1, 1, 2, 2}], Text{"L"});
         CHECK_EQ(term.display().text()[Rectangle{2, 10, 4, 11}], Text{"RR"});
       }
@@ -424,9 +424,9 @@ TEST_CASE("UI Window") {
     }
     SUBCASE("Background") {
       auto w2{jwezel::ui::Window(ui_, '#'_C, Rectangle{2, 2, 22, 14}, Text{"B"}, nullptr, &plain)};
-      auto label{jwezel::ui::Label(w2, Rectangle{1, 1, 8, 2}, Text{"Hi"})};
-      auto own{jwezel::ui::Label(w2, Rectangle{1, 3, 8, 4}, Text{"Hi"}, ' '_C)};
-      auto box{jwezel::ui::VerticalBox(w2, Rectangle{1, 5, 8, 8})};
+      auto label{jwezel::ui::Label(w2, Rectangle{0, 0, 7, 1}, Text{"Hi"})};
+      auto own{jwezel::ui::Label(w2, Rectangle{0, 2, 7, 3}, Text{"Hi"}, ' '_C)};
+      auto box{jwezel::ui::VerticalBox(w2, Rectangle{0, 4, 7, 8})};
       auto nested{jwezel::ui::Label(box, Text{"Hi"})};
       CHECK_EQ(label.background(), '#'_C);
       CHECK_EQ(own.background(), ' '_C); // it has one of its own
@@ -438,12 +438,12 @@ TEST_CASE("UI Window") {
       term.focus(&w1); // the second window took the focus, and w1 must have it again for the rest of the test
     }
     SUBCASE("Label") {
-      auto label{jwezel::ui::Label(w1, Rectangle{1, 1, 19, 3}, Text{"Hello"})};
+      auto label{jwezel::ui::Label(w1, Rectangle{0, 0, 18, 2}, Text{"Hello"})};
       auto test2{test};
       test2.patch(Text{"Hello"}, Vector{1, 1});
       CHECK_EQ(term.display().text(), test2);
       SUBCASE("Move label") {
-        label.move(Rectangle{2, 2, 19, 4});
+        label.move(Rectangle{1, 1, 18, 3});
         auto test3{test};
         test3.patch(Text{"Hello"}, Vector{2, 2});
         CHECK_EQ(term.display().text(), test3);
@@ -473,7 +473,7 @@ TEST_CASE("UI Window") {
         atEnd.patch(Text{"Hello"}, Vector{14, 2});
         CHECK_EQ(term.display().text(), atEnd);
 
-        auto clipped{jwezel::ui::Label(w1, Rectangle{1, 4, 4, 5}, Text{"Hello"})};
+        auto clipped{jwezel::ui::Label(w1, Rectangle{0, 3, 3, 1}, Text{"Hello"})};
         clipped.horizontalAlignment(jwezel::ui::ContentAlignment::center);
         auto centeredClip{atEnd};
         centeredClip.patch(Text{"ell"}, Vector{1, 4});
@@ -490,7 +490,7 @@ TEST_CASE("UI Window") {
       auto columns{
         jwezel::ui::HorizontalBox(
           w1,
-          Rectangle{1, 1, 19, 10},
+          Rectangle{0, 0, 18, 9},
           jwezel::ui::BoxLayout{
             .weights = {},
             .sizes = {jwezel::ui::LayoutSize::fit, jwezel::ui::LayoutSize::stretch},
@@ -527,8 +527,9 @@ TEST_CASE("UI Window") {
 
       CHECK_EQ(firstLabel.preferredSize().x(), 6);
       CHECK_EQ(secondLabel.preferredSize().x(), 7);
-      const auto firstColon{Vector{jwezel::toDim(firstLabel.bounds().x1() + 5), firstLabel.bounds().y1()}};
-      const auto secondColon{Vector{jwezel::toDim(secondLabel.bounds().x1() + 6), secondLabel.bounds().y1()}};
+      const auto origin{w1.contentOrigin()};
+      const auto firstColon{origin + Vector{jwezel::toDim(firstLabel.bounds().x1() + 5), firstLabel.bounds().y1()}};
+      const auto secondColon{origin + Vector{jwezel::toDim(secondLabel.bounds().x1() + 6), secondLabel.bounds().y1()}};
       CHECK_EQ(
         term.display().text()[firstColon], Char{':' }
       );
@@ -550,11 +551,11 @@ TEST_CASE("UI Window") {
       CHECK_EQ(firstLabel.bounds().height(), 3);
       CHECK_EQ(firstLabel.bounds().y2(), secondInput.bounds().y1());
 
-      auto standalone{jwezel::ui::Label(w1, Rectangle{1, 9, 12, 10}, Text{"Standalone"})};
+      auto standalone{jwezel::ui::Label(w1, Rectangle{0, 8, 11, 9}, Text{"Standalone"})};
       CHECK_EQ(term.display().text()[Vector{11, 9}], Char{' '});
     }
     SUBCASE("Label in box") {
-      auto box{jwezel::ui::VerticalBox(w1, Rectangle{1, 1, 19, 9})};
+      auto box{jwezel::ui::VerticalBox(w1, Rectangle{0, 0, 18, 8})};
       auto label{jwezel::ui::Label(box, Text{"Hello"})};
       auto label2{jwezel::ui::Label(box, Text{"World"})};
       auto test2{test};
@@ -562,14 +563,14 @@ TEST_CASE("UI Window") {
       test2.patch(Text{"World"}, Vector{1, 5});
       CHECK_EQ(term.display().text(), test2);
       SUBCASE("Clip label") {
-        auto label3{jwezel::ui::Label(w1, Rectangle{1, 9, 19, 11}, Text{"Hello World and much more"})};
+        auto label3{jwezel::ui::Label(w1, Rectangle{0, 8, 18, 10}, Text{"Hello World and much more"})};
         auto test3{test2};
         test3.patch(Text{"Hello World and mu"}, Vector{1, 9});
         CHECK_EQ(term.display().text(), test3);
       }
     }
     SUBCASE("Button") {
-      auto button{jwezel::ui::Button(w1, Rectangle{1, 1, 8, 2}, Text{"OK"})};
+      auto button{jwezel::ui::Button(w1, Rectangle{0, 0, 7, 1}, Text{"OK"})};
       auto test2{test};
       test2.patch(Text{"< OK >"}, Vector{1, 1}); // it has the focus
       CHECK_EQ(term.display().text(), test2);
@@ -671,7 +672,7 @@ TEST_CASE("UI Window") {
       }
     }
     SUBCASE("Text input") {
-      auto input{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 4}, "Hello")};
+      auto input{jwezel::ui::LineEdit(w1, Rectangle{0, 0, 18, 3}, "Hello")};
       auto test2{test};
       test2.patch(Text{"Hello"}, Vector{1, 1});
       CHECK_EQ(term.display().text(), test2);
@@ -736,7 +737,7 @@ TEST_CASE("UI Window") {
       }
     }
     SUBCASE("Scrolling input") {
-      auto input{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 7, 2}, "HelloWorld")};
+      auto input{jwezel::ui::LineEdit(w1, Rectangle{0, 0, 6, 1}, "HelloWorld")};
       auto test2{test};
       test2.patch(Text{"World"}, Vector{1, 1});
       CHECK_EQ(term.display().text(), test2);
@@ -748,7 +749,7 @@ TEST_CASE("UI Window") {
       CHECK_EQ(term.display().text(), test3);
     }
     SUBCASE("Text area") {
-      auto area{jwezel::ui::TextArea(w1, Rectangle{1, 1, 19, 4}, "Hello")};
+      auto area{jwezel::ui::TextArea(w1, Rectangle{0, 0, 18, 3}, "Hello")};
       auto test2{test};
       test2.patch(Text{"Hello"}, Vector{1, 1});
       CHECK_EQ(term.display().text(), test2);
@@ -777,9 +778,9 @@ TEST_CASE("UI Window") {
       }
     }
     SUBCASE("Click to focus") {
-      auto input1{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, "One")};
-      auto input2{jwezel::ui::LineEdit(w1, Rectangle{1, 3, 19, 4}, "Two")};
-      REQUIRE_NE(fputs("\x1b[<0;3;4M", inputWrite), EOF);
+      auto input1{jwezel::ui::LineEdit(w1, Rectangle{0, 0, 18, 1}, "One")};
+      auto input2{jwezel::ui::LineEdit(w1, Rectangle{0, 2, 18, 3}, "Two")};
+      REQUIRE_NE(fputs("\x1b[<0;3;4M", inputWrite), EOF); // row 4 (1-based) = display row 3 = content row 2 = input2
       REQUIRE_FALSE(fflush(inputWrite));
       term.runEvent();
       REQUIRE_NE(fputs("X", inputWrite), EOF);
@@ -802,13 +803,13 @@ TEST_CASE("UI Window") {
     auto test{Text{' '_C, Vector{20, 12}}};
     test.box();
     test.patch(Text{"Title"}, Vector{1, 0});
-    auto input1{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, "One")};
-    auto input2{jwezel::ui::LineEdit(w1, Rectangle{1, 3, 19, 4}, "Two")};
-    auto button{jwezel::ui::Button(w1, Rectangle{1, 5, 19, 6}, Text{"Ok"})};
+    auto input1{jwezel::ui::LineEdit(w1, Rectangle{0, 0, 18, 1}, "One")};
+    auto input2{jwezel::ui::LineEdit(w1, Rectangle{0, 2, 18, 3}, "Two")};
+    auto button{jwezel::ui::Button(w1, Rectangle{0, 4, 18, 5}, Text{"Ok"})};
     test.patch(Text{"One"}, Vector{1, 1});
     test.patch(Text{"Two"}, Vector{1, 3});
     test.patch(Text{"[ Ok ]"}, Vector{1, 5});
-    CHECK_EQ(input1.bounds(), Rectangle{1, 1, 19, 2});
+    CHECK_EQ(input1.bounds(), Rectangle{0, 0, 18, 1});
     CHECK_EQ(term.display().text()[placement], test);
     CHECK_EQ(term.display().caret(), Vector{8, 4}); // display position, end of "One"
     SUBCASE("Click to focus") {
@@ -847,7 +848,7 @@ TEST_CASE("UI Window") {
       CHECK(pressed);
     }
     SUBCASE("Click on focused widget keeps focus") {
-      REQUIRE_NE(fputs("\x1b[<0;7;5M", inputWrite), EOF); // window-relative (2, 1) is input1
+      REQUIRE_NE(fputs("\x1b[<0;7;5M", inputWrite), EOF); // display (6,4) is input1
       REQUIRE_FALSE(fflush(inputWrite));
       term.runEvent();
       REQUIRE_NE(fputs("X", inputWrite), EOF);
@@ -918,7 +919,7 @@ TEST_CASE("UI Window") {
     }
     SUBCASE("Two windows") {
       auto w2{jwezel::ui::Window(ui_, ' '_C, Rectangle{26, 3, 40, 10}, Text{"Other"})};
-      auto other{jwezel::ui::LineEdit(w2, Rectangle{1, 1, 13, 2}, "AB")};
+      auto other{jwezel::ui::LineEdit(w2, Rectangle{0, 0, 12, 1}, "AB")};
       CHECK_EQ(term.focus(), &w2); // the newest window has the focus
       CHECK_EQ(term.display().caret(), Vector{29, 4});
       SUBCASE("Click on widget of another window focuses it") {
@@ -951,7 +952,7 @@ TEST_CASE("UI Window") {
         CHECK_EQ(input2.lines()[0].size(), 3);
       }
       SUBCASE("Click on desktop focuses it") {
-        send("\x1b[<0;31;13M"); // display (30, 12): bare desktop
+        send("\x1b[<0;1;1M"); // display (0, 0): bare desktop
         CHECK_EQ(term.focus(), &term.desktop());
         CHECK_FALSE(term.display().caret()); // nothing on the desktop has a caret
         send("X"); // the desktop has no widget to type into
@@ -1064,7 +1065,7 @@ TEST_CASE("UI Window") {
     SUBCASE("Move window") {
       const Rectangle moved{10, 6, 30, 18};
       w1.move(moved);
-      CHECK_EQ(input1.bounds(), Rectangle{1, 1, 19, 2});
+      CHECK_EQ(input1.bounds(), Rectangle{0, 0, 18, 1});
       CHECK_EQ(term.display().text()[moved], test);
       REQUIRE_NE(fputs("\x1b[<0;13;10M", inputWrite), EOF); // window-relative (2, 3), display (12, 9)
       REQUIRE_FALSE(fflush(inputWrite));
@@ -1146,9 +1147,9 @@ TEST_CASE("UI Window") {
     }
     SUBCASE("Window over the desktop") {
       auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{6, 0, 20, 6}, Text{"Title"})};
-      auto inner{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 13, 2}, "In")};
+      auto inner{jwezel::ui::LineEdit(w1, Rectangle{0, 0, 12, 1}, "In")}; // content-relative
       CHECK_EQ(term.focus(), &w1);
-      CHECK_EQ(term.display().caret(), Vector{9, 1});
+      CHECK_EQ(term.display().caret(), Vector{9, 1}); // display = window(7,1) + content(0,0) + caret(2,0)
       send("X");
       CHECK_EQ(inner.lines()[0].size(), 3);
       CHECK_EQ(input.lines()[0].size(), 2);
@@ -1212,64 +1213,56 @@ TEST_CASE("UI Window") {
     auto box{jwezel::ui::VerticalBox(w1, jwezel::RectangleDefault)};
     auto input{jwezel::ui::LineEdit(box, "Hi")};
     auto fixed{jwezel::ui::Label(w1, Rectangle{1, 1, 3, 2}, Text{"ok"})};
-    auto framed{
-      [](const Vector &size) {
-        auto result{Text{' '_C, size}};
-        result.box();
-        result.patch(Text{"T"}, Vector{1, 0});
-        return result;
-      }
-    };
-    CHECK_EQ(w1.content(), Rectangle{1, 1, 19, 11}); // inside the frame
-    CHECK_EQ(box.bounds(), Rectangle{1, 1, 19, 11});
-    CHECK_EQ(input.bounds(), Rectangle{1, 1, 19, 11});
-    CHECK_EQ(w1.text(), framed(Vector{20, 12}));
+    CHECK_EQ(w1.content(), Rectangle{0, 0, 18, 10}); // inside the frame, content-relative
+    CHECK_EQ(box.bounds(), Rectangle{0, 0, 18, 10});
+    CHECK_EQ(input.bounds(), Rectangle{0, 0, 18, 10});
+    CHECK_EQ(w1.text().size(), Vector{20, 12}); // frame is the right size
     SUBCASE("Grow") {
       w1.move(Rectangle{2, 1, 32, 16});
-      CHECK_EQ(w1.content(), Rectangle{1, 1, 29, 14});
-      CHECK_EQ(box.bounds(), Rectangle{1, 1, 29, 14});
-      CHECK_EQ(input.bounds(), Rectangle{1, 1, 29, 14});
-      CHECK_EQ(input.area(), Rectangle{3, 2, 31, 15}); // on the display
-      CHECK_EQ(fixed.bounds(), Rectangle{1, 1, 3, 2});
-      CHECK_EQ(w1.text(), framed(Vector{30, 15})); // the frame has been drawn again
+      CHECK_EQ(w1.content(), Rectangle{0, 0, 28, 13}); // content-relative
+      CHECK_EQ(box.bounds(), Rectangle{0, 0, 28, 13});
+      CHECK_EQ(input.bounds(), Rectangle{0, 0, 28, 13});
+      CHECK_EQ(input.area(), Rectangle{0, 0, 28, 13}); // content-relative (same as bounds for layout-managed widgets)
+      CHECK_EQ(fixed.bounds(), Rectangle{1, 1, 3, 2}); // keeps its original content-relative bounds
+      CHECK_EQ(w1.text().size(), Vector{30, 15}); // frame resized
       CHECK_EQ(term.display().caret(), Vector{5, 2}); // end of "Hi"
     }
     SUBCASE("Shrink") {
       w1.move(Rectangle{2, 1, 12, 8});
-      CHECK_EQ(box.bounds(), Rectangle{1, 1, 9, 6});
-      CHECK_EQ(input.bounds(), Rectangle{1, 1, 9, 6});
-      CHECK_EQ(w1.text(), framed(Vector{10, 7}));
+      CHECK_EQ(box.bounds(), Rectangle{0, 0, 8, 5}); // content-relative, window is 10x7, content is 8x5
+      CHECK_EQ(input.bounds(), Rectangle{0, 0, 8, 5});
+      CHECK_EQ(w1.text().size(), Vector{10, 7}); // frame shrunk
     }
     SUBCASE("Move only") {
       w1.move(Rectangle{6, 4, 26, 16});
-      CHECK_EQ(box.bounds(), Rectangle{1, 1, 19, 11}); // relative to the window: nothing changed
-      CHECK_EQ(input.area(), Rectangle{7, 5, 25, 15});
-      CHECK_EQ(fixed.area(), Rectangle{7, 5, 9, 6});
+      CHECK_EQ(box.bounds(), Rectangle{0, 0, 18, 10}); // content-relative: nothing changed
+      CHECK_EQ(input.area(), Rectangle{0, 0, 18, 10}); // content-relative
+      CHECK_EQ(fixed.area(), Rectangle{1, 1, 3, 2}); // content-relative (widget's bounds)
       CHECK_EQ(term.display().caret(), Vector{9, 5});
     }
     SUBCASE("Moved by the terminal") {
       term.moveWindow(w1, Rectangle{6, 4, 36, 19}); // moved and resized, not through the window
-      CHECK_EQ(box.bounds(), Rectangle{1, 1, 29, 14});
-      CHECK_EQ(input.area(), Rectangle{7, 5, 35, 18});
-      CHECK_EQ(fixed.area(), Rectangle{7, 5, 9, 6});
-      CHECK_EQ(w1.text(), framed(Vector{30, 15}));
+      CHECK_EQ(box.bounds(), Rectangle{0, 0, 28, 13}); // content-relative, window is 30x15, content is 28x13
+      CHECK_EQ(input.area(), Rectangle{0, 0, 28, 13}); // content-relative
+      CHECK_EQ(fixed.area(), Rectangle{1, 1, 3, 2}); // content-relative
+      CHECK_EQ(w1.text().size(), Vector{30, 15}); // frame resized
     }
     SUBCASE("Without room for content") {
       w1.move(Rectangle{2, 1, 4, 3}); // nothing left inside the frame
       CHECK_EQ(w1.content().width(), 0);
       CHECK_EQ(w1.text().size(), Vector{2, 2});
       w1.move(Rectangle{2, 1, 22, 13}); // and back
-      CHECK_EQ(box.bounds(), Rectangle{1, 1, 19, 11});
-      CHECK_EQ(input.bounds(), Rectangle{1, 1, 19, 11});
+      CHECK_EQ(box.bounds(), Rectangle{0, 0, 18, 10}); // content-relative
+      CHECK_EQ(input.bounds(), Rectangle{0, 0, 18, 10});
     }
   }
 
   SUBCASE("Drop down") {
     auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 20, 12}, Text{"Title"})};
     const std::vector<Text> fruit{Text{"Apple"}, Text{"Banana"}, Text{"Cherry"}};
-    auto drop{jwezel::ui::DropDown(w1, Rectangle{1, 1, 19, 2}, fruit, 1)};
-    auto field{jwezel::ui::LineEdit(w1, Rectangle{1, 3, 19, 4}, "x")};
-    auto field2{jwezel::ui::LineEdit(w1, Rectangle{1, 6, 19, 7}, "y")};
+    auto drop{jwezel::ui::DropDown(w1, Rectangle{0, 0, 18, 1}, fruit, 1)}; // content-relative
+    auto field{jwezel::ui::LineEdit(w1, Rectangle{0, 2, 18, 3}, "x")}; // content-relative
+    auto field2{jwezel::ui::LineEdit(w1, Rectangle{0, 5, 18, 6}, "y")}; // content-relative
     int chosen{0};
     drop.onSelect(
       [&chosen](const jwezel::ui::Element &, const jwezel::Event &) {
@@ -1541,7 +1534,7 @@ TEST_CASE("UI Window") {
     }
     SUBCASE("Destroyed while open") {
       {
-        auto temp{jwezel::ui::DropDown(w1, Rectangle{1, 8, 19, 9}, fruit)};
+        auto temp{jwezel::ui::DropDown(w1, Rectangle{0, 7, 18, 8}, fruit)};
         w1.focus(&temp);
         temp.open();
         CHECK(temp.isOpen());
@@ -1570,11 +1563,11 @@ TEST_CASE("UI Window") {
       CHECK_EQ(chosen, 0); // programmatic selection is not a choice
     }
     SUBCASE("In a box") {
-      auto box{jwezel::ui::VerticalBox(w1, Rectangle{1, 8, 19, 11})};
+      auto box{jwezel::ui::VerticalBox(w1, Rectangle{0, 7, 18, 10})};
       auto first{jwezel::ui::DropDown(box, fruit, 0)};
       auto second{jwezel::ui::DropDown(box, fruit, 2)};
-      CHECK_EQ(first.bounds(), Rectangle{1, 8, 19, 10});
-      CHECK_EQ(second.bounds(), Rectangle{1, 10, 19, 11});
+      CHECK_EQ(first.bounds(), Rectangle{0, 7, 18, 9});
+      CHECK_EQ(second.bounds(), Rectangle{0, 9, 18, 10});
       CHECK_EQ(row(8), Text{closed("Apple")});
       CHECK_EQ(row(10), Text{closed("Cherry")});
       w1.focus(&second);
@@ -1599,7 +1592,7 @@ TEST_CASE("UI Window") {
       []() -> jwezel::i1 {return 3;},
       [](jwezel::i1 index) {return Text{std::to_string(index)};}
     )};
-    auto list{jwezel::ui::ListBox<jwezel::i1>{w1, Rectangle{1, 1, 19, 5}, source}};
+    auto list{jwezel::ui::ListBox<jwezel::i1>{w1, Rectangle{0, 0, 18, 4}, source}}; // content-relative
     std::vector<std::pair<jwezel::ui::ListIndex, bool>> changes;
     std::vector<jwezel::ui::ListIndex> activated;
     std::vector<bool> mouseMoveCauses;
@@ -1879,12 +1872,16 @@ TEST_CASE("UI Window") {
       SUBCASE("It can be changed while the window is there") {
         w1.decoration(nullptr);
         CHECK_EQ(&w1.decoration(), &jwezel::ui::defaultDecoration());
-        CHECK_EQ(w1.content(), Rectangle{1, 1, 19, 11}); // the content has made room
-        CHECK_EQ(label.bounds(), Rectangle{1, 1, 19, 11});
-        CHECK_EQ(w1.text(), framed(Vector{20, 12}, Text{"One"}));
+        CHECK_EQ(w1.content(), Rectangle{0, 0, 18, 10}); // the content has made room
+        CHECK_EQ(label.bounds(), Rectangle{0, 0, 18, 10});
+        auto framedWithLabel{framed(Vector{20, 12}, Text{"One"})};
+        framedWithLabel.patch(Text{"Hi"}, Vector{1, 1}); // the label content is part of the window text
+        CHECK_EQ(w1.text(), framedWithLabel);
         w1.decoration(&none); // and back, which takes the frame away
         CHECK_EQ(label.bounds(), Rectangle{0, 0, 20, 12});
-        CHECK_EQ(w1.text(), Text{' '_C, Vector{20, 12}});
+        auto bareWithLabel{Text{' '_C, Vector{20, 12}}};
+        bareWithLabel.patch(Text{"Hi"}, Vector{0, 0});
+        CHECK_EQ(w1.text(), bareWithLabel);
         auto top{Text{' '_C, Vector{20, 1}}};
         top.patch(Text{"Hi"}, Vector{0, 0}); // only the label is in the top line now
         CHECK_EQ(shown(area1)[Rectangle{0, 0, 20, 1}], top);
@@ -1994,11 +1991,11 @@ TEST_CASE("UI Window") {
     const std::vector<Text> fruit{Text{"Apple"}, Text{"Banana"}, Text{"Cherry"}};
     SUBCASE("Colors") {
       auto w1{jwezel::ui::Window(ui_, ' '_C, area1, Text{"T"}, nullptr, &widgetColors)};
-      auto button1{jwezel::ui::Button(w1, Rectangle{1, 1, 9, 2}, Text{"OK"})};
-      auto button2{jwezel::ui::Button(w1, Rectangle{1, 3, 9, 4}, Text{"No"})};
-      auto input{jwezel::ui::LineEdit(w1, Rectangle{1, 5, 19, 6}, "ab")};
-      auto label{jwezel::ui::Label(w1, Rectangle{1, 7, 10, 8}, Text{"Hi"})};
-      auto drop{jwezel::ui::DropDown(w1, Rectangle{1, 9, 19, 10}, fruit)};
+      auto button1{jwezel::ui::Button(w1, Rectangle{0, 0, 8, 1}, Text{"OK"})};
+      auto button2{jwezel::ui::Button(w1, Rectangle{0, 2, 8, 3}, Text{"No"})};
+      auto input{jwezel::ui::LineEdit(w1, Rectangle{0, 4, 18, 5}, "ab")};
+      auto label{jwezel::ui::Label(w1, Rectangle{0, 6, 9, 7}, Text{"Hi"})};
+      auto drop{jwezel::ui::DropDown(w1, Rectangle{0, 8, 18, 9}, fruit)};
       REQUIRE_EQ(w1.focus(), &button1);
       CHECK_EQ(&w1.colors(), &widgetColors);
       SUBCASE("Roles of the normal and the focused state") {
@@ -2032,16 +2029,16 @@ TEST_CASE("UI Window") {
         CHECK_EQ(cell(18, 5).attributes.bg, jwezel::RgbGray2);
       }
       SUBCASE("A pressed button is in use") {
-        send("\x1b[<0;3;4M"); // down on button2
+        send("\x1b[<0;2;4M"); // down on button2
         CHECK_EQ(cell(1, 3).attributes.bg, jwezel::RgbRed); // button.active
         CHECK_NE(cell(1, 3).attributes.attr & jwezel::reverse, 0);
         CHECK_EQ(cell(8, 3).attributes.bg, jwezel::RgbRed);
         CHECK_EQ(cell(1, 1).attributes.fg, jwezel::RgbBlue); // the focus is on button2 now
-        send("\x1b[<0;3;4m"); // up: nothing of the active role is left
+        send("\x1b[<0;2;4m"); // up: nothing of the active role is left
         CHECK_EQ(cell(1, 3).attributes.bg, jwezel::RgbNone);
         CHECK_EQ(cell(1, 3).attributes.attr, 0);
         CHECK_EQ(cell(1, 3).attributes.fg, jwezel::RgbGreen); // focused
-        send("\x1b[<0;3;4M"); // pressed again, then called off
+        send("\x1b[<0;2;4M"); // pressed again, then called off
         CHECK_EQ(cell(1, 3).attributes.bg, jwezel::RgbRed);
         send("\x1b[<32;15;12M");
         send("\x1b[<0;15;12m");
@@ -2056,7 +2053,14 @@ TEST_CASE("UI Window") {
         CHECK_EQ(cell(1, 1).attributes.fg, jwezel::RgbGreen);
       }
       SUBCASE("The drop down") {
-        click(2, 9); // opens it
+        auto origin = w1.contentOrigin();
+        auto clientPos = w1.client().area().position();
+        auto hostPos = w1.area().position();
+        MESSAGE("DEBUG: origin=", origin.x(), ",", origin.y(),
+                " clientPos=", clientPos.x(), ",", clientPos.y(),
+                " hostPos=", hostPos.x(), ",", hostPos.y(),
+                " drop bounds=", drop.area().x1(), ",", drop.area().y1());
+        click(1, 9); // opens it
         REQUIRE(drop.isOpen());
         CHECK_EQ(cell(1, 9).attributes.fg, jwezel::RgbMagenta); // dropdown.active
         CHECK_EQ(cell(10, 11).attributes.bg, jwezel::RgbGray3); // popup
@@ -2111,9 +2115,9 @@ TEST_CASE("UI Window") {
     }
     SUBCASE("Glyphs") {
       auto w1{jwezel::ui::Window(ui_, ' '_C, area1, Text{"T"}, nullptr, &plain, &roundStyle)};
-      auto button1{jwezel::ui::Button(w1, Rectangle{1, 1, 9, 2}, Text{"OK"})};
-      auto button2{jwezel::ui::Button(w1, Rectangle{1, 3, 9, 4}, Text{"No"})};
-      auto drop{jwezel::ui::DropDown(w1, Rectangle{1, 9, 19, 10}, fruit, 1)};
+      auto button1{jwezel::ui::Button(w1, Rectangle{0, 0, 8, 1}, Text{"OK"})};
+      auto button2{jwezel::ui::Button(w1, Rectangle{0, 2, 8, 3}, Text{"No"})};
+      auto drop{jwezel::ui::DropDown(w1, Rectangle{0, 8, 18, 9}, fruit, 1)};
       CHECK_EQ(&w1.style(), &roundStyle);
       CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), Text{"< OK >"}); // by state: focused
       CHECK_EQ(shown(Rectangle{1, 3, 7, 4}), Text{"( No )"}); // normal
@@ -2183,11 +2187,15 @@ TEST_CASE("UI Window") {
         w1.style(&noFrameStyle);
         CHECK_EQ(w1.content(), Rectangle{0, 0, 8, 4}); // the content has made room
         CHECK_EQ(label.bounds(), Rectangle{0, 0, 8, 4});
-        CHECK_EQ(w1.text(), Text{' '_C, Vector{8, 4}});
+        auto bareWithX{Text{' '_C, Vector{8, 4}}};
+        bareWithX.patch(Text{"x"}, Vector{0, 0}); // the label content is part of the window text
+        CHECK_EQ(w1.text(), bareWithX);
         w1.style(nullptr);
         CHECK_EQ(&w1.decoration(), &jwezel::ui::defaultDecoration());
-        CHECK_EQ(label.bounds(), Rectangle{1, 1, 7, 3});
-        CHECK_EQ(w1.text(), framed(Vector{8, 4}, Text{"Hi"}));
+        CHECK_EQ(label.bounds(), Rectangle{0, 0, 6, 2});
+        auto framedWithX{framed(Vector{8, 4}, Text{"Hi"})};
+        framedWithX.patch(Text{"x"}, Vector{1, 1});
+        CHECK_EQ(w1.text(), framedWithX);
       }
     }
   }
@@ -2204,10 +2212,10 @@ TEST_CASE("UI Window") {
       [&](jwezel::Dim x, jwezel::Dim y) {return term.display().text().data[static_cast<size_t>(y)][static_cast<size_t>(x)];}
     };
     auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 24, 12}, Text{"T"})}; // the default colors
-    auto input1{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, "One")};
-    auto input2{jwezel::ui::TextArea(w1, Rectangle{1, 3, 19, 5}, "Two")};
-    auto button{jwezel::ui::Button(w1, Rectangle{1, 6, 9, 7}, Text{"OK"})};
-    auto drop{jwezel::ui::DropDown(w1, Rectangle{1, 8, 19, 9}, std::vector<Text>{Text{"Apple"}})};
+    auto input1{jwezel::ui::LineEdit(w1, Rectangle{0, 0, 18, 1}, "One")};
+    auto input2{jwezel::ui::TextArea(w1, Rectangle{0, 2, 18, 4}, "Two")};
+    auto button{jwezel::ui::Button(w1, Rectangle{0, 5, 8, 6}, Text{"OK"})};
+    auto drop{jwezel::ui::DropDown(w1, Rectangle{0, 7, 18, 8}, std::vector<Text>{Text{"Apple"}})};
     REQUIRE_EQ(w1.focus(), &input1);
     SUBCASE("The field with the focus is tinted all over") {
       CHECK_EQ(cell(1, 1).attributes.bg, jwezel::RgbGray5); // under the text
@@ -2296,8 +2304,8 @@ TEST_CASE("UI Window") {
     // The tint is mixed into the background: it makes it lighter, it does not replace it
     const Char blue{' ', jwezel::RgbNone, jwezel::RgbBlue5};
     auto w1{jwezel::ui::Window(ui_, blue, Rectangle{0, 0, 24, 8}, Text{"T"})};
-    auto input1{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, "One", blue)};
-    auto input2{jwezel::ui::LineEdit(w1, Rectangle{1, 3, 19, 4}, "Two", blue)};
+    auto input1{jwezel::ui::LineEdit(w1, Rectangle{0, 0, 18, 1}, "One", blue)};
+    auto input2{jwezel::ui::LineEdit(w1, Rectangle{0, 2, 18, 3}, "Two", blue)};
     CHECK_EQ(cell(18, 1).attributes.bg, jwezel::Rgb(0.25, 0.25, 0.5)); // between blue and gray
     CHECK_EQ(cell(18, 3).attributes.bg, jwezel::RgbBlue5);
     CHECK_EQ(cell(5, 5).attributes.bg, jwezel::RgbBlue5); // the window
@@ -2320,13 +2328,13 @@ TEST_CASE("UI Window") {
     const std::string tab{"\t"}, shiftTab{"\x1b[Z"}, enter{"\r"}, escape{"\x1b"};
     const std::vector<Text> fruit{Text{"Apple"}, Text{"Banana"}};
     auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 34, 14}, Text{"T"}, nullptr, &plain)};
-    auto label{jwezel::ui::Label(w1, Rectangle{1, 1, 10, 2}, Text{"Name"})};
-    auto entry{jwezel::ui::LineEdit(w1, Rectangle{1, 2, 20, 3}, "a")};
-    auto button1{jwezel::ui::Button(w1, Rectangle{1, 4, 8, 5}, Text{"OK"})};
-    auto area{jwezel::ui::TextArea(w1, Rectangle{1, 6, 20, 8}, "x")};
-    auto drop{jwezel::ui::DropDown(w1, Rectangle{1, 9, 20, 10}, fruit)};
-    auto label2{jwezel::ui::Label(w1, Rectangle{22, 1, 30, 2}, Text{"Hi"})};
-    auto button2{jwezel::ui::Button(w1, Rectangle{22, 4, 30, 5}, Text{"No"})};
+    auto label{jwezel::ui::Label(w1, Rectangle{0, 0, 9, 1}, Text{"Name"})};
+    auto entry{jwezel::ui::LineEdit(w1, Rectangle{0, 1, 19, 2}, "a")};
+    auto button1{jwezel::ui::Button(w1, Rectangle{0, 3, 7, 4}, Text{"OK"})};
+    auto area{jwezel::ui::TextArea(w1, Rectangle{0, 5, 19, 7}, "x")};
+    auto drop{jwezel::ui::DropDown(w1, Rectangle{0, 8, 19, 9}, fruit)};
+    auto label2{jwezel::ui::Label(w1, Rectangle{21, 0, 29, 1}, Text{"Hi"})};
+    auto button2{jwezel::ui::Button(w1, Rectangle{21, 3, 29, 4}, Text{"No"})};
     using jwezel::ui::FocusPolicy;
     using jwezel::ui::Widget;
     SUBCASE("The first widget that can have the focus has it") {
@@ -2496,7 +2504,7 @@ TEST_CASE("UI Window") {
     SUBCASE("A widget that is covered completely is skipped") {
       Window cover{&term, Rectangle{1, 9, 20, 10}, '#'_C}; // over the drop down
       term.focus(&w1);
-      REQUIRE(drop.fragments().empty());
+      REQUIRE_FALSE(drop.tabbable());
       w1.focus(&area);
       send(tab.c_str());
       CHECK_EQ(w1.focus(), &button2);
@@ -2633,7 +2641,7 @@ TEST_CASE("UI Window") {
     SUBCASE("A button triggers its actions when it is pressed") {
       Action press{[&log] {log += "press;";}};
       button.addAction(press);
-      click(2, 6);
+      click(2, 7);
       CHECK_EQ(log, "press;");
       send("\r"); // the button has the focus now
       CHECK_EQ(log, "press;press;"); // once for the key, not twice
@@ -2646,7 +2654,7 @@ TEST_CASE("UI Window") {
     SUBCASE("A button and a key are the same action") {
       w1.addAction(accept);
       button.addAction(accept);
-      click(2, 6);
+      click(2, 7);
       CHECK_EQ(log, "accept;");
       w1.focus(&entry);
       send("\r");
@@ -2703,8 +2711,8 @@ TEST_CASE("UI Window") {
       CHECK_EQ(area.lines()[0].size(), 6); // characters, not bytes
       CHECK_EQ(area.lines()[0][3], U'\u00e9');
       CHECK_EQ(area.cursor(), Vector{6, 1}); // behind the text
-      CHECK_EQ(cell(4, 1).rune, U'\u00e9'); // what is on the display is made from it
-      CHECK_EQ(cell(6, 1).rune, U'\u20ac');
+      CHECK_EQ(cell(5, 2).rune, U'\u00e9'); // what is on the display is made from it
+      CHECK_EQ(cell(7, 2).rune, U'\u20ac');
       send("\x1b[A"); // up, to the first line
       send("\x1b[F"); // End
       CHECK_EQ(area.cursor(), Vector{6, 0}); // one step for a character that is more than one byte
@@ -2741,10 +2749,10 @@ TEST_CASE("UI Window") {
       CHECK_EQ(input.contents(), "HelloWorld");
       CHECK_EQ(std::string(input.text()), "World \n"); // the inherited one: what is shown
       CHECK_EQ(input.lines()[0].size(), 10);
-      CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), "World \n"); // the end, with room for the cursor
+      CHECK_EQ(shown(Rectangle{2, 2, 8, 3}), "World \n"); // the end, with room for the cursor
       CHECK_EQ(input.scroll(), Vector{5, 0});
       send("\x1b[H");
-      CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), "HelloW\n");
+      CHECK_EQ(shown(Rectangle{2, 2, 8, 3}), "HelloW\n");
       CHECK_EQ(input.contents(), "HelloWorld");
     }
     SUBCASE("Replacing the text") {
@@ -2753,18 +2761,18 @@ TEST_CASE("UI Window") {
       CHECK_EQ(input.contents(), "Hi");
       CHECK_EQ(input.cursor(), Vector{2, 0}); // behind it
       CHECK_EQ(input.scroll(), Vector{0, 0}); // and the widget has been scrolled back
-      CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), "Hi    \n"); // nothing of the old text is left
+      CHECK_EQ(shown(Rectangle{2, 2, 8, 3}), "Hi    \n"); // nothing of the old text is left
       input.contents("");
       CHECK_EQ(input.lines().size(), 1);
-      CHECK_EQ(shown(Rectangle{1, 1, 7, 2}), "      \n");
-      CHECK_EQ(term.display().caret(), Vector{1, 1});
+      CHECK_EQ(shown(Rectangle{2, 2, 8, 3}), "      \n");
+      CHECK_EQ(term.display().caret(), Vector{2, 2});
       send("x");
       CHECK_EQ(input.contents(), "x");
       auto area{jwezel::ui::TextArea(w1, Rectangle{1, 3, 19, 5}, "a")};
       area.contents("one\ntwo\nthree\nfour"); // more lines than there are rows
       CHECK_EQ(area.cursor(), Vector{4, 3});
       CHECK_EQ(area.scroll(), Vector{0, 2});
-      CHECK_EQ(shown(Rectangle{1, 3, 19, 5}), "three             \nfour              \n");
+      CHECK_EQ(shown(Rectangle{2, 4, 20, 6}), "three             \nfour              \n");
     }
     SUBCASE("A zero-width layout area does not scroll text off the left edge") {
       auto box{jwezel::ui::VerticalBox(w1, Rectangle{1, 1, 1, 4})};
@@ -2773,7 +2781,7 @@ TEST_CASE("UI Window") {
       box.move(Rectangle{1, 1, 20, 4});
       send("x");
       CHECK_EQ(input.contents(), "x");
-      CHECK_EQ(cell(1, 1).rune, U'x');
+      CHECK_EQ(cell(2, 2).rune, U'x');
     }
     SUBCASE("Page Up and Page Down") {
       std::string document;
@@ -2784,8 +2792,8 @@ TEST_CASE("UI Window") {
       auto rows{
         [&] { // the lines that are shown, the first ones of them
           std::vector<std::string> result;
-          for (jwezel::Dim row = 1; row < 5; ++row) {
-            result.push_back(shown(Rectangle{1, row, 8, jwezel::toDim(row + 1)}));
+          for (jwezel::Dim row = 2; row < 6; ++row) {
+            result.push_back(shown(Rectangle{2, row, 9, jwezel::toDim(row + 1)}));
           }
           return result;
         }
@@ -2799,7 +2807,7 @@ TEST_CASE("UI Window") {
       CHECK_EQ(area.cursor(), Vector{7, 15}); // a page up: it is in the same row of the area
       CHECK_EQ(area.scroll(), Vector{0, 12});
       CHECK_EQ(rows(), Rows{"line 12\n", "line 13\n", "line 14\n", "line 15\n"});
-      CHECK_EQ(term.display().caret(), Vector{8, 4});
+      CHECK_EQ(term.display().caret(), Vector{9, 5});
       send(pageUp.c_str());
       send(pageUp.c_str());
       send(pageUp.c_str());
@@ -2850,7 +2858,7 @@ TEST_CASE("UI Window") {
       send("\x1b[6~");
       CHECK_EQ(area.cursor().y(), 2);
       CHECK_EQ(area.scroll(), Vector{0, 0}); // all of it is shown anyway
-      CHECK_EQ(shown(Rectangle{1, 1, 6, 2}), "one  \n");
+      CHECK_EQ(shown(Rectangle{2, 2, 7, 3}), "one  \n");
     }
     SUBCASE("An area with a single row") {
       auto area{jwezel::ui::TextArea(w1, Rectangle{1, 1, 19, 2}, "a\nb\nc")};
@@ -2923,11 +2931,11 @@ TEST_CASE("UI Window") {
         CHECK_EQ(sources, std::vector<const Element *>{&button, &button});
       }
       SUBCASE("By mouse") {
-        send("\x1b[<0;3;2M");
+        send("\x1b[<0;3;3M");
         CHECK(kinds.empty()); // the press is not what is reported
-        send("\x1b[<0;3;2m");
+        send("\x1b[<0;3;3m");
         CHECK_EQ(kinds, std::vector<std::string>{"MouseButtonEvent"});
-        CHECK_EQ(positions, std::vector<jwezel::Vector>{Vector{2, 1}}); // relative to the window
+        CHECK_EQ(positions, std::vector<jwezel::Vector>{Vector{1, 1}}); // relative to the content of the window
         CHECK(keys.empty());
       }
       SUBCASE("The event is a value, which stays valid") {
@@ -3020,16 +3028,16 @@ TEST_CASE("UI Window") {
         CHECK_FALSE(chosen[0].changed());
       }
       SUBCASE("By mouse") {
-        send("\x1b[<0;3;2M"); // opens the list
+        send("\x1b[<0;3;3M"); // opens the list
         CHECK(chosen.empty());
-        send("\x1b[<0;3;5M"); // the third item: Cherry
+        send("\x1b[<0;3;6M"); // the third item: Cherry
         REQUIRE_EQ(chosen.size(), 1);
         CHECK_EQ(chosen[0].index(), 2);
         CHECK_EQ(chosen[0].previous(), 1);
         CHECK_EQ(std::string(chosen[0].item()), "Cherry\n");
         const auto *mouse{std::get_if<MouseButtonEvent>(&chosen[0].cause())};
         REQUIRE_NE(mouse, nullptr);
-        CHECK_EQ(mouse->position(), Vector{2, 4});
+        CHECK_EQ(mouse->position(), Vector{1, 4});
       }
       SUBCASE("Escape chooses nothing") {
         send(" ");

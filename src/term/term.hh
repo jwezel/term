@@ -48,6 +48,12 @@ struct Terminal: Surface, TerminalInterface {
     Display::Screen screen=Display::Screen::main
   );
 
+  /// Destroy the terminal
+  ///
+  /// The desktop window is destroyed with the terminal, while the terminal is still alive. Contracting the
+  /// display then would resize the desktop that is being removed, so it is switched off for the teardown.
+  ~Terminal() override;
+
   void addElement(Surface::Element *element, Surface::Element * below) override;
 
   void deleteElement(Element *element, Element *destination) override;
