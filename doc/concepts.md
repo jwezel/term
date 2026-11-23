@@ -13,13 +13,14 @@ destructors unregister them. Do not put an owning `unique_ptr` or raw owning poi
 
 `jwezel::Vector` represents a position or size; `jwezel::Rectangle` uses half-open bounds `[x1, x2) × [y1, y2)`. UI
 widget coordinates are relative to their window's content area. A window's terminal area is relative to the display.
-`Element::bounds()` reports the assigned UI area, while `TextElement::area()` is the area rendered on the underlying
-surface.
+`Element::bounds()` reports the content-relative area, while `TextElement::area()` is the window-relative area on
+the surface (bounds offset by the decoration insets).
 
-The root draws its widgets through an `ElementDevice` that covers the window's content, so a widget is clipped to that
-content and cannot paint over the window's frame. `WidgetPlacement::host` is the exception: a host-placed widget is
-drawn on the window's own surface at the display position of its bounds, above the frame. That is how the popup of a
-drop-down or menu can reach past the window; `UiStyle::popupPlacement` chooses between the two for choice controls.
+Widgets are elements on the window's own content surface. The window draws its frame into its own text; widgets sit
+above it, offset by the content origin that the decoration insets define. The window clips them to its area, so a
+widget cannot paint beyond the window. `UiStyle::popupPlacement` controls where the popup of a choice control opens:
+`inside` (the default) places it in the same window, clipped to the content and flipped above the control when there
+is not enough room below; `window` opens it in a transient window that can extend past the frame.
 
 An element may provide a `preferredSize()`. A box uses this when a child opts into `LayoutSize::fit`; otherwise it
 divides the available main-axis space between stretching children according to their weights. A child can be aligned

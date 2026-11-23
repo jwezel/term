@@ -37,12 +37,14 @@
 - **Widget backgrounds:** `InheritBackground` is the default for widgets and
     resolves to the host window's background. Explicit `Space` still means the
     terminal background. A UI `Window` background remains explicit.
-- **Window content:** Widgets are clipped to their `ui::Window` content area
-    through the root's `ElementDevice` client, and `bounds()`, focus, and hit
-    testing are content-relative. `WidgetPlacement::host` draws a transient,
-    such as a popup list, on the host window's surface at display coordinates
-    so it can extend beyond the frame; `UiStyle::popupPlacement` selects
-    between the two, and `Root::ensure()` grows the window for larger bounds.
+- **Window content:** Widgets are elements on the window's own content
+    surface, offset by the decoration insets. `bounds()` is content-relative;
+    `TextElement::area()` is window-relative. The window clips its content.
+    `UiStyle::popupPlacement` controls where a popup opens: `inside` (the
+    default) places it in the same window, clipped and flipped above the
+    control when needed; `window` opens a transient `jwezel::Window` that
+    can extend past the frame. `jwezel::Window::clientInsets()` reshapes
+    the content area and fires `geometryEvent` so the root re-layouts.
 - **Drop-down captions:** `caption(const Text &)` / `caption()` sets a fixed
     closed-state caption. A non-empty caption displays regardless of selection;
     an empty caption shows the selected item. It does not alter items,
@@ -105,15 +107,15 @@
 
 ## Current checkpoint (2026-11-23)
 
-- Commit `31f1d15` draws widgets inside their host window: content-relative
-  bounds, caret, and mouse coordinates, a clipped `ElementDevice` client per
-  root, `Framing`/`Insets` decoration geometry, host-placed transient popups
-  selected by `UiStyle::popupPlacement`, visibility-based tab order, and a
-  terminal-teardown contraction guard. Commit `c59e8b5` records the model in
-  the architecture and concept pages under `doc/`.
-- The demo person-and-address dialog is committed in `8c5517f`; no pending
-  working-tree changes remain besides this file.
-- The normal, ASan/UBSan, and release test suites each pass with 10,400
+- The working tree has an uncommitted refactor: widgets are elements on the
+  window's own content surface (no separate `ElementDevice` client), offset
+  by decoration insets. `jwezel::Window` stores insets and fires
+  `geometryEvent` when they change. Popups open inside the window by default
+  (`PopupPlacement::inside`, with flip-above), or as a transient
+  `jwezel::Window` (`PopupPlacement::window`). `WidgetPlacement` is removed.
+  `Insets` moved to `geometry.hh`. New files: `popup_window.{hh,cc}`.
+- The normal, ASan/UBSan, and release test suites each pass with 10,443
   assertions, and `ninja -C build docs` reports zero Doxygen warnings. The
-  demo pty checks cover the menu popup, dialog cancellation, Tab navigation
-  and typing into fields, saving, and the 70x22 minimum terminal size.
+  demo pty checks cover the menu popup, dialog cancellation, Tab navigation,
+  typing into fields, saving, and the 70x22 minimum terminal size. The
+  Country dropdown in the demo now stays inside its dialog window.
