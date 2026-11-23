@@ -8,8 +8,8 @@ owns terminal rendering and translates input into events.
 
 - A `jwezel::Terminal` coordinates the display, keyboard, and terminal-sized surface.
 - A `jwezel::ui::Ui` exposes that terminal to the UI layer. It supplies the desktop and a `run()` / `stop()` loop.
-- A `jwezel::ui::Window` is a root for UI elements. Its children use coordinates relative to the window's content;
-  the window itself is positioned on the terminal display.
+- A `jwezel::ui::Window` is a root for UI elements. Its children use coordinates relative to the window's content and
+  are clipped to it; the window itself is positioned on the terminal display.
 - A `jwezel::ui::Widget` is an element that paints on a surface and can participate in focus and input handling.
 - A `jwezel::ui::Container` holds child elements. A `jwezel::ui::Box` lays out its children along one axis.
 - Events flow from the terminal to the focused window, through the focused widget, and then to registered handlers

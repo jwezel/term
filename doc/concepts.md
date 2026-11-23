@@ -16,6 +16,11 @@ widget coordinates are relative to their window's content area. A window's termi
 `Element::bounds()` reports the assigned UI area, while `TextElement::area()` is the area rendered on the underlying
 surface.
 
+The root draws its widgets through an `ElementDevice` that covers the window's content, so a widget is clipped to that
+content and cannot paint over the window's frame. `WidgetPlacement::host` is the exception: a host-placed widget is
+drawn on the window's own surface at the display position of its bounds, above the frame. That is how the popup of a
+drop-down or menu can reach past the window; `UiStyle::popupPlacement` chooses between the two for choice controls.
+
 An element may provide a `preferredSize()`. A box uses this when a child opts into `LayoutSize::fit`; otherwise it
 divides the available main-axis space between stretching children according to their weights. A child can be aligned
 at the beginning, center, or end of the cross axis instead of stretching. `layoutChanged()` notifies the nearest box
