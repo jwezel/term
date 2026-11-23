@@ -37,6 +37,12 @@
 - **Widget backgrounds:** `InheritBackground` is the default for widgets and
     resolves to the host window's background. Explicit `Space` still means the
     terminal background. A UI `Window` background remains explicit.
+- **Window content:** Widgets are clipped to their `ui::Window` content area
+    through the root's `ElementDevice` client, and `bounds()`, focus, and hit
+    testing are content-relative. `WidgetPlacement::host` draws a transient,
+    such as a popup list, on the host window's surface at display coordinates
+    so it can extend beyond the frame; `UiStyle::popupPlacement` selects
+    between the two, and `Root::ensure()` grows the window for larger bounds.
 - **Drop-down captions:** `caption(const Text &)` / `caption()` sets a fixed
     closed-state caption. A non-empty caption displays regardless of selection;
     an empty caption shows the selected item. It does not alter items,
@@ -97,16 +103,17 @@
   concept to similar parts of the software.
 - Format code with structured indentation (https://structured-indentation.org)
 
-## Current checkpoint (2026-11-19)
+## Current checkpoint (2026-11-23)
 
-- Commit `62c892a` contains the background inheritance, drop-down caption, and
-  layout sizing/alignment polish.
-- The working tree has an uncommitted change to `examples/demo/demo.cc`
-  expanding the address dialog into a person/contact form. Preserve it; do not
-  reset or overwrite it.
-- Documentation work is in progress: root `Doxyfile.in`, the optional Meson
-  `docs` target, a Markdown manual under `doc/`, and the compiled README
-  quick-start example/screenshot.
-- The normal, ASan/UBSan, and release test suites have each passed with 10,064
-  assertions. The demo pty checks have covered saving, cancellation, and the
-  70x22 minimum size.
+- Commit `31f1d15` draws widgets inside their host window: content-relative
+  bounds, caret, and mouse coordinates, a clipped `ElementDevice` client per
+  root, `Framing`/`Insets` decoration geometry, host-placed transient popups
+  selected by `UiStyle::popupPlacement`, visibility-based tab order, and a
+  terminal-teardown contraction guard. Commit `c59e8b5` records the model in
+  the architecture and concept pages under `doc/`.
+- The demo person-and-address dialog is committed in `8c5517f`; no pending
+  working-tree changes remain besides this file.
+- The normal, ASan/UBSan, and release test suites each pass with 10,400
+  assertions, and `ninja -C build docs` reports zero Doxygen warnings. The
+  demo pty checks cover the menu popup, dialog cancellation, Tab navigation
+  and typing into fields, saving, and the 70x22 minimum terminal size.
