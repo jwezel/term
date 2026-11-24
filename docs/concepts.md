@@ -129,6 +129,7 @@ jwezel::ui::SelectEvent), and [`SelectionEvent`](\ref jwezel::ui::SelectionEvent
 
 ## Terminal I/O boundary
 
-`jwezel::Display` owns terminal output, cursor control, screen selection, and display updates. Widgets write cells to
-the display surface; they do not emit ANSI sequences or write directly to standard output. Keeping this boundary
-centralized makes terminal state restoration predictable and testable.
+`jwezel::Display` owns terminal output, cursor control, screen selection, and display updates. Widgets never touch the
+terminal: they render cells into their own element buffers on the window's surface, the surface composes the visible
+fragments, and `Display` is the only component that turns them into terminal output. Keeping this boundary centralized
+makes terminal state restoration predictable and testable.
