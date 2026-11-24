@@ -23,6 +23,7 @@ Checks: >
   -llvm-prefer-static-over-anonymous-namespace
   -readability-avoid-nested-conditional-operator
   -cppcoreguidelines-avoid-const-or-ref-data-members
+  -readability-math-missing-parentheses
 CheckOptions:
   readability-identifier-length.MinimumVariableNameLength: 2
   readability-identifier-length.IgnoredVariableNames: '_.*'
