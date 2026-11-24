@@ -3,7 +3,12 @@ name: Deploy docs to Pages
 on:
   push:
     branches: ["master"]
-    paths: ["docs/**"]
+    paths:
+      - "docs/**"
+      - "Doxyfile.in"
+      - "meson.build"
+      - "src/**"
+      - "examples/quick_start/**"
   workflow_dispatch:
 
 permissions:
@@ -16,16 +21,42 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: git submodule update --init --recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: Install documentation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen graphviz
+          pip install -r requirements.txt
+      - name: Cache Conan packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.conan2
+          key: ${{ runner.os }}-conan2-${{ hashFiles('**/conanfile.txt') }}
+      - run: conan profile detect || true
+      - run: conan install packages --build=missing
+      - run: meson setup build
+        env:
+          PKG_CONFIG_PATH: packages
+      - run: ninja -C build docs
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: build/html
+
   deploy:
+    needs: build
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v5
-        with:
-          path: docs
       - id: deployment
         uses: actions/deploy-pages@v5
