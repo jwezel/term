@@ -12,13 +12,13 @@ jobs:
     runs-on:
       - ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
+    - uses: actions/checkout@v7
+    - uses: actions/setup-python@v7
       with:
         python-version: '3.12'
         cache: 'pip'
     - name: Cache Conan packages
-      uses: actions/cache@v3
+      uses: actions/cache@v6
       with:
         path: ~/.conan2
         key: ${{ runner.os }}-conan2-${{ hashFiles('**/conanfile.txt') }}
@@ -39,7 +39,7 @@ jobs:
       env:
         COLUMNS: 128
         LINES: 48
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       if: failure()
       with:
         name: Linux_Meson_Testlog

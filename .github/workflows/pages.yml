@@ -24,9 +24,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: git submodule update --init --recursive
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: "pip"
@@ -36,7 +36,7 @@ jobs:
           sudo apt-get install -y doxygen graphviz
           pip install -r requirements.txt
       - name: Cache Conan packages
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: ~/.conan2
           key: ${{ runner.os }}-conan2-${{ hashFiles('**/conanfile.txt') }}
@@ -46,7 +46,7 @@ jobs:
         env:
           PKG_CONFIG_PATH: packages
       - run: ninja -C build docs
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
           path: build/html
