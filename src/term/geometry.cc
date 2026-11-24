@@ -75,11 +75,11 @@ auto Vector::operator -(Dim size) const -> Vector {
 }
 
 auto Vector::operator *(double factor) const -> Vector {
-  return Vector{static_cast<Dim>(x_ * factor)};
+  return Vector(toDim(x_ * factor), toDim(y_ * factor));
 }
 
 auto Vector::operator /(double divisor) const -> Vector {
-  return Vector{static_cast<Dim>(x_ / divisor)};
+  return Vector(toDim(x_ / divisor), toDim(y_ / divisor));
 }
 
 auto Vector::left(Dim shift) const -> Vector {
@@ -98,25 +98,21 @@ auto Vector::down(Dim shift) const -> Vector {
   return Vector(x_, toDim(y_ + shift));
 }
 
-// TODO(j): Test
 auto Vector::left(Dim shift) -> Vector & {
   x_ = toDim(x_ - shift);
   return *this;
 }
 
-// TODO(j): Test
 auto Vector::right(Dim shift) -> Vector & {
   x_ = toDim(x_ + shift);
   return *this;
 }
 
-// TODO(j): Test
 auto Vector::up(Dim shift) -> Vector & {
   y_ = toDim(y_ - shift);
   return *this;
 }
 
-// TODO(j): Test
 auto Vector::down(Dim shift) -> Vector & {
   y_ = toDim(y_ + shift);
   return *this;
@@ -255,28 +251,24 @@ auto Rectangle::down(Dim shift) const -> Rectangle {
   return Rectangle(x1_, toDim(y1_ + shift), x2_, toDim(y2_ + shift));
 }
 
-// TODO(j): Test
 auto Rectangle::left(Dim shift) -> Rectangle & {
   x1_ = toDim(x1_ - shift);
   x2_ = toDim(x2_ - shift);
   return *this;
 }
 
-// TODO(j): Test
 auto Rectangle::right(Dim shift) -> Rectangle & {
   x1_ = toDim(x1_ + shift);
   x2_ = toDim(x2_ + shift);
   return *this;
 }
 
-// TODO(j): Test
 auto Rectangle::up(Dim shift) -> Rectangle & {
   y1_ = toDim(y1_ - shift);
   y2_ = toDim(y2_ - shift);
   return *this;
 }
 
-// TODO(j): Test
 auto Rectangle::down(Dim shift) -> Rectangle & {
   y1_ = toDim(y1_ + shift);
   y2_ = toDim(y2_ + shift);

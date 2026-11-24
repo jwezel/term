@@ -155,6 +155,12 @@ TEST_CASE("UI Window") {
   Terminal term('.'_C, VectorMin, VectorMin, VectorMax, output->_fileno, inputRead->_fileno);
   jwezel::ui::Ui ui_{term};
 
+  SUBCASE("Default window size") {
+    // The default area is two thirds of the display: both dimensions have to be scaled
+    auto w{jwezel::ui::Window(ui_)};
+    CHECK_GT(w.area().width(), 0);
+    CHECK_GT(w.area().height(), 0);
+  }
   SUBCASE("Window") {
     auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 20, 12}, Text{"Title"}, nullptr, &plain)};
     auto test{Text{' '_C, Vector{20, 12}}};

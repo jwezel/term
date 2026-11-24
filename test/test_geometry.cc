@@ -10,6 +10,7 @@
 using
   jwezel::Vector,
   jwezel::Rectangle,
+  jwezel::RectangleError,
   jwezel::string,
   jwezel::diff,
   jwezel::DimLow,
@@ -92,6 +93,31 @@ TEST_CASE("Vector") {
   SUBCASE("operator - Dim") {
     CHECK_EQ(vec - 1, Vector(19, 9));
   }
+  SUBCASE("operator += Dim") {
+    Vector shifted{vec};
+    const Vector &result{shifted += 2};
+    CHECK_EQ(&result, &shifted); // the in-place operation returns the Vector itself
+    CHECK_EQ(shifted, Vector(22, 12));
+  }
+  SUBCASE("operator -= Dim") {
+    Vector shifted{vec};
+    const Vector &result{shifted -= 2};
+    CHECK_EQ(&result, &shifted);
+    CHECK_EQ(shifted, Vector(18, 8));
+  }
+  SUBCASE("operator * double") {
+    CHECK_EQ(vec * 1.5, Vector(30, 15)); // both components are scaled
+    CHECK_EQ(vec * 0.0, Vector(0, 0));
+  }
+  SUBCASE("operator / double") {
+    CHECK_EQ(vec / 4, Vector(5, 2));
+    CHECK_EQ(vec / 2.5, Vector(8, 4));
+  }
+  SUBCASE("operator <<") {
+    stringstream stream;
+    vec << stream;
+    CHECK_EQ(stream.str(), "Vec(20, 10)");
+  }
   SUBCASE("operator + Vector") {
     CHECK_EQ(vec + Vector(2, 4), Vector(22, 14));
   }
@@ -99,16 +125,52 @@ TEST_CASE("Vector") {
     CHECK_EQ(vec - Vector(2, 4), Vector(18, 6));
   }
   SUBCASE("left()") {
-    CHECK_EQ(vec.left(2), Vector(18, 10));
+    const Vector &cvec{vec}; // the const overload leaves the Vector unchanged
+    CHECK_EQ(cvec.left(2), Vector(18, 10));
   }
   SUBCASE("right()") {
-    CHECK_EQ(vec.right(2), Vector(22, 10));
+    const Vector &cvec{vec};
+    CHECK_EQ(cvec.right(2), Vector(22, 10));
   }
   SUBCASE("up()") {
-    CHECK_EQ(vec.up(2), Vector(20, 8));
+    const Vector &cvec{vec};
+    CHECK_EQ(cvec.up(2), Vector(20, 8));
   }
   SUBCASE("down()") {
-    CHECK_EQ(vec.down(2), Vector(20, 12));
+    const Vector &cvec{vec};
+    CHECK_EQ(cvec.down(2), Vector(20, 12));
+  }
+  SUBCASE("left() in place") {
+    Vector shifted{vec};
+    const Vector &result{shifted.left(2)};
+    CHECK_EQ(&result, &shifted); // the in-place shift returns the Vector itself
+    CHECK_EQ(shifted, Vector(18, 10));
+    shifted.left(); // the default shift is one
+    CHECK_EQ(shifted, Vector(17, 10));
+  }
+  SUBCASE("right() in place") {
+    Vector shifted{vec};
+    const Vector &result{shifted.right(2)};
+    CHECK_EQ(&result, &shifted);
+    CHECK_EQ(shifted, Vector(22, 10));
+    shifted.right();
+    CHECK_EQ(shifted, Vector(23, 10));
+  }
+  SUBCASE("up() in place") {
+    Vector shifted{vec};
+    const Vector &result{shifted.up(2)};
+    CHECK_EQ(&result, &shifted);
+    CHECK_EQ(shifted, Vector(20, 8));
+    shifted.up();
+    CHECK_EQ(shifted, Vector(20, 7));
+  }
+  SUBCASE("down() in place") {
+    Vector shifted{vec};
+    const Vector &result{shifted.down(2)};
+    CHECK_EQ(&result, &shifted);
+    CHECK_EQ(shifted, Vector(20, 12));
+    shifted.down();
+    CHECK_EQ(shifted, Vector(20, 13));
   }
   SUBCASE("operator | Vector") {
     CHECK_EQ(vec | Vector(2, 4), Vector(20, 10));
@@ -130,6 +192,11 @@ TEST_CASE("Rectangle") {
 
   SUBCASE("operator string") {
     CHECK_EQ(string(rec), "Rec(10, 10, 30, 30)");
+  }
+  SUBCASE("operator <<") {
+    stringstream stream;
+    stream << rec;
+    CHECK_EQ(stream.str(), "Rec(10, 10, 30, 30)");
   }
   SUBCASE("operator ==") {
     CHECK(rec == Rectangle(10, 10, 30, 30));
@@ -293,9 +360,67 @@ TEST_CASE("Rectangle") {
   }
   SUBCASE("operator - Dim") {
     CHECK_EQ(rec - 1, Rectangle(11, 11, 29, 29));
+    const Rectangle degenerate{DimLow, DimLow, DimLow, DimLow};
+    const auto shrink{[&] { return degenerate - 0; }};
+    CHECK_THROWS_AS(shrink(), RectangleError); // the result would be RectangleDefault
   }
   SUBCASE("operator + Dim") {
     CHECK_EQ(rec + 1, Rectangle(9, 9, 31, 31));
+    const Rectangle degenerate{DimLow, DimLow, DimLow, DimLow};
+    const auto grow{[&] { return degenerate + 0; }};
+    CHECK_THROWS_AS(grow(), RectangleError);
+  }
+  SUBCASE("left()") {
+    const Rectangle &crec{rec}; // the const overload leaves the Rectangle unchanged
+    CHECK_EQ(crec.left(2), Rectangle(8, 10, 28, 30));
+    CHECK_EQ(crec.left(), Rectangle(9, 10, 29, 30)); // the default shift is one
+  }
+  SUBCASE("right()") {
+    const Rectangle &crec{rec};
+    CHECK_EQ(crec.right(2), Rectangle(12, 10, 32, 30));
+    CHECK_EQ(crec.right(), Rectangle(11, 10, 31, 30));
+  }
+  SUBCASE("up()") {
+    const Rectangle &crec{rec};
+    CHECK_EQ(crec.up(2), Rectangle(10, 8, 30, 28));
+    CHECK_EQ(crec.up(), Rectangle(10, 9, 30, 29));
+  }
+  SUBCASE("down()") {
+    const Rectangle &crec{rec};
+    CHECK_EQ(crec.down(2), Rectangle(10, 12, 30, 32));
+    CHECK_EQ(crec.down(), Rectangle(10, 11, 30, 31));
+  }
+  SUBCASE("left() in place") {
+    Rectangle shifted{rec};
+    const Rectangle &result{shifted.left(2)};
+    CHECK_EQ(&result, &shifted); // the in-place shift returns the Rectangle itself
+    CHECK_EQ(shifted, Rectangle(8, 10, 28, 30));
+    shifted.left(); // the default shift is one
+    CHECK_EQ(shifted, Rectangle(7, 10, 27, 30));
+  }
+  SUBCASE("right() in place") {
+    Rectangle shifted{rec};
+    const Rectangle &result{shifted.right(2)};
+    CHECK_EQ(&result, &shifted);
+    CHECK_EQ(shifted, Rectangle(12, 10, 32, 30));
+    shifted.right();
+    CHECK_EQ(shifted, Rectangle(13, 10, 33, 30));
+  }
+  SUBCASE("up() in place") {
+    Rectangle shifted{rec};
+    const Rectangle &result{shifted.up(2)};
+    CHECK_EQ(&result, &shifted);
+    CHECK_EQ(shifted, Rectangle(10, 8, 30, 28));
+    shifted.up();
+    CHECK_EQ(shifted, Rectangle(10, 7, 30, 27));
+  }
+  SUBCASE("down() in place") {
+    Rectangle shifted{rec};
+    const Rectangle &result{shifted.down(2)};
+    CHECK_EQ(&result, &shifted);
+    CHECK_EQ(shifted, Rectangle(10, 12, 30, 32));
+    shifted.down();
+    CHECK_EQ(shifted, Rectangle(10, 13, 30, 33));
   }
   SUBCASE("defaultTo()") {
     CHECK_EQ(Rectangle(DimLow, 10, 30, 30).defaultTo(rec), rec);
