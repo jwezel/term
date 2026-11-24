@@ -140,6 +140,32 @@ enum Key: Unicode {
   AltEnter,        ///< Alt + Enter.
   AltTab,          ///< Alt + Tab.
   AltSystem,       ///< Alt + system-request key.
+  AltA,            ///< Alt + A.
+  AltB,            ///< Alt + B.
+  AltC,            ///< Alt + C.
+  AltD,            ///< Alt + D.
+  AltE,            ///< Alt + E.
+  AltF,            ///< Alt + F.
+  AltG,            ///< Alt + G.
+  AltH,            ///< Alt + H.
+  AltI,            ///< Alt + I.
+  AltJ,            ///< Alt + J.
+  AltK,            ///< Alt + K.
+  AltL,            ///< Alt + L.
+  AltM,            ///< Alt + M.
+  AltN,            ///< Alt + N.
+  AltO,            ///< Alt + O.
+  AltP,            ///< Alt + P.
+  AltQ,            ///< Alt + Q.
+  AltR,            ///< Alt + R.
+  AltS,            ///< Alt + S.
+  AltT,            ///< Alt + T.
+  AltU,            ///< Alt + U.
+  AltV,            ///< Alt + V.
+  AltW,            ///< Alt + W.
+  AltX,            ///< Alt + X.
+  AltY,            ///< Alt + Y.
+  AltZ,            ///< Alt + Z.
   AltF1,           ///< Alt + F1.
   AltF2,           ///< Alt + F2.
   AltF3,           ///< Alt + F3.

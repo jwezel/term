@@ -1,3 +1,4 @@
+#include "focus_group.hh"
 #include "root.hh"
 #include "widget.hh"
 
@@ -100,9 +101,19 @@ void Root::step(int direction) {
     :
       static_cast<std::size_t>(current - chain_.begin())
   };
+  const auto *currentGroup{focus_? focus_->focusGroup(): nullptr};
   for (std::size_t distance = 1; distance <= count; ++distance) {
     const auto index{(start + (direction > 0? distance: count - distance)) % count};
     if (auto *candidate{chain_[index]}; candidate->tabbable()) {
+      if (auto *group{candidate->focusGroup()}; group) {
+        if (group == currentGroup) {
+          continue; // a group is one stop: it was entered already, so the focus leaves it here
+        }
+        candidate = direction > 0? group->first(): group->last();
+        if (not candidate) {
+          continue;
+        }
+      }
       if (candidate != focus_) {
         focus(candidate);
       }

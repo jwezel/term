@@ -68,11 +68,16 @@ struct UiStyle {
   BracketsByState dropDown{ ///< Drop-down glyphs by state; the right glyph includes the arrow.
     Brackets{"[ ", " ▼ ]"}, Brackets{"[ ", " ▼ ]"}, Brackets{"[ ", " ▼ ]"}
   };
+  BracketsByState menu{ ///< Menu-button glyphs by state; unlike a drop-down, a menu has no arrow.
+    Brackets{"[ ", " ]"}, Brackets{"< ", " >"}, Brackets{"< ", " >"}
+  };
   Brackets popup{" ", " "}; ///< Glyphs surrounding each item in a drop-down popup.
   Brackets list{" ", " "}; ///< Glyphs surrounding each item in a list box.
   std::string_view listMarker{"🢒"}; ///< Marker shown before the current item in caret mode.
   ItemSelectionStyle itemSelectionStyle{ItemSelectionStyle::highlight}; ///< Default current-item style for list boxes.
   std::string_view labelSuffix{}; ///< Suffix shown after the text of a label that has a buddy.
+  std::string_view menuCheck{"✓"}; ///< Mark in front of a checked menu item.
+  std::string_view menuSubmenu{"▸"}; ///< Mark after a menu item that opens a submenu.
   PopupPlacement popupPlacement{PopupPlacement::inside}; ///< Where a popup of a choice control opens.
 };
 
@@ -90,6 +95,8 @@ inline constexpr std::array<std::string_view, WidgetStates> buttonRoles{"button"
 inline constexpr std::array<std::string_view, WidgetStates> inputRoles{"input", "input.focus", "input.active"};
 /// Drop-down color roles in `WidgetState` order.
 inline constexpr std::array<std::string_view, WidgetStates> dropDownRoles{"dropdown", "dropdown.focus", "dropdown.active"};
+/// Menu-button color roles in `WidgetState` order.
+inline constexpr std::array<std::string_view, WidgetStates> menuRoles{"menu", "menu.focus", "menu.active"};
 /// Color role for labels.
 inline constexpr std::string_view labelRole{"label"};
 /// Color role for a drop-down popup.

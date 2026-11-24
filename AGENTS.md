@@ -120,7 +120,8 @@
   insets and fires `geometryEvent` when they change. Popups open inside the
   window by default (`PopupPlacement::inside`, with flip-above), or as a
   transient `jwezel::Window` (`PopupPlacement::window`). `WidgetPlacement` is
-  removed. `Insets` moved to `geometry.hh`. New files: `popup_window.{hh,cc}`.
+  removed. `Insets` moved to `geometry.hh`. New files: `popup_window.{hh,cc}`,
+  `focus_group.{hh,cc}`, `menu_bar.{hh,cc}`.
 - Geometry is fully tested: const and in-place shifts, scaling, accumulation,
   stream output, and the `RectangleDefault` guards. `Vector`'s `operator*` and
   `operator/` scale both components, so a default-sized UI window
@@ -129,8 +130,23 @@
   repository.
 - The backdrop is the lowest surface element, and `Surface::isBackdrop()` says
   so: the surface does not paint it because it is the terminal background.
-- The normal, ASan/UBSan, and release suites each pass with 10,549 assertions
+- Menus are richer than a caption drop-down: `MenuItem` carries a hint, a
+  check mark, a separator, or a weak `Menu*` submenu. A `MenuBar` orders
+  application-owned menus, and a `FocusGroup` makes the bar one Tab stop while
+  Left/Right move between its menus. Submenus open at their item's row and the
+  parent forwards the input to the open child. The decoder turns escape plus a
+  letter into `Key::AltA`..`Key::AltZ`, so Alt+letter accelerators work through
+  actions. A menu item's action shortcuts become window accelerators (a proxy
+  action closes the open menus first), and the first one is the item's hint
+  unless it gives its own. Menu buttons use their own glyphs (`UiStyle::menu`)
+  and color roles, without the drop-down arrow. The demo has File/View/Help
+  menus, a Contacts submenu, a checked Colors item, and modal Keys/About
+  notices.
+- `Root::layout()` moves non-managed children to their current area; a popup
+  choice closes only when that area actually changes, so a layout pass does not
+  close an open menu.
+- The normal, ASan/UBSan, and release suites each pass with 10,690 assertions
   (41 cases, 2 intentionally skipped), and `ninja -C build docs` reports zero
-  Doxygen warnings. The demo pty checks cover the menu popup, dialog
-  cancellation, Tab navigation, typing into fields, saving, and the 70x22
-  minimum terminal size; the Country dropdown stays inside its dialog window.
+  Doxygen warnings. The demo pty checks cover menu bar and submenu navigation,
+  the Keys and About boxes, dialog cancellation, Tab navigation, typing into
+  fields, saving, and the 70x22 minimum terminal size.

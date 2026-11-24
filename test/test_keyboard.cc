@@ -23,7 +23,7 @@ TEST_CASE("Keyboard") {
   CHECK_EQ(kb.keyPrefixes().nodes.at('\x7f')->key, Key::Backspace);
   CHECK_EQ(kb.keyPrefixes().nodes.at('\x1b')->nodes['\x0d']->key, Key::AltEnter);
   CHECK_EQ(kb.keyPrefixes().nodes.at('\x1b')->nodes['\x0d']->nodes.size(), 0);
-  CHECK_EQ(kb.keyPrefixes().nodes.at('\x1b')->nodes.size(), 6);
+  CHECK_EQ(kb.keyPrefixes().nodes.at('\x1b')->nodes.size(), 32); // six sequences and the 26 Alt + letter keys
   SUBCASE("Read key") {
     CHECK_EQ(kb.key(), jwezel::Key::AltEnter);
     CHECK_EQ(kb.key(), Key::Escape);
@@ -133,17 +133,25 @@ TEST_CASE("Keyboard: Escape is a key, and the start of others") {
   }
   SUBCASE("Alone") {
     CHECK_EQ(keysOf("\x1b", 1), Keys{Key::Escape});
-    CHECK_EQ(keysOf("a\x1b" "b", 3), Keys{'a', Key::Escape, 'b'}); // (a hex escape takes all the hex digits)
+    CHECK_EQ(keysOf("a\x1b" "[", 3), Keys{'a', Key::Escape, '['}); // (a hex escape takes all the hex digits)
   }
   SUBCASE("Followed by a character that is not part of a key") {
-    CHECK_EQ(keysOf("\x1bx", 2), Keys{Key::Escape, 'x'});
+    CHECK_EQ(keysOf("\x1b\x01", 2), Keys{Key::Escape, '\x01'});
     CHECK_EQ(keysOf("\x1b[", 2), Keys{Key::Escape, '['});
     CHECK_EQ(keysOf("\x1b[99X", 5), Keys{Key::Escape, '[', '9', '9', 'X'});
     CHECK_EQ(keysOf("\x1bO", 2), Keys{Key::Escape, 'O'});
   }
+  SUBCASE("Alt + letter") {
+    CHECK_EQ(keysOf("\x1b" "a", 1), Keys{Key::AltA});
+    CHECK_EQ(keysOf("\x1b" "f", 1), Keys{Key::AltF});
+    CHECK_EQ(keysOf("\x1b" "z", 1), Keys{Key::AltZ});
+    CHECK_EQ(keysOf("\x1b" "a\x1b" "b", 2), Keys{Key::AltA, Key::AltB});
+    // a letter that arrives after the 2 ms window is not part of an Alt sequence
+    CHECK_EQ(keysOf("\x1b\xff\xff\xff" "b", 2), Keys{Key::Escape, 'b'});
+  }
   SUBCASE("More than one") {
     CHECK_EQ(keysOf("\x1b\x1b", 2), Keys{Key::Escape, Key::Escape});
-    CHECK_EQ(keysOf("\x1b\x1bx", 3), Keys{Key::Escape, Key::Escape, 'x'});
+    CHECK_EQ(keysOf("\x1b\x1bx", 2), Keys{Key::Escape, Key::AltX});
     CHECK_EQ(keysOf("\x1b\x1b\x1b", 3), Keys{Key::Escape, Key::Escape, Key::Escape});
   }
   SUBCASE("It does not get in the way of sequences") {

@@ -109,13 +109,42 @@ jwezel::ui::Menu menu{
 An action that is disabled, or a null action, is shown as unavailable and skipped during navigation. Unlike a
 drop-down, choosing a menu item triggers its action rather than emitting `SelectEvent`.
 
+Items can also show a hint, a check mark, a rule, or open a submenu:
+
+```cpp
+#include <ui/menu_bar.hh>
+
+jwezel::ui::Menu submenu{window, {{jwezel::Text{"Open"}, &openList}}};
+jwezel::ui::Menu file{
+  window,
+  {
+    {jwezel::Text{"Save"}, &save, jwezel::Text{"Ctrl-S"}},
+    jwezel::ui::MenuItem::rule(),
+    jwezel::ui::MenuItem::withSubmenu(jwezel::Text{"Contacts"}, submenu),
+    {jwezel::Text{"Quit"}, &quit}
+  }
+};
+jwezel::ui::Menu view{window, {{jwezel::Text{"Colors"}, &toggleColors, {}, nullptr, true}}};
+jwezel::ui::MenuBar bar{{&file, &view}};
+file.caption(jwezel::Text{"File"});
+view.caption(jwezel::Text{"View"});
+bar.arrange(jwezel::Rectangle{2, 1, 24, 2});
+bar.accelerate(jwezel::Key::F10);
+bar.mnemonic(file, jwezel::Key::AltF);
+```
+
+The bar is one Tab stop. Left and Right move between its menus, Down opens one, and Escape closes it. Alt+letter opens
+the menu it is given to. An item's action shortcuts are registered with the window and shown as hints, so for example
+`Action quit{..., {'\x11'}}` (Ctrl-Q) works whether the menu is open or not. A menu bar, its menus, and a submenu are plain values: the application declares them and
+keeps them alive; the bar holds weak references.
+
 ## 6. Keep application data in the application
 
 Widgets edit and display input; they are not the application's data model. Read a `LineEdit` with `contents()`, or use
 `TextArea` with a `TextBuffer` for multi-line documents. Copy values into your own record type when the application
 accepts them. This keeps validation, persistence, and domain behavior independent of rendering.
 
-For a larger working example, build `demo` and run `./build/demo`. It includes an action-backed menu, a lazy contact
+For a larger working example, build `demo` and run `./build/demo`. It includes an action-backed menu bar, a lazy contact
 list with a deliberately narrow index type, a detailed person-and-address dialog, a text area, focus traversal, and an
 event log.
 

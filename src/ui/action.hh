@@ -63,6 +63,12 @@ struct Action {
   void shortcuts(std::initializer_list<Unicode> shortcuts) {shortcuts_ = shortcuts;}
 
   ///
+  /// Set the shortcuts
+  ///
+  /// @param[in]  shortcuts  The keys that trigger the action
+  void shortcuts(const std::vector<Unicode> &shortcuts) {shortcuts_ = shortcuts;}
+
+  ///
   /// Whether a key is a shortcut of the action
   [[nodiscard]] auto hasShortcut(Unicode key) const -> bool;
 

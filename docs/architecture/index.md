@@ -38,10 +38,17 @@ runtime interface. `ListView<Index>` owns the scrolling/current/selection mechan
 needed to render or measure it. `ListPopup` is the one-choice view shared by `DropDown` and `Menu`.
 `UiStyle::popupPlacement` controls where it opens: `inside` places it in the same `ui::Window` as its control,
 clipped to the content area and flipped above the control when there is not enough room below; `window` opens it in
-a transient terminal window of its own, above the owner and not clipped by it. The default is `inside`. A `ListBox` keeps its view
-visible and handles multi-item selection itself. Single-choice changes use `SelectEvent`, multi-selection deltas use
+a transient terminal window of its own, above the owner and not clipped by it. The default is `inside`. A `ListBox`
+keeps its view visible and handles multi-item selection itself. Single-choice changes use `SelectEvent`, multi-selection deltas use
 `SelectionEvent`, and activation is an independent `ActivateEvent`. A menu closes its popup before dispatching the
 selected item's weakly referenced `Action`.
+
+`MenuBar` does not draw: it orders application-owned menus and puts them in a `FocusGroup` in the root, which makes
+the bar one Tab stop while Left and Right still move between its members. `Menu` extends the popup with hints, check
+marks, separators, and submenus; `PopupChoice::openAt()` places a submenu at its item's row, inside the window, and
+the parent keeps the input and forwards it to the open child. The keyboard decoder turns the escape character followed
+by a letter into `Key::AltA` through `Key::AltZ`, so Alt+letter accelerators work through the ordinary `Action`
+shortcut mechanism.
 
 ## Rendering path
 

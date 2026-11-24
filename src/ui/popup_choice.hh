@@ -64,12 +64,23 @@ struct PopupChoice: Widget {
   void caption(const Text &caption);
 
   ///
-  /// Open the popup; nothing happens if there are no items
+  /// Open the popup below the control; nothing happens if there are no items
   void open();
 
   ///
+  /// Open the popup at an anchor, for a submenu that hangs off an item
+  ///
+  /// The anchor is the item's row; the popup opens at its left edge, inside the window, and is moved left when it
+  /// would run past the right edge. Submenus always open inside the window, so that they share its input.
+  ///
+  /// @param[in]  anchor  The anchor in content coordinates, with no height
+  void openAt(const Rectangle &anchor);
+
+  ///
   /// Close the popup without choosing anything
-  void close();
+  ///
+  /// Derived classes that own further popups close those first.
+  virtual void close();
 
   [[nodiscard]] auto isOpen() const -> bool {return popup_.has_value();}
 
@@ -112,12 +123,40 @@ struct PopupChoice: Widget {
   /// The text of the closed control, or nullptr for none
   [[nodiscard]] virtual auto closedText() const -> const Text * = 0;
 
+  ///
+  /// The glyphs around the closed control, by widget state
+  [[nodiscard]] virtual auto closedGlyphs(std::size_t state) -> const Brackets & {
+    return uiStyle().dropDown[state];
+  }
+
+  ///
+  /// The color role of the closed control, by widget state
+  [[nodiscard]] virtual auto closedRole(std::size_t state) -> std::string_view {
+    return dropDownRoles[state];
+  }
+
+  ///
+  /// The area of a visible popup item, in content coordinates
+  ///
+  /// @param[in]  index  The item, which must be visible
+  [[nodiscard]] auto popupItemArea(ListIndex index) const -> Rectangle;
+
+  ///
+  /// The highlighted item, or -1 when the popup is closed
+  [[nodiscard]] auto highlighted() const -> ListIndex {
+    return popup_? popup_->highlighted(): static_cast<ListIndex>(-1);
+  }
+
+  ///
+  /// Handle a key event; derived classes extend the keys the popup uses
+  virtual auto handleKey(const Event &event) -> bool;
+
   void render() override;
 
   Text caption_;
 
   private:
-  auto handleKey(const Event &event) -> bool;
+  void show(const Rectangle &anchor, bool submenu);
 
   auto handleMouseButton(const Event &event) -> bool;
 

@@ -1,10 +1,11 @@
 ///
 /// Demo of the UI library
 ///
-/// A main window with a menu (a drop down), a text area and an event log, and a dialog window that the menu opens.
+/// A main window with a menu bar, a text area and an event log, and dialog windows that the menus open.
 /// It is a show case: look at the TODO(feature) notes for what a real application would miss.
 ///
-/// Keys: Tab / Shift-Tab move the focus, Space / Enter / Down open the menu, Esc closes the dialog, Ctrl-C quits.
+/// Keys: Tab / Shift-Tab move the focus, Alt+F / Alt+V / Alt+H or F10 open the menus, Esc closes popups and dialogs,
+/// Ctrl-C quits.
 /// The mouse works as well: click to focus, click a menu entry, drag from the menu to an entry and let go.
 ///
 /// Like the other examples, the demo draws where the cursor is, scrolls the terminal if there is not enough room below
@@ -29,6 +30,7 @@
 #include <ui/line_edit.hh>
 #include <ui/list_box.hh>
 #include <ui/menu.hh>
+#include <ui/menu_bar.hh>
 #include <ui/text_area.hh>
 #include <ui/ui.hh>
 #include <ui/vertical_box.hh>
@@ -78,6 +80,7 @@ using
   jwezel::VectorMax,
   jwezel::VectorMin,
   jwezel::bold,
+  jwezel::toDim,
   jwezel::ui::Action,
   jwezel::ui::BoxLayout,
   jwezel::ui::Button,
@@ -86,12 +89,14 @@ using
   jwezel::ui::ColorRoles,
   jwezel::ui::ColorStyle,
   jwezel::ui::DropDown,
+  jwezel::ui::FocusPolicy,
   jwezel::ui::HorizontalBox,
   jwezel::ui::LayoutSize,
   jwezel::ui::Label,
   jwezel::ui::LineEdit,
   jwezel::ui::ListBox,
   jwezel::ui::Menu,
+  jwezel::ui::MenuBar,
   jwezel::ui::MenuItem,
   jwezel::ui::TextArea,
   jwezel::ui::Ui,
@@ -106,7 +111,7 @@ namespace {
 // window background shines through wherever a role has no background.
 
 // Dark blue main window
-constexpr ColorRoles<21> mainRoles{
+constexpr ColorRoles<23> mainRoles{
   {"frame", CharAttributes{RgbGray6}},
   {"frame.active", CharAttributes{RgbCyan7}},
   {"frame.inactive", CharAttributes{RgbGray4}},
@@ -120,6 +125,8 @@ constexpr ColorRoles<21> mainRoles{
   {"input.focus", CharAttributes{RgbWhite, RgbBlue6}},
   {"dropdown", CharAttributes{RgbBlack, RgbGray7}},
   {"dropdown.focus", CharAttributes{RgbBlack, RgbCyan7}},
+  {"menu", CharAttributes{RgbBlack, RgbGray7}},
+  {"menu.focus", CharAttributes{RgbBlack, RgbCyan7}},
   {"popup", CharAttributes{RgbBlack, RgbGray8}},
   {"popup.highlight", CharAttributes{RgbWhite, RgbBlue7, bold}},
   {"list", CharAttributes{RgbWhite, RgbBlue2}},
@@ -634,6 +641,36 @@ struct ContactsWindow {
   Action close_;
 };
 
+//~Notice~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+/// A small modal message, used by the Help menu for its keys and its About box.
+struct Notice {
+  Notice(
+    Ui &ui,
+    const Rectangle &area,
+    const Text &title,
+    const Text &message,
+    const ColorStyle *colors,
+    const UiStyle *style,
+    const std::function<void()> &done
+  ):
+  window_{ui, dialogBackground, area, title, nullptr, colors, style},
+  message_{window_, Rectangle{2, 1, toDim(area.width() - 4), toDim(area.height() - 2)}, message},
+  close_{[done] {done();}, {Key::Escape, Key::Enter, '\x03'}}
+  {
+    window_.addAction(close_);
+    window_.modal(true);
+    message_.verticalAlignment(ContentAlignment::center);
+  }
+
+  [[nodiscard]] auto window() -> Window & {return window_;}
+
+  private:
+  Window window_;
+  Label message_;
+  Action close_;
+};
+
 //~Demo~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ///
@@ -650,21 +687,65 @@ struct Demo {
     ui_, mainBackground, Rectangle{margin, 1, static_cast<Dim>(margin + width), static_cast<Dim>(1 + height)},
     Text{" jwezel UI demo "}, nullptr, &mainColors, &demoStyle
   },
-  openDialog_{[this] {openDialog();}},
-  openContacts_{[this] {openContacts();}},
-  toggleColorsAction_{[this] {toggleColors();}},
-  exit_{[this] {quit();}},
+  openDialog_{[this] {openDialog();}, {'\x0e'}}, // Ctrl-N
+  openContacts_{[this] {openContacts();}, {'\x0f'}}, // Ctrl-O
+  toggleColorsAction_{[this] {toggleColors();}, {'\x14'}}, // Ctrl-T
+  exit_{[this] {quit();}, {'\x11'}}, // Ctrl-Q
   quit_{[this] {quit();}, {'\x03'}}, // Ctrl-C comes as a key, the terminal is in raw mode
-  menu_{
-    window_, Rectangle{2, 1, 24, 2},
+  keysAction_{
+    [this] {
+      openNotice(
+        Text{" Keys "},
+        Text{
+          "Tab moves the focus\n"
+          "Space or Down opens a menu\n"
+          "Alt+F, Alt+V, Alt+H open a menu\n"
+          "F10 focuses the menu bar\n"
+          "Esc closes popups and dialogs\n"
+          "Menu items work by their shown shortcut\n"
+          "Ctrl-C quits"
+        }
+      );
+    },
+    {Key::F1}
+  },
+  aboutAction_{
+    [this] {
+      openNotice(
+        Text{" About "},
+        Text{"jwezel UI demo\nA value-owned terminal UI library\nC++23  ·  " __DATE__}
+      );
+    }
+  },
+  contactsMenu_{
+    window_, Rectangle{2, 1, 12, 2},
     std::vector<MenuItem>{
-      {Text{"Address..."}, &openDialog_},
-      {Text{"Contacts..."}, &openContacts_},
-      {Text{"Toggle colors"}, &toggleColorsAction_},
+      {Text{"Open list..."}, &openContacts_},
+      {Text{"New person..."}, &openDialog_}
+    }
+  },
+  fileMenu_{
+    window_, Rectangle{2, 1, 10, 2},
+    std::vector<MenuItem>{
+      {Text{"New person..."}, &openDialog_},
+      MenuItem::withSubmenu(Text{"Contacts"}, contactsMenu_),
+      MenuItem::rule(),
       {Text{"Exit"}, &exit_}
     }
   },
-  title_{window_, Rectangle{22, 1, 62, 2}, Text{"Everything you see is a widget"}},
+  viewMenu_{
+    window_, Rectangle{13, 1, 20, 2},
+    std::vector<MenuItem>{{Text{"Colors"}, &toggleColorsAction_, {}, nullptr, true}}
+  },
+  helpMenu_{
+    window_, Rectangle{22, 1, 30, 2},
+    std::vector<MenuItem>{
+      {Text{"Keys..."}, &keysAction_},
+      {Text{"About..."}, &aboutAction_}
+    }
+  },
+  menuBar_{std::vector<Menu *>{&fileMenu_, &viewMenu_, &helpMenu_}},
+  title_{window_, Rectangle{29, 1, 62, 2}, Text{"Everything is a widget"}},
   notesLabel_{window_, Rectangle{2, 3, 62, 4}, Text{"Notes"}},
   notes_{
     window_, Rectangle{2, 4, 62, 10},
@@ -672,10 +753,20 @@ struct Demo {
   },
   eventsLabel_{window_, Rectangle{2, 11, 62, 12}, Text{"Events"}},
   events_{window_, Rectangle{2, 12, 62, 17}, Text{}},
-  hint_{window_, Rectangle{2, 18, 62, 19}, Text{"Tab: next  Space: menu  Esc: close  Ctrl-C: quit"}}
+  hint_{window_, Rectangle{2, 18, 62, 19}, Text{"Tab: next  Alt+F/V/H: menus  Esc: close  Ctrl-C: quit"}}
   {
     window_.addAction(quit_); // Tab and Shift-Tab go from the menu to the notes and back, without anybody saying so
-    menu_.caption(Text{"Menu"}); // a menu shows what it is called, not what was chosen from it
+    contactsMenu_.focusPolicy(FocusPolicy::none); // a submenu is opened by its parent, never on its own
+    window_.focus(&fileMenu_);
+    fileMenu_.caption(Text{"File"}); // a menu shows what it is called, not what was chosen from it
+    viewMenu_.caption(Text{"View"});
+    helpMenu_.caption(Text{"Help"});
+    menuBar_.mnemonic(fileMenu_, Key::AltF);
+    menuBar_.mnemonic(viewMenu_, Key::AltV);
+    menuBar_.mnemonic(helpMenu_, Key::AltH);
+    menuBar_.accelerate(Key::F10);
+    menuBar_.arrange(Rectangle{2, 1, 34, 2});
+    viewMenu_.checked(0, true);
     log("started");
   }
 
@@ -708,6 +799,34 @@ struct Demo {
 
   void quit() {
     ui_.post([this] {ui_.stop();});
+  }
+
+  void openNotice(const Text &title, const Text &message) {
+    if (notice_) {
+      return;
+    }
+    constexpr Dim noticeWidth{50};
+    const auto area{window_.area()};
+    const auto noticeHeight{toDim(message.height() + 4)};
+    const Vector position{
+      static_cast<Dim>(area.x1() + (width - noticeWidth) / 2),
+      static_cast<Dim>(area.y1() + (height - noticeHeight) / 2)
+    };
+    notice_.emplace(
+      ui_,
+      Rectangle{position, Vector{toDim(position.x() + noticeWidth), toDim(position.y() + noticeHeight)}},
+      title,
+      message,
+      colored_? &dialogColors: nullptr,
+      &demoStyle,
+      [this] {
+        ui_.post([this] {
+          notice_.reset();
+          terminal_.focus(&window_);
+        });
+      }
+    );
+    log("notice: opened");
   }
 
   void openDialog() {
@@ -769,6 +888,7 @@ struct Demo {
 
   void toggleColors() {
     colored_ = not colored_;
+    viewMenu_.checked(0, colored_);
     window_.colors(colored_? &mainColors: nullptr);
     if (dialog_) {
       dialog_->window().colors(colored_? &dialogColors: nullptr);
@@ -784,7 +904,13 @@ struct Demo {
   Action toggleColorsAction_;
   Action exit_;
   Action quit_;
-  Menu menu_;
+  Action keysAction_;
+  Action aboutAction_;
+  Menu contactsMenu_;
+  Menu fileMenu_;
+  Menu viewMenu_;
+  Menu helpMenu_;
+  MenuBar menuBar_;
   Label title_;
   Label notesLabel_;
   TextArea notes_;
@@ -796,6 +922,7 @@ struct Demo {
   bool colored_{true};
   std::optional<Dialog> dialog_; // last: destroyed first
   std::optional<ContactsWindow> contactsWindow_;
+  std::optional<Notice> notice_;
 };
 
 } // namespace

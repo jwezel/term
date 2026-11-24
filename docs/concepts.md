@@ -82,8 +82,19 @@ by default, and preferred height is capped at eight rows; both limits can be cha
 `ListView<Index>` provides the shared scrolling and selection state. `ListPopup<Index>` uses it for transient choices;
 `DropDown` stays non-templated. `ListBox<Index>` is a focusable persistent list and can use single or multiple
 selection. In multiple mode, `Selection<Index>` gives the sorted selected indices, while the current row is tracked
-separately. `Menu` also stays non-templated: its items refer weakly to application-owned `Action`s, and choosing an
-enabled item closes the popup before triggering that action.
+separately. `Menu` also stays non-templated: its items refer weakly to application-owned `Action`s and submenus,
+and choosing an enabled item closes the popup before triggering that action.
+
+A menu item can carry a right-aligned hint such as a shortcut, a check mark, or be a separator. An item whose action
+has shortcuts registers them as accelerators of its window, so they work while the menu is closed; the first shortcut
+is its hint unless the item gives one explicitly. A separator and a disabled item are skipped by navigation. An item that names a submenu opens it next to the item instead of doing
+anything itself; Right opens it, Left or Escape returns to the parent item, and choosing a leaf action closes the whole
+path of menus.
+
+A `MenuBar` arranges menus next to each other and makes them one focus group, so Tab enters the bar once and leaves
+it as a whole; Left and Right move between the menus, also while a popup is open. A mnemonic key opens a menu from
+anywhere in its window, and `MenuBar::accelerate()` gives the bar a key of its own, F10 by default. Alt+letter is a
+key of its own as well (`Key::AltA` through `Key::AltZ`), decoded from the escape character followed by the letter.
 
 The overall `UiStyle::itemSelectionStyle` controls how a list box marks its current row: `ItemSelectionStyle::caret`
 shows the configured `listMarker` (🢒), while `ItemSelectionStyle::highlight` highlights the full row. Highlight is the

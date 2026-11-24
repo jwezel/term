@@ -1,5 +1,6 @@
 #include "container.hh"
 #include "element.hh"
+#include "focus_group.hh"
 #include "root.hh"
 #include "widget.hh"
 
@@ -34,9 +35,25 @@ bounds_{area}
 }
 
 Widget::~Widget() {
+  if (focusGroup_) {
+    focusGroup_->forget(*this);
+  }
   try {
     root()->forget(*this);
   } catch (const std::exception &) { // no root to tell
+  }
+}
+
+void Widget::focusGroup(FocusGroup *group) {
+  if (focusGroup_ == group) {
+    return;
+  }
+  if (focusGroup_) {
+    focusGroup_->remove(*this);
+  }
+  focusGroup_ = group;
+  if (group) {
+    group->add(*this);
   }
 }
 

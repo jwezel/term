@@ -13,6 +13,8 @@
 
 namespace jwezel::ui {
 
+struct FocusGroup;
+
 ///
 /// How a widget can get the focus
 ///
@@ -145,6 +147,19 @@ struct Widget: TextElement, ui::Element, ActionHost
   }
 
   ///
+  /// Get the focus group the widget is in, if any
+  [[nodiscard]] auto focusGroup() const -> FocusGroup * {return focusGroup_;}
+
+  ///
+  /// Put the widget in a focus group, or take it out of its group with nullptr
+  ///
+  /// A focus group takes one stop in the focus order; Tab enters it once and leaves it as a whole. The group is a
+  /// weak reference: the widget leaves it again when either of them is destroyed.
+  ///
+  /// @param      group  The group, or nullptr
+  void focusGroup(FocusGroup *group);
+
+  ///
   /// A mouse button went down somewhere else than on this widget, while it has the focus
   virtual void pressedElsewhere() {}
 
@@ -198,8 +213,10 @@ struct Widget: TextElement, ui::Element, ActionHost
   ContentAlignment horizontalAlignment_{ContentAlignment::begin};
   ContentAlignment verticalAlignment_{ContentAlignment::begin};
   std::vector<Widget *> layoutDependents_; // weak labels whose preferred size follows this widget
+  FocusGroup *focusGroup_{}; // weak reference, nullptr when the widget is in no group
 
   friend struct Label;
+  friend struct FocusGroup;
 };
 
 } // namespace jwezel::ui

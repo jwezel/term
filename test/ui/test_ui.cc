@@ -8,7 +8,9 @@
 #include "ui/label.hh"
 #include "ui/line_edit.hh"
 #include "ui/list_box.hh"
+#include "ui/focus_group.hh"
 #include "ui/menu.hh"
+#include "ui/menu_bar.hh"
 #include "ui/text_area.hh"
 #include "ui/vertical_box.hh"
 #include "ui/widget.hh"
@@ -43,7 +45,9 @@ using
   jwezel::VectorMax,
   jwezel::VectorMin,
   jwezel::Window,
-  jwezel::operator""_C;
+  jwezel::operator""_C,
+  jwezel::ui::FocusGroup,
+  jwezel::ui::MenuBar;
 
 // NOLINTBEGIN(cppcoreguidelines-avoid-non-const-global-variables)
 // NOLINTBEGIN(readability-function-cognitive-complexity)
@@ -1853,6 +1857,134 @@ TEST_CASE("UI Window") {
     send("\x1b");
     CHECK_FALSE(menu.isOpen());
     CHECK_EQ(invoked, 1); // Escape closes without triggering an action
+  }
+
+  SUBCASE("Menu items and submenus") {
+    auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 30, 12}, Text{"Title"})};
+    auto runCalls{0}, submenuCalls{0}, hotCalls{0};
+    jwezel::ui::Action run{[&runCalls] {++runCalls;}};
+    jwezel::ui::Action hot{[&hotCalls] {++hotCalls;}, {'\x11'}}; // Ctrl-Q
+    jwezel::ui::Action submenuAction{[&submenuCalls] {++submenuCalls;}};
+    auto submenu{jwezel::ui::Menu{
+      w1, Rectangle{1, 8, 12, 9},
+      std::vector<jwezel::ui::MenuItem>{{Text{"Sub action"}, &submenuAction}}
+    }};
+    auto menu{jwezel::ui::Menu{
+      w1, Rectangle{1, 1, 14, 2},
+      std::vector<jwezel::ui::MenuItem>{
+        {Text{"Run"}, &run, Text{"F5"}},
+        jwezel::ui::MenuItem::rule(),
+        {Text{"Unavailable"}, nullptr},
+        jwezel::ui::MenuItem::withSubmenu(Text{"More"}, submenu),
+        {Text{"Hot"}, &hot}
+      }
+    }};
+    menu.caption(Text{"Actions"});
+    auto send{
+      [&](const char *input) {
+        REQUIRE_NE(fputs(input, inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+      }
+    };
+    auto shown{[&] {return std::string(term.display().text());}};
+    w1.focus(&menu);
+    send(" ");
+    CHECK(menu.isOpen());
+    CHECK_NE(shown().find("Run"), std::string::npos);
+    CHECK_NE(shown().find("F5"), std::string::npos); // the hint is on the item's row
+    CHECK_NE(shown().find("──"), std::string::npos); // a rule
+    CHECK_NE(shown().find("Ctrl-Q"), std::string::npos); // the shortcut of the action is the hint
+    send("\x1b[B"); // a rule and a disabled item are skipped
+    send("\x1b[C"); // Right opens the submenu
+    CHECK(menu.isOpen());
+    CHECK(submenu.isOpen());
+    send("\x1b[D"); // Left closes the submenu and stays in the parent
+    CHECK(menu.isOpen());
+    CHECK_FALSE(submenu.isOpen());
+    send("\x1b[C");
+    send("\x0d"); // choosing the submenu item closes the whole path
+    CHECK_EQ(submenuCalls, 1);
+    CHECK_EQ(runCalls, 0);
+    CHECK_FALSE(menu.isOpen());
+    CHECK_FALSE(submenu.isOpen());
+    send("\x11"); // an item's shortcut works while the menu is closed
+    CHECK_EQ(hotCalls, 1);
+  }
+
+  SUBCASE("Menu bar") {
+    auto invoked{0};
+    jwezel::ui::Action action{[&invoked] {++invoked;}};
+    auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 30, 12}, Text{"Title"})};
+    auto first{jwezel::ui::Menu{w1, Rectangle{1, 1, 8, 2}, std::vector<jwezel::ui::MenuItem>{{Text{"One"}, &action}}}};
+    auto second{jwezel::ui::Menu{w1, Rectangle{9, 1, 16, 2}, std::vector<jwezel::ui::MenuItem>{{Text{"Two"}, &action}}}};
+    jwezel::ui::MenuBar bar{std::vector<jwezel::ui::Menu *>{&first, &second}};
+    first.caption(Text{"First"});
+    second.caption(Text{"Second"});
+    bar.arrange(Rectangle{1, 1, 20, 2});
+    bar.accelerate(jwezel::Key::F10);
+    bar.mnemonic(second, jwezel::Key::AltT);
+    auto send{
+      [&](const char *input) {
+        REQUIRE_NE(fputs(input, inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+      }
+    };
+    auto outside{jwezel::ui::LineEdit{w1, Rectangle{1, 4, 12, 5}, "x"}};
+    w1.focus(&outside);
+    send("\x1b[21~"); // F10 puts the focus on the bar, at its first menu
+    CHECK_EQ(w1.focus(), &first);
+    send(" ");
+    CHECK(first.isOpen());
+    send("\x1b[C"); // Right moves on to the next menu and opens it
+    CHECK_EQ(w1.focus(), &second);
+    CHECK(second.isOpen());
+    CHECK_FALSE(first.isOpen());
+    send("\x1b[D");
+    CHECK_EQ(w1.focus(), &first);
+    CHECK(first.isOpen());
+    send("\x1b"); // Escape closes the menu and leaves the focus in the bar
+    CHECK_FALSE(first.isOpen());
+    CHECK_EQ(w1.focus(), &first);
+    send("\x1b[C"); // Left and Right also move between menus while they are closed
+    CHECK_EQ(w1.focus(), &second);
+    CHECK_FALSE(second.isOpen());
+    send("\x1b[D");
+    CHECK_EQ(w1.focus(), &first);
+    CHECK_FALSE(first.isOpen());
+    send("\x0d"); // Enter reopens it
+    CHECK(first.isOpen());
+    send("\x1b");
+    send("\x1bt"); // Alt+T opens the second menu from anywhere in the window
+    CHECK(second.isOpen());
+    CHECK_EQ(w1.focus(), &second);
+    send("\x0d");
+    CHECK_EQ(invoked, 1);
+  }
+
+  SUBCASE("Focus group") {
+    auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 30, 12}, Text{"Title"})};
+    auto one{jwezel::ui::Button{w1, Rectangle{1, 1, 6, 2}, Text{"One"}}};
+    auto two{jwezel::ui::Button{w1, Rectangle{7, 1, 12, 2}, Text{"Two"}}};
+    FocusGroup group{std::vector<jwezel::ui::Widget *>{&one, &two}};
+    auto outside{jwezel::ui::LineEdit{w1, Rectangle{1, 4, 12, 5}, "x"}};
+    auto send{
+      [&](const char *input) {
+        REQUIRE_NE(fputs(input, inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+      }
+    };
+    w1.focus(&one);
+    send("\t"); // the group is one stop: Tab leaves it
+    CHECK_EQ(w1.focus(), &outside);
+    send("\t"); // and comes back in at its first member
+    CHECK_EQ(w1.focus(), &one);
+    send("\x1b[Z"); // Shift-Tab leaves it at the other side
+    CHECK_EQ(w1.focus(), &outside);
+    CHECK_EQ(group.next(one), &two);
+    CHECK_EQ(group.previous(two), &one);
   }
 
   SUBCASE("Window decoration") {

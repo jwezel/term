@@ -35,6 +35,14 @@ void PopupChoice::caption(const Text &caption) {
 }
 
 void PopupChoice::open() {
+  show(bounds(), false);
+}
+
+void PopupChoice::openAt(const Rectangle &anchor) {
+  show(anchor, true);
+}
+
+void PopupChoice::show(const Rectangle &anchor, bool submenu) {
   if (popup_) {
     return;
   }
@@ -43,8 +51,7 @@ void PopupChoice::open() {
   if (count <= 0) {
     return;
   }
-  const auto self{bounds()};
-  auto width{self.width()};
+  auto width{submenu? Dim{0}: anchor.width()};
   const auto &glyphs{uiStyle().popup};
   const auto padding{toDim(Text{glyphs.left}.width() + Text{glyphs.right}.width())};
   const auto scan{std::min(static_cast<std::size_t>(count), scanLimit_)};
@@ -53,16 +60,22 @@ void PopupChoice::open() {
   }
   const auto rows{count > static_cast<ListIndex>(maxRows_)? maxRows_: static_cast<Dim>(count)};
   auto *root{this->root()};
-  if (uiStyle().popupPlacement == PopupPlacement::inside) {
+  if (submenu or uiStyle().popupPlacement == PopupPlacement::inside) {
     // The popup is a widget inside the same window, clipped to the content area; it flips above the control when
-    // there is not enough room below
+    // there is not enough room below, unless it hangs off a menu item, which keeps it at the item's row
     const auto content{root->content()};
-    const auto below{toDim(content.y2() - self.y2())}; // rows available below the control
-    const auto above{toDim(self.y1() - content.y1())}; // rows available above the control
+    const auto below{toDim(content.y2() - anchor.y2())}; // rows available below the anchor
+    const auto above{toDim(anchor.y1() - content.y1())}; // rows available above the anchor
     const auto popupRows{std::min(rows, std::max(below, above))};
-    const auto flip{below < popupRows and above > below};
-    const auto py{flip? toDim(self.y1() - popupRows): self.y2()};
-    popupArea_ = Rectangle{self.x1(), py, toDim(self.x1() + width), toDim(py + popupRows)};
+    const auto flip{not submenu and below < popupRows and above > below};
+    const auto py{flip? toDim(anchor.y1() - popupRows): anchor.y2()};
+    const auto px{
+      submenu?
+        std::clamp(anchor.x1(), content.x1(), std::max(content.x1(), toDim(content.x2() - width)))
+      :
+        anchor.x1()
+    };
+    popupArea_ = Rectangle{px, py, toDim(px + width), toDim(py + popupRows)};
     popup_.emplace(
       *root,
       popupArea_,
@@ -74,11 +87,20 @@ void PopupChoice::open() {
     // The popup opens in a transient window of its own, above the owner window
     auto &terminal{*root->host().terminal()};
     const auto ownerDisplay{root->displayOrigin()};
-    const auto x{toDim(ownerDisplay.x() + self.x1())};
-    const auto y{toDim(ownerDisplay.y() + self.y2())};
-    popupArea_ = Rectangle{Vector{self.x1(), self.y2()}, Vector{toDim(self.x1() + width), toDim(self.y2() + rows)}};
-    popupWindow_.emplace(terminal, Rectangle{Vector{x, y}, Vector{toDim(x + width), toDim(y + rows)}}, background(), root->host(),
-                         &root->colors(), &root->style());
+    const auto x{toDim(ownerDisplay.x() + anchor.x1())};
+    const auto y{toDim(ownerDisplay.y() + anchor.y2())};
+    popupArea_ = Rectangle{
+      Vector{anchor.x1(), anchor.y2()},
+      Vector{toDim(anchor.x1() + width), toDim(anchor.y2() + rows)}
+    };
+    popupWindow_.emplace(
+      terminal,
+      Rectangle{Vector{x, y}, Vector{toDim(x + width), toDim(y + rows)}},
+      background(),
+      root->host(),
+      &root->colors(),
+      &root->style()
+    );
     popup_.emplace(
       *popupWindow_,
       Rectangle{Vector{0, 0}, Vector{width, rows}},
@@ -111,7 +133,10 @@ void PopupChoice::maxRows(Dim rows) {
 }
 
 void PopupChoice::move(const Rectangle &area) {
-  close();
+  // A layout pass may move every element to the area it has already; that does not close the popup
+  if (area != bounds()) {
+    close();
+  }
   Widget::move(area);
 }
 
@@ -127,7 +152,7 @@ void PopupChoice::pressedElsewhere() {
 }
 
 auto PopupChoice::preferredSize() -> Vector {
-  const auto &glyphs{uiStyle().dropDown[static_cast<size_t>(WidgetState::normal)]};
+  const auto &glyphs{closedGlyphs(static_cast<size_t>(WidgetState::normal))};
   const auto padding{toDim(Text{glyphs.left}.width() + Text{glyphs.right}.width())};
   auto width{caption_.width()};
   auto source{popupItems()};
@@ -137,6 +162,11 @@ auto PopupChoice::preferredSize() -> Vector {
     width = std::max(width, source[static_cast<ListIndex>(position)].width());
   }
   return Vector{toDim(width + padding), 1};
+}
+
+auto PopupChoice::popupItemArea(ListIndex index) const -> Rectangle {
+  const auto row{toDim(popupArea_.y1() + index - popup_->first())};
+  return Rectangle{popupArea_.x1(), row, popupArea_.x2(), toDim(row + 1)};
 }
 
 auto PopupChoice::firstEnabled() const -> ListIndex {
@@ -322,9 +352,9 @@ void PopupChoice::render() {
     return;
   }
   const auto state{static_cast<size_t>(widgetState(popup_.has_value()))};
-  const auto &glyphs{uiStyle().dropDown[state]};
+  const auto &glyphs{closedGlyphs(state)};
   const Text left{glyphs.left}, right{glyphs.right};
-  auto visible{canvas(dropDownRoles[state])};
+  auto visible{canvas(closedRole(state))};
   const auto position{contentPosition(Vector{size.x(), 1})};
   const auto framed{size.x() >= left.width() + right.width()};
   const auto textWidth{framed? toDim(size.x() - left.width() - right.width()): size.x()};
