@@ -318,7 +318,7 @@ auto loadKeyTranslations(const std::vector<pair<std::string, Unicode>> &translat
       auto elem = node->nodes.find(*it);
       if (elem == node->nodes.end()) {
         auto insResult = node->nodes.insert(make_pair(*it, new Keyboard::PrefixNode));
-        if (!insResult.second) {
+        if (not insResult.second) {
           throw runtime_error(format("Couldn't create keyboard translation tree node for \"{}\"", keys));
         }
         node = insResult.first->second.get();
@@ -371,7 +371,7 @@ Keyboard::~Keyboard() {
 void Keyboard::raw() {
   if (bool(isatty(fd_))) {
     termios old{};
-    if (!originalState_) {
+    if (not originalState_) {
       if (tcgetattr(fd_, &old) != 0) {
         throw std::system_error(
           errno,
@@ -408,13 +408,13 @@ void Keyboard::reset() {
 }
 
 auto Keyboard::readByte(bool wait) -> std::optional<Byte> {
-  if (!pending_.empty()) {
+  if (not pending_.empty()) {
     const auto value{pending_.front()};
     pending_.pop_front();
     return Byte{value, {}};
   }
   const auto flags{fcntl(fd_, F_GETFL)};
-  if (!wait and fcntl(fd_, F_SETFL, flags | O_NONBLOCK) != 0) {
+  if (not wait and fcntl(fd_, F_SETFL, flags | O_NONBLOCK) != 0) {
     cerr << "fcntl(F_SETFL, O_NONBLOCK) failed\n";
   }
   const auto start{steady_clock::now()};
@@ -429,7 +429,7 @@ auto Keyboard::readByte(bool wait) -> std::optional<Byte> {
         throw std::system_error(errno, std::system_category(), format("Could not get key: {}", fd_, std::strerror(errno)/*NOLINT*/));
       }
       // Without waiting, wait twice for a key, then give up
-      if (!wait and attempt++ > 1) {
+      if (not wait and attempt++ > 1) {
         break;
       }
       sleep_for(1ms); // TODO(j): make this much smaller (based on 19200 cps) and configurable
@@ -443,7 +443,7 @@ auto Keyboard::readByte(bool wait) -> std::optional<Byte> {
       break; // no byte at the end of the input
     }
   }
-  if (!wait and fcntl(fd_, F_SETFL, flags) != 0) {
+  if (not wait and fcntl(fd_, F_SETFL, flags) != 0) {
     cerr << "fcntl(F_SETFL, 0) failed\n";
   }
   return result;
@@ -459,7 +459,7 @@ auto Keyboard::key() -> Unicode {
   std::deque<char> consumed;
   while (true) {
     const auto byte{readByte(node == &keyPrefixes_)};
-    if (!byte) {
+    if (not byte) {
       break; // nothing came in time, or there is no more input
     }
     consumed.push_back(byte->value);

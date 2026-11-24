@@ -124,7 +124,7 @@ struct ListView: Widget {
   [[nodiscard]] auto itemAt(const Vector &position) -> Index {
     const auto bounds{this->bounds()};
     const Rectangle point{position, position + Vector{1, 1}};
-    if (!(bounds & point)) {
+    if (not (bounds & point)) {
       return static_cast<Index>(-1);
     }
     const auto origin{contentPosition(Vector{bounds.width(), visibleRows()})};
@@ -370,7 +370,7 @@ struct ListView: Widget {
         );
       }
       const Rectangle rowArea{0, screenRow, size.x(), toDim(screenRow + 1)};
-      if (!itemEnabled(index)) {
+      if (not itemEnabled(index)) {
         visible.setAttr(colors()[disabledRole()], rowArea, AttributeMode::replace);
       }
       // Selection must remain visible even when the row is also current or disabled.
@@ -422,7 +422,7 @@ struct ListView: Widget {
 
   ///
   /// Whether the marker is shown; it may still reserve space when hidden
-  [[nodiscard]] virtual auto markerVisible() -> bool {return !marker().empty();}
+  [[nodiscard]] virtual auto markerVisible() -> bool {return not marker().empty();}
 
   private:
   [[nodiscard]] auto visibleRows() const -> Dim {

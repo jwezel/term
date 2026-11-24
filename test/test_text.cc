@@ -261,10 +261,10 @@ TEST_CASE("Text") {
       CHECK_EQ(text, Text("line1\nline 2", attr));
     }
     SUBCASE("Not equal") {
-      CHECK(!(text == Text("line3\nline 2", attr)));
+      CHECK(not (text == Text("line3\nline 2", attr)));
     }
     SUBCASE("Not equal (attribute)") {
-      CHECK(!(text == Text("line1\nline 2", Rgb(1.), Rgb(0., 0., 1.), underline)));
+      CHECK(not (text == Text("line1\nline 2", Rgb(1.), Rgb(0., 0., 1.), underline)));
     }
     SUBCASE("Right align (string comparison)") {
       CHECK_EQ(string(text.rightAligned(8)), "   line1\n  line 2\n");

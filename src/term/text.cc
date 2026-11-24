@@ -12,6 +12,7 @@
 #include <cstddef>
 #include <iterator>
 #include <optional>
+#include <ranges>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -140,14 +141,14 @@ const vector<pair<u4, QuadTuple>> _quadInitializer {
 };
 
 Rgb::operator string() const {
-  if (r == -1 && g == -1 && b == -1) {
+  if (r == -1 and g == -1 and b == -1) {
     return "RgbNone";
   }
   return format("Rgb(r={}, g={}, b={})", r, g, b);
 }
 
 Hsv::operator string() const {
-  if (h == -1 && s == -1 && v == -1) {
+  if (h == -1 and s == -1 and v == -1) {
     return "HsvNone";
   }
   return format("Hsv(h={}, s={}, v={})", h, s, v);
@@ -293,10 +294,10 @@ auto Hsv::operator !=(const Hsv &other) const -> bool {
 ///
 /// @return     Color 1 and color 2 mixed
 auto Rgb::operator +(const Rgb &color2) const -> Rgb {
-  if (!specified(color2)) {
+  if (not specified(color2)) {
     return *this;
   }
-  if (!specified(*this)) {
+  if (not specified(*this)) {
     return color2;
   }
   return Rgb{(r + color2.r) / 2, (g + color2.g) / 2, (b + color2.b) / 2};
@@ -346,11 +347,11 @@ CharAttributes::operator string() const {
 }
 
 auto CharAttributes::operator ==(const CharAttributes &other) const -> bool {
-  return fg == other.fg && bg == other.bg && attr == other.attr;
+  return fg == other.fg and bg == other.bg and attr == other.attr;
 }
 
 auto CharAttributes::operator !=(const CharAttributes &other) const -> bool {
-  return !(*this == other);
+  return not (*this == other);
 }
 
 Char::Char():
@@ -377,7 +378,7 @@ auto Char::operator ==(const Char &other) const -> bool {
 }
 
 auto Char::operator !=(const Char &other) const -> bool {
-  return rune != other.rune or !(attributes == other.attributes);
+  return rune != other.rune or not (attributes == other.attributes);
 }
 
 Char::operator string() const {
@@ -410,12 +411,12 @@ auto asString(const String &s) -> string {
 
 Text::Text(const string_view &str_, const Rgb &fg, const Rgb &bg, const Attributes &attr, const AttributeMode &mix) {
   const auto _str{utf8::utf8to32(string(str_))};
-  if (!_str.empty()) {
+  if (not _str.empty()) {
     vector<std::u32string_view> lines;
     size_t width = 0;
     size_t lineStart = 0;
     for (size_t i = 0; i <= _str.size(); ++i) {
-      if (i == _str.size() || _str[i] == U'\n') {
+      if (i == _str.size() or _str[i] == U'\n') {
         const auto lineSize = i - lineStart;
         lines.emplace_back(_str.data() + lineStart, lineSize);
         if (lineSize > width) {
@@ -462,7 +463,7 @@ auto Text::height() const -> Dim {
 }
 
 auto Text::width() const -> Dim {
-  return toDim(!data.empty()? data[0].size(): 0);
+  return toDim(not data.empty()? data[0].size(): 0);
 }
 
 auto Text::size() const -> Vector {
@@ -509,7 +510,7 @@ auto Text::rightAligned(Dim width) const -> Text {
   for (const String &_line: data) {
     // Trim line on right
     auto ci{_line.rbegin()};
-    while (ci != _line.rend() && ci->rune == ' ') {
+    while (ci != _line.rend() and ci->rune == ' ') {
       ++ci;
     }
     const auto trimmedEnd = ci.base();
@@ -540,12 +541,12 @@ auto Text::centered(Dim width) const -> Text {
   for (const String &_line: data) {
     // Trim line
     auto rend{_line.rbegin()};
-    while (rend != _line.rend() && rend->rune == ' ') {
+    while (rend != _line.rend() and rend->rune == ' ') {
       ++rend;
     }
     auto end = rend.base();
     auto begin{_line.begin()};
-    while (begin != _line.end() && begin->rune == ' ') {
+    while (begin != _line.end() and begin->rune == ' ') {
       ++begin;
     }
     const auto _size = end - begin;
@@ -644,12 +645,8 @@ auto Char::combine(
 namespace
 {
 auto initializedBox2Quad() -> unordered_map<Unicode, QuadTuple> {
-  unordered_map<Unicode, QuadTuple> result(_quadInitializer.size() * 2);
-  // TODO(jwezel): try copy()
-  for (const auto &[rune, quad]: _quadInitializer) {
-    result[rune] = quad;
-  }
-  return result;
+  // The initializer is already keyed by rune: copy it into the lookup map
+  return {_quadInitializer.begin(), _quadInitializer.end()};
 }
 
 auto QuadTuple2Value_(const QuadTuple &tuple) -> QuadValue {
@@ -662,11 +659,17 @@ auto QuadTuple2Value_(const QuadTuple &tuple) -> QuadValue {
 }
 
 auto initializedQuad2Box() -> unordered_map<QuadValue, Unicode> {
+  // The reverse map needs a computed key for every entry
   unordered_map<QuadValue, Unicode> result;
-  // TODO(jwezel): try copy()
-  for (const auto &[rune, quad]: _quadInitializer) {
-    result[QuadTuple2Value_(quad)] = rune;
-  }
+  result.reserve(_quadInitializer.size());
+  std::ranges::copy(
+    _quadInitializer | std::views::transform(
+      [](const pair<u4, QuadTuple> &entry) -> pair<QuadValue, Unicode> {
+        return {QuadTuple2Value_(entry.second), entry.first};
+      }
+    ),
+    std::inserter(result, result.end())
+  );
   return result;
 }
 }  // namespace
@@ -780,7 +783,7 @@ void Text::patchArea(
     auto
       dest = data[area_.y1() + l].begin() + area_.x1(),
       _limit = data[area_.y1() + l].begin() + area_.x2();
-    while (dest != _limit && source != sourceEnd) {
+    while (dest != _limit and source != sourceEnd) {
       *dest++ = dest->combine(*source++, mixDefault, overrideMix, resetMix);
     }
     ++data_;
@@ -829,7 +832,7 @@ auto Text::operator [](const Rectangle &area) const -> Text {
 
 auto Text::operator [](const Vector &position) const -> Char {
   const Vector position_ = size().position(position);
-  if (position_.y() < height() && position_.x() < width()) {
+  if (position_.y() < height() and position_.x() < width()) {
     return data[position_.y()][position_.x()];
   }
   return Null;
@@ -837,7 +840,7 @@ auto Text::operator [](const Vector &position) const -> Char {
 
 auto Text::operator [](const Vector &position) -> Char & {
   const Vector position_ = size().position(position);
-  if (position_.y() < height() && position_.x() < width()) {
+  if (position_.y() < height() and position_.x() < width()) {
     return data[position_.y()][position_.x()];
   }
   throw range_error(format("Position {} is outside text dimensions {}", string(position), string(size())));
@@ -845,7 +848,7 @@ auto Text::operator [](const Vector &position) -> Char & {
 
 auto Text::at(const Vector &position) -> Char & {
   const Vector position_ = size().position(position);
-  if (position_.y() < height() && position_.x() < width()) {
+  if (position_.y() < height() and position_.x() < width()) {
     return data[position_.y()][position_.x()];
   }
   throw range_error(format("Position {} is outside text dimensions {}", string(position), string(size())));

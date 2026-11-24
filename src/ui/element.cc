@@ -25,7 +25,7 @@ void Element::layoutChanged() {
 
 auto Element::root() /*NOLINT(misc-no-recursion)*/ -> Root * {
   auto *result{parent_? parent_->root(): 0};
-  if (!result) {
+  if (not result) {
     throw std::runtime_error("Can't find root");
   }
   return result;

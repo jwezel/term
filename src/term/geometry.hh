@@ -37,7 +37,7 @@ class RectangleError: public logic_error
 template<typename T>
 inline auto toDim(T v)->Dim {
 #ifndef NDEBUG
-  if (static_cast<Dim>(v) > DimHigh || static_cast<Dim>(v) < DimLow) {
+  if (static_cast<Dim>(v) > DimHigh or static_cast<Dim>(v) < DimLow) {
     throw range_error(format("Dim {} is out of range", v));
   }
 #endif
@@ -72,7 +72,7 @@ struct Vector {
   ///
   /// @return     True if equal
   [[nodiscard]] auto operator==(const Vector &other) const -> bool {
-    return x_ == other.x() && y_ == other.y();
+    return x_ == other.x() and y_ == other.y();
   }
 
   /// Compare two vectors for inequality.
@@ -81,7 +81,7 @@ struct Vector {
   ///
   /// @return     True in not equal
   [[nodiscard]] auto operator!=(const Vector &other) const -> bool {
-    return !(*this == other);
+    return not (*this == other);
   }
 
   ///
@@ -111,7 +111,7 @@ struct Vector {
   ///
   /// @return     True if less or equal
   [[nodiscard]] auto operator<=(const Vector &other) const -> bool {
-    return x_ <= other.x() && y_ <= other.y();
+    return x_ <= other.x() and y_ <= other.y();
   }
 
   ///
@@ -121,7 +121,7 @@ struct Vector {
   ///
   /// @return     True if greater than equal
   [[nodiscard]] auto operator>=(const Vector &other) const -> bool {
-    return x_ >= other.x() && y_ >= other.y();
+    return x_ >= other.x() and y_ >= other.y();
   }
 
   ///
@@ -648,7 +648,7 @@ struct Insets {
   }
 
   [[nodiscard]] auto operator!=(const Insets &other) const -> bool {
-    return !(*this == other);
+    return not (*this == other);
   }
 };
 

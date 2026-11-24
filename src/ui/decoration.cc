@@ -48,7 +48,7 @@ auto BoxDecoration::draw(
       }
     }
   }
-  if (!title.data.empty()) {
+  if (not title.data.empty()) {
     const auto &line{title.data[0]};
     const auto available{toDim(size.x() - 2)}; // between the corners
     const auto length{std::min(available, toDim(line.size()))};
@@ -75,7 +75,7 @@ auto TitleLineDecoration::draw(
   const ColorStyle &colors
 ) const -> Text {
   Text result{Untouched, size};
-  if (size.y() > 0 and !title.data.empty()) {
+  if (size.y() > 0 and not title.data.empty()) {
     const auto &line{title.data[0]};
     const auto available{toDim(size.x())}; // the line can be as wide as the window
     const auto length{std::min(available, toDim(line.size()))};

@@ -151,7 +151,7 @@ void Root::forget(Widget &widget) {
 auto Root::add(Element &child) -> Container & {
   Container::add(child);
   // Ensure the host window is large enough for the child's area
-  if (!child.layoutManaged()) {
+  if (not child.layoutManaged()) {
     ensure(child.bounds());
     layout(); // place the children again, in case the host window has grown
   }
@@ -170,7 +170,7 @@ void Root::move(const Rectangle &area) {
 void Root::layout() {
   const auto area{content()};
   for (auto *child: children()) {
-    if (!child->layoutManaged()) {
+    if (not child->layoutManaged()) {
       child->move(child->bounds());
     } else if (area.width() > 0 and area.height() > 0) {
       child->move(area);
@@ -244,7 +244,7 @@ auto Root::handleEvent(const Event &event) -> bool {
       auto *element{fragment? fragment->element: nullptr};
       widget = dynamic_cast<Widget *>(element);
       own = not widget or widget->root() == this;
-      if (!own) {
+      if (not own) {
         widget = nullptr;
       }
     }
@@ -279,7 +279,7 @@ auto Root::handleEvent(const Event &event) -> bool {
   if (focus_ and visible(*focus_)) {
     handled = focus_->event(event);
   }
-  if (!handled and event.type() == KeyEvent::type_) {
+  if (not handled and event.type() == KeyEvent::type_) {
     handled = handleKey(event);
   }
   return handled;

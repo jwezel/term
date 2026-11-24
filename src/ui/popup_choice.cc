@@ -88,7 +88,7 @@ void PopupChoice::open() {
     );
   }
   popup_->itemEnabled([this](ListIndex index) {return popupItemEnabled(index);});
-  if (!popupItemEnabled(popup_->highlighted())) {
+  if (not popupItemEnabled(popup_->highlighted())) {
     if (const auto first{firstEnabled()}; first >= 0) {
       popup_->highlight(first);
     }
@@ -116,7 +116,7 @@ void PopupChoice::move(const Rectangle &area) {
 }
 
 void PopupChoice::focusChanged(bool focused) {
-  if (!focused) {
+  if (not focused) {
     close();
   }
   Widget::focusChanged(focused);
@@ -194,7 +194,7 @@ auto PopupChoice::near(ListIndex target, i8 direction) const -> ListIndex {
 
 auto PopupChoice::handleKey(const Event &event) -> bool {
   const auto key{event.as<KeyEvent>().key()};
-  if (!popup_) {
+  if (not popup_) {
     if (key == ' ' or key == Key::Enter or key == Key::Down) {
       open();
       return true;
@@ -288,7 +288,7 @@ auto PopupChoice::handleMouseButton(const Event &event) -> bool {
   }
   // The button was released: if it opened the popup, letting go over an item chooses it, letting
   // go over the control leaves the popup open, and anywhere else closes it again
-  if (!dragging_) {
+  if (not dragging_) {
     return false;
   }
   dragging_ = false;
@@ -297,7 +297,7 @@ auto PopupChoice::handleMouseButton(const Event &event) -> bool {
       if (popupItemEnabled(item)) {
         popupActivate(item, event);
       }
-    } else if (!inside) {
+    } else if (not inside) {
       close();
     }
   }
@@ -305,11 +305,11 @@ auto PopupChoice::handleMouseButton(const Event &event) -> bool {
 }
 
 auto PopupChoice::handleMouseMove(const Event &event) -> bool {
-  if (!popup_) {
+  if (not popup_) {
     return false;
   }
   const auto item{popup_->itemAt(popupPosition(event.as<MouseMoveEvent>().position()))};
-  if (item < 0 or item == popup_->highlighted() or !popupItemEnabled(item)) {
+  if (item < 0 or item == popup_->highlighted() or not popupItemEnabled(item)) {
     return false;
   }
   popup_->highlight(item);

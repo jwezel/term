@@ -134,7 +134,7 @@ auto topmostCells(const Surface &screen, Dim width, Dim height) -> vector<const 
   vector<const Surface::Element *> result(static_cast<size_t>(width) * static_cast<size_t>(height), nullptr);
   for (const auto *element: screen.zorder()) {
     const auto area{element->area() & Rectangle{0, 0, width, height}};
-    if (!area) {
+    if (not area) {
       continue;
     }
     for (Dim y = area->y1(); y < area->y2(); ++y) {
@@ -637,7 +637,7 @@ TEST_CASE("Surface model") {
         operation = "add";
         const auto letter{letters.back()};
         letters.pop_back();
-        auto *below{!elements.empty() and number(0, 2) == 0? pick(): nullptr};
+        auto *below{not elements.empty() and number(0, 2) == 0? pick(): nullptr};
         elements.push_back(std::make_unique<jwezel::TextElement>(&scr, area(), Char(letter), below));
       } else if (choice < 5) {
         operation = "delete";

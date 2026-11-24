@@ -17,7 +17,7 @@ Action::~Action() {
 }
 
 auto Action::trigger() -> bool {
-  if (!enabled_ or !handler_) {
+  if (not enabled_ or not handler_) {
     return false;
   }
   // The handler may well remove the action, or its host: it is not touched after that

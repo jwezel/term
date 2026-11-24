@@ -87,11 +87,11 @@ struct Watchdog {
   fd_{fd},
   thread_{
     [this] {
-      for (auto i = 0; i < 300 and !done_; ++i) {
+      for (auto i = 0; i < 300 and not done_; ++i) {
         std::this_thread::sleep_for(std::chrono::milliseconds{10});
       }
-      if (!done_) {
-        (void)!write(fd_, "\x01", 1); // a key that nothing expects, so that what was waited for is not what comes
+      if (not done_) {
+        (void) not write(fd_, "\x01", 1); // a key that nothing expects, so that what was waited for is not what comes
       }
     }
   }

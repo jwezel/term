@@ -144,12 +144,12 @@ void Terminal::runEvent() {
     };
     if (change == MouseCapture::Change::began) {
       captureWindow_ = window;
-    } else if (captureWindow_ and window != captureWindow_ and (!window or window->transient() != captureWindow_)) {
+    } else if (captureWindow_ and window != captureWindow_ and (not window or window->transient() != captureWindow_)) {
       // While a button is down, the motion and the release stay with the window that got the press,
       // except when the mouse is over a transient of it, like an open popup
       window = captureWindow_;
     }
-    if (window and (!focusWindow_->modal() or window == focusWindow_ or window->transient() == focusWindow_)) {
+    if (window and (not focusWindow_->modal() or window == focusWindow_ or window->transient() == focusWindow_)) {
       // A modal window takes the input exclusively while it is open and focused; no other window gets input,
       // but a transient of the modal window does: it belongs to it
       target = window;
@@ -164,7 +164,7 @@ void Terminal::runEvent() {
 }
 
 void Terminal::start() {
-  if (!focusWindow_) {
+  if (not focusWindow_) {
     focus(dynamic_cast<Window *>(zorder().back()));
   }
   running_ = true;
@@ -182,7 +182,7 @@ void Terminal::stop() {
 }
 
 auto Terminal::expand(const Vector &size) -> bool {
-  if (!expand_) {
+  if (not expand_) {
     return false;
   }
   const auto size_ = max(min(display_.maxSize(), size), display_.size());
@@ -195,7 +195,7 @@ auto Terminal::expand(const Vector &size) -> bool {
 }
 
 auto Terminal::contract() -> bool {
-  if (!contract_) {
+  if (not contract_) {
     return false;
   }
   const auto size_{max(max(minSize(&desktop_), Vector{1, 1}), minimumSize_)};

@@ -178,7 +178,7 @@ auto main(int /*unused*/, char * /*unused*/[]) -> int {
         ws.erase(ws.begin() + cw);
         if (cw >= ws.size()) {
           if (cw-- == 0) {
-            if (!ws.empty()) {
+            if (not ws.empty()) {
               ++cw;
             } else {
               goto end;

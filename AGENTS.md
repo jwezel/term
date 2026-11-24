@@ -19,6 +19,8 @@
   examples.
 - Treat Escape as a logical `Key`. Keep text documents separate from their
   rendered UI, and preserve Page Up/Page Down behavior in text widgets.
+- Prefer the modern boolean operator spellings `not`, `and`, and `or` over
+  `!`, `&&`, and `||` in C++ code.
 - Event handlers use `(const Element &, const Event &)`. Widgets emit typed
   events.
 - Multi-parameter constructors are not `explicit`; constructors callable with
@@ -100,22 +102,35 @@
   ninja -C build docs`; HTML goes to `build/html/`, with Doxygen diagnostics in
   `build/doxygen-warnings.log`.
 - Commit using conventional commits
+- Push over SSH: `origin` is `git@github.com:jwezel/term.git`. The stored HTTPS
+  credential is an OAuth token without the `workflow` scope, so HTTPS pushes
+  that touch `.github/workflows/` are rejected.
 - Conceptualize everything. Think about whether the feature just developed could
   be used somewhere else. Try to make a concept out of it and apply that
   concept to similar parts of the software.
-- Format code with structured indentation (https://structured-indentation.org)
+- Format code with structured indentation (https://structured-indentation.org),
+  using 2 spaces per indentation level and a maximum line size of 128.
 
-## Current checkpoint (2026-11-23)
+## Current checkpoint (2026-11-24)
 
-- The working tree has an uncommitted refactor: widgets are elements on the
-  window's own content surface (no separate `ElementDevice` client), offset
-  by decoration insets. `jwezel::Window` stores insets and fires
-  `geometryEvent` when they change. Popups open inside the window by default
-  (`PopupPlacement::inside`, with flip-above), or as a transient
-  `jwezel::Window` (`PopupPlacement::window`). `WidgetPlacement` is removed.
-  `Insets` moved to `geometry.hh`. New files: `popup_window.{hh,cc}`.
-- The normal, ASan/UBSan, and release test suites each pass with 10,443
-  assertions, and `ninja -C build docs` reports zero Doxygen warnings. The
-  demo pty checks cover the menu popup, dialog cancellation, Tab navigation,
-  typing into fields, saving, and the 70x22 minimum terminal size. The
-  Country dropdown in the demo now stays inside its dialog window.
+- `master` is at `4cc42bd`, pushed to `origin`; CI is green on it (the `build`
+  and `Deploy docs to Pages` workflows pass).
+- Widgets are elements on the window's own content surface (no separate
+  `ElementDevice` client), offset by decoration insets. `jwezel::Window` stores
+  insets and fires `geometryEvent` when they change. Popups open inside the
+  window by default (`PopupPlacement::inside`, with flip-above), or as a
+  transient `jwezel::Window` (`PopupPlacement::window`). `WidgetPlacement` is
+  removed. `Insets` moved to `geometry.hh`. New files: `popup_window.{hh,cc}`.
+- Geometry is fully tested: const and in-place shifts, scaling, accumulation,
+  stream output, and the `RectangleDefault` guards. `Vector`'s `operator*` and
+  `operator/` scale both components, so a default-sized UI window
+  (`maxSize() * 2 / 3`) has a nonzero height. A `b_coverage` build reports 100%
+  of the lines in `src/term/geometry.cc`; keep coverage trees outside the
+  repository.
+- The backdrop is the lowest surface element, and `Surface::isBackdrop()` says
+  so: the surface does not paint it because it is the terminal background.
+- The normal, ASan/UBSan, and release suites each pass with 10,549 assertions
+  (41 cases, 2 intentionally skipped), and `ninja -C build docs` reports zero
+  Doxygen warnings. The demo pty checks cover the menu popup, dialog
+  cancellation, Tab navigation, typing into fields, saving, and the 70x22
+  minimum terminal size; the Country dropdown stays inside its dialog window.

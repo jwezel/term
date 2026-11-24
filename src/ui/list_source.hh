@@ -38,10 +38,10 @@ using SourceIndex = std::remove_cvref_t<decltype(std::declval<const S &>().size(
 /// returns something convertible to `Text`. `item` wins when a source has both.
 template<class S>
 concept ListSourceLike =
-  std::signed_integral<SourceIndex<S>> &&
+  std::signed_integral<SourceIndex<S>> and
   (requires(const S &source, SourceIndex<S> index) {
      { source.item(index) } -> std::convertible_to<Text>;
-   } ||
+   } or
    requires(const S &source, SourceIndex<S> index) {
      { source[index] } -> std::convertible_to<Text>;
    });
@@ -191,7 +191,7 @@ auto ownedListSource(std::vector<Text> items) -> ListSource<Index> {
 /// @param[in]  size  The size function
 /// @param[in]  item  The item function
 template<class Size, class Item>
-  requires std::signed_integral<std::invoke_result_t<Size>> &&
+  requires std::signed_integral<std::invoke_result_t<Size>> and
            requires(Item item, std::invoke_result_t<Size> index) {
              { item(index) } -> std::convertible_to<Text>;
            }

@@ -28,7 +28,7 @@ bounds_{area}
   parent.add(*this);
   auto *root{parent.root()};
   root->enroll(*this);
-  if (!root->focus()) {
+  if (not root->focus()) {
     root->focus(this);
   }
 }
@@ -83,7 +83,7 @@ void Widget::focusPolicy(FocusPolicy policy) {
   auto *root{this->root()};
   if (policy == FocusPolicy::none and root->focus() == this) {
     root->focus(nullptr);
-  } else if ((policy == FocusPolicy::tab or policy == FocusPolicy::strong) and !root->focus()) {
+  } else if ((policy == FocusPolicy::tab or policy == FocusPolicy::strong) and not root->focus()) {
     root->focus(this);
   }
 }

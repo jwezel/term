@@ -201,7 +201,7 @@ void Surface::tidy(long from, long to) {
 }
 
 void Surface::expose(vector<Rectangle> regions, long above, long lowest, vector<Fragment> &updates) {
-  for (auto z = above - 1; z >= lowest and !regions.empty(); --z) {
+  for (auto z = above - 1; z >= lowest and not regions.empty(); --z) {
     auto *element{zorder_[z]};
     const auto area{element->area()};
     vector<Rectangle> rest;
@@ -234,16 +234,21 @@ void Surface::addElement(Surface::Element *element, Surface::Element *below) {
       subtract(elementBelow->fragments_, area);
     }
   }
-  // TODO(j): Find a better way to test for the backdrop. Creating a device update
-  // for the backdrop is not necessary and creates problems
-  if (ze) {
+  // The backdrop is the terminal background itself: painting it would paint the whole surface with the
+  // background, which is not necessary and creates problems
+  if (not isBackdrop(element)) {
     update(element->fragments_);
   }
   tidy(0, ze);
 }
 
+auto Surface::isBackdrop(const Element *element) const -> bool {
+  // The surface keeps the backdrop at the bottom, so the lowest element is the backdrop
+  return not zorder_.empty() and zorder_.front() == element;
+}
+
 auto Surface::position(Element *element, int default_) -> int {
-  if (!element) {
+  if (not element) {
     if (default_ == -1) {
       return zorder_.size(); // NOLINT
     }
@@ -334,7 +339,7 @@ void Surface::reorder(int source, int destination) {
           gained.push_back(part.value());
         }
       }
-      if (!gained.empty()) {
+      if (not gained.empty()) {
         for (const auto &part: gained) {
           join(element->fragments_, part, element);
           updates.emplace_back(part, element);
@@ -446,7 +451,7 @@ auto TextElement::moveEvent(const Rectangle &area) -> bool {
 
 auto TextElement::above(TextElement *element) -> bool {
   Element *destination{element};
-  if (!destination) { // one up
+  if (not destination) { // one up
     const auto next{static_cast<size_t>(surface()->position(this)) + 1};
     if (next >= surface()->zorder().size()) {
       return false; // already on top
@@ -459,7 +464,7 @@ auto TextElement::above(TextElement *element) -> bool {
 
 auto TextElement::below(TextElement *element) -> bool {
   Element *destination{element};
-  if (!destination) { // one down
+  if (not destination) { // one down
     const auto previous{surface()->position(this) - 1};
     if (previous < 1) {
       return false; // already at the bottom, the backdrop is below

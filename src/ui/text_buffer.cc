@@ -26,7 +26,7 @@ void TextBuffer::text(std::string_view text) {
   lines_.assign(1, std::u32string{});
   for (const auto character: characters) {
     if (character == LineFeed) {
-      if (!lines_.back().empty() and lines_.back().back() == CarriageReturn) {
+      if (not lines_.back().empty() and lines_.back().back() == CarriageReturn) {
         lines_.back().pop_back();
       }
       lines_.emplace_back();
@@ -65,7 +65,7 @@ auto TextBuffer::contains(const Vector &position) const -> bool {
 }
 
 void TextBuffer::insert(const Vector &position, Unicode character) {
-  if (!contains(position)) {
+  if (not contains(position)) {
     throw std::out_of_range(std::format("{} is not in the text", string(position)));
   }
   auto &line{lines_[static_cast<size_t>(position.y())]};
@@ -73,7 +73,7 @@ void TextBuffer::insert(const Vector &position, Unicode character) {
 }
 
 void TextBuffer::split(const Vector &position) {
-  if (!contains(position)) {
+  if (not contains(position)) {
     throw std::out_of_range(std::format("{} is not in the text", string(position)));
   }
   auto &line{lines_[static_cast<size_t>(position.y())]};
@@ -83,7 +83,7 @@ void TextBuffer::split(const Vector &position) {
 }
 
 void TextBuffer::erase(const Vector &position) {
-  if (!contains(position)) {
+  if (not contains(position)) {
     throw std::out_of_range(std::format("{} is not in the text", string(position)));
   }
   auto &line{lines_[static_cast<size_t>(position.y())]};
@@ -96,7 +96,7 @@ void TextBuffer::erase(const Vector &position) {
 }
 
 auto TextBuffer::eraseBefore(const Vector &position) -> Vector {
-  if (!contains(position)) {
+  if (not contains(position)) {
     throw std::out_of_range(std::format("{} is not in the text", string(position)));
   }
   if (position.x() > 0) {

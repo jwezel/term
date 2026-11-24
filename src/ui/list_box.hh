@@ -346,7 +346,7 @@ struct ListBox: ListView<Index> {
   }
 
   void extendTo(Index oldCurrent, Index newCurrent, const UiEvent::Cause &cause) {
-    if (!rangeActive_) {
+    if (not rangeActive_) {
       rangeAnchor_ = this->anchor() >= 0? this->anchor(): oldCurrent;
       rangeBase_ = this->selection();
       rangeActive_ = true;
@@ -367,12 +367,12 @@ struct ListBox: ListView<Index> {
   void applySelection(const Selection<Index> &target, const UiEvent::Cause &cause) {
     std::vector<std::pair<Index, bool>> changes;
     for (const auto index: this->selection()) {
-      if (!target.contains(index)) {
+      if (not target.contains(index)) {
         changes.emplace_back(index, false);
       }
     }
     for (const auto index: target) {
-      if (!this->selected(index)) {
+      if (not this->selected(index)) {
         changes.emplace_back(index, true);
       }
     }
@@ -504,7 +504,7 @@ struct ListBox: ListView<Index> {
       return false;
 
       case Key::Escape:
-      if (mode_ == SelectionMode::multiple and !this->selection().empty()) {
+      if (mode_ == SelectionMode::multiple and not this->selection().empty()) {
         clearSelectionByUser(event);
         return true;
       }
@@ -555,7 +555,7 @@ struct ListBox: ListView<Index> {
       return false;
     }
     const auto index{this->itemAt(mouse.position())};
-    if (index < 0 or !this->itemEnabled(index)) {
+    if (index < 0 or not this->itemEnabled(index)) {
       return false;
     }
     const auto previous{this->current()};
@@ -591,7 +591,7 @@ struct ListBox: ListView<Index> {
   }
 
   auto handleMouseMove(const Event &event) -> bool {
-    if (!dragging_ and !pendingControlClick_) {
+    if (not dragging_ and not pendingControlClick_) {
       return false;
     }
     const auto index{dragItemAt(event.as<MouseMoveEvent>().position())};
@@ -603,7 +603,7 @@ struct ListBox: ListView<Index> {
       dragging_ = true;
       resetPendingControlClick();
     }
-    if (index < 0 or !this->itemEnabled(index)) {
+    if (index < 0 or not this->itemEnabled(index)) {
       return true;
     }
     if (index != previous) {
@@ -640,7 +640,7 @@ struct ListBox: ListView<Index> {
         changes.emplace_back(selected, false);
       }
     }
-    if (!this->selected(index)) {
+    if (not this->selected(index)) {
       changes.emplace_back(index, true);
     }
     this->ListView<Index>::select(index);

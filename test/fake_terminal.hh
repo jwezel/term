@@ -43,7 +43,7 @@ struct FakeTerminal {
   void feed(const std::string &text) const {
     struct stat status{};
     (void)fstat(input_, &status);
-    (void)!pwrite(input_, text.data(), text.size(), status.st_size);
+    (void) not pwrite(input_, text.data(), text.size(), status.st_size);
   }
 
   /// Everything that was written since the start or since `clear`
@@ -51,13 +51,13 @@ struct FakeTerminal {
     struct stat status{};
     (void)fstat(output_, &status);
     std::string result(static_cast<std::size_t>(status.st_size), '\0');
-    (void)!pread(output_, result.data(), result.size(), 0);
+    (void) not pread(output_, result.data(), result.size(), 0);
     return result;
   }
 
   /// Forget what was written
   void clear() const {
-    (void)!ftruncate(output_, 0);
+    (void) not ftruncate(output_, 0);
     (void)lseek(output_, 0, SEEK_SET);
   }
 

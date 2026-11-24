@@ -111,7 +111,7 @@ Display::~Display() {
 }
 
 void Display::write(const string_view &str) const {
-  if (!str.empty()) {
+  if (not str.empty()) {
     const auto *wp{str.data()};
     size_t wt{0};
     const size_t ws{str.size()};
@@ -166,7 +166,7 @@ void Display::caret(const std::optional<Vector> &position) {
     caret_->y() >= 0 and caret_->y() < size().y()
   ) {
     cursor(toDim(caret_->x() + position_.x()), toDim(caret_->y() + position_.y()));
-    if (!cursorVisible_) {
+    if (not cursorVisible_) {
       cursor(true);
     }
   } else if (cursorVisible_) {
@@ -229,7 +229,7 @@ void Display::attributes(const Attributes &attributes) {
       output += (output.empty()? "\x1b[": ";") + sequence.at(b).at((nattr - eattr) + 1U >> 1U);
     }
   }
-  if (!output.empty()) {
+  if (not output.empty()) {
     attributes_ = attributes;
     output += "m";
   }
@@ -249,7 +249,7 @@ auto Display::terminalSize() -> Vector {
 
 void Display::update(const Vector &position, const Text &text) {
   auto area{Rectangle{position, position + text.size()} & Rectangle{Vector{0, 0}, size()}};
-  if (!area) {
+  if (not area) {
     return;
   }
   auto textArea{area.value() - position};

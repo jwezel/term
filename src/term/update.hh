@@ -20,7 +20,7 @@ struct Update {
   }
 
   auto operator !=(const Update &other) const -> bool {
-    return !(*this == other);
+    return not (*this == other);
   }
 
   auto operator <(const Update &other) const -> bool {
@@ -32,11 +32,11 @@ struct Update {
   }
 
   auto operator <=(const Update &other) const -> bool {
-    return !(*this < other);
+    return not (*this < other);
   }
 
   auto operator >=(const Update &other) const -> bool {
-    return !(other < *this);
+    return not (other < *this);
   }
 
   // NOLINTBEGIN(misc-non-private-member-variables-in-classes)

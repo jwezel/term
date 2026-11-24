@@ -50,7 +50,7 @@ void Label::buddy(Widget &widget) {
 
 auto Label::preferredSize() -> Vector {
   auto size{text_.size()};
-  if (buddy_ and !uiStyle().labelSuffix.empty()) {
+  if (buddy_ and not uiStyle().labelSuffix.empty()) {
     const auto line{text_.height() > 0? toDim(text_.height() - 1): Dim{0}};
     const auto lastLineWidth{text_.data.empty()? Dim{0}: toDim(text_.data.back().size())};
     size.x() = std::max(size.x(), toDim(lastLineWidth + Text{uiStyle().labelSuffix}.width()));
@@ -76,7 +76,7 @@ void Label::render() {
   auto contentSize{text_.size()};
   auto suffix{Text{}};
   auto suffixPosition{Vector{0, 0}};
-  if (buddy_ and !uiStyle().labelSuffix.empty()) {
+  if (buddy_ and not uiStyle().labelSuffix.empty()) {
     suffix = Text{uiStyle().labelSuffix};
     const auto line{text_.height() > 0? toDim(text_.height() - 1): Dim{0}};
     const auto column{text_.data.empty()? Dim{0}: toDim(text_.data.back().size())};
@@ -87,7 +87,7 @@ void Label::render() {
   auto visible{canvas(labelRole)};
   const auto position{contentPosition(contentSize)};
   overlay(visible, text_, position);
-  if (!suffix.data.empty()) {
+  if (not suffix.data.empty()) {
     overlay(visible, suffix, position + suffixPosition);
   }
   write(Vector{0, 0}, visible);

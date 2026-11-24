@@ -47,8 +47,8 @@ auto Vector::defaultTo(const Vector &default_) const -> Vector {
     return default_;
   }
   return Vector(
-    (x_ == DimLow || x_ == DimHigh)? default_.x_: x_,
-    (y_ == DimLow || y_ == DimHigh)? default_.y_: y_
+    (x_ == DimLow or x_ == DimHigh)? default_.x_: x_,
+    (y_ == DimLow or y_ == DimHigh)? default_.y_: y_
   );
 }
 
@@ -141,11 +141,11 @@ x1_(v1.x()), y1_(v1.y()), x2_(v2.x()), y2_(v2.y())
 {}
 
 auto Rectangle::operator ==(const Rectangle &other) const -> bool {
-  return x1_ == other.x1() && x2_ == other.x2() && y1_ == other.y1() && y2_ == other.y2();
+  return x1_ == other.x1() and x2_ == other.x2() and y1_ == other.y1() and y2_ == other.y2();
 }
 
 auto Rectangle::operator !=(const Rectangle &other) const -> bool {
-  return !(*this == other);
+  return not (*this == other);
 }
 
 Rectangle::operator string() const {
@@ -210,7 +210,7 @@ void Rectangle::intersect(vector<Rectangle> &result, const Rectangle &other) con
 
 auto Rectangle::operator -(const Rectangle &other) const -> vector<Rectangle> {
   const auto intersection = *this & other;
-  if (!intersection || intersection.value() == *this) {
+  if (not intersection or intersection.value() == *this) {
     // If the two rectangles do not intersect or the intersection is *this, an empty sequence is returned.
     return {};
   }
@@ -222,7 +222,7 @@ auto Rectangle::operator -(const Rectangle &other) const -> vector<Rectangle> {
 
 auto Rectangle::defaultIntersection(const Rectangle &other) const -> vector<Rectangle> {
   const auto intersection = *this & other;
-  if (!intersection) {
+  if (not intersection) {
     return {*this};
   }
   if (intersection.value() == *this) {
@@ -332,10 +332,10 @@ auto Rectangle::operator +(Dim size) const -> Rectangle {
 
 auto Rectangle::defaultTo(const Rectangle &default_) const -> Rectangle {
   return Rectangle(
-    x1_ == DimLow || x1_ == DimHigh? default_.x1(): x1_,
-    y1_ == DimLow || y1_ == DimHigh? default_.y1(): y1_,
-    x2_ == DimLow || x2_ == DimHigh? default_.x2(): x2_,
-    y2_ == DimLow || y2_ == DimHigh? default_.y2(): y2_
+    x1_ == DimLow or x1_ == DimHigh? default_.x1(): x1_,
+    y1_ == DimLow or y1_ == DimHigh? default_.y1(): y1_,
+    x2_ == DimLow or x2_ == DimHigh? default_.x2(): x2_,
+    y2_ == DimLow or y2_ == DimHigh? default_.y2(): y2_
   );
 }
 

@@ -10,30 +10,32 @@
 /// Like the other examples, the demo draws where the cursor is, scrolls the terminal if there is not enough room below
 /// it, and leaves the screen to the shell afterwards. With --fullscreen it uses the alternate screen instead.
 
+// NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers)
+
+#include <ext_ui/list_editor.hh>
 #include <term/display.hh>
 #include <term/event.hh>
 #include <term/geometry.hh>
 #include <term/keyboard.hh>
 #include <term/term.hh>
 #include <term/text.hh>
-#include <ext_ui/list_editor.hh>
 #include <ui/action.hh>
 #include <ui/box.hh>
 #include <ui/button.hh>
 #include <ui/color_style.hh>
 #include <ui/drop_down.hh>
+#include <ui/horizontal_box.hh>
 #include <ui/label.hh>
 #include <ui/line_edit.hh>
 #include <ui/list_box.hh>
 #include <ui/menu.hh>
 #include <ui/text_area.hh>
 #include <ui/ui.hh>
-#include <ui/horizontal_box.hh>
 #include <ui/vertical_box.hh>
 #include <ui/window.hh>
 
-#include <deque>
 #include <algorithm>
+#include <deque>
 #include <exception>
 #include <format>
 #include <functional>
@@ -50,7 +52,6 @@ using
   jwezel::Dim,
   jwezel::Event,
   jwezel::Key,
-  jwezel::KeyEvent,
   jwezel::i1,
   jwezel::Rectangle,
   jwezel::Rgb,
@@ -60,7 +61,6 @@ using
   jwezel::RgbBlue5,
   jwezel::RgbBlue6,
   jwezel::RgbBlue7,
-  jwezel::RgbCyan5,
   jwezel::RgbCyan7,
   jwezel::RgbGray1,
   jwezel::RgbGray4,
@@ -162,7 +162,7 @@ const Char dialogBackground{' ', RgbNone, RgbGray9};
 /// Text without the line ends
 auto plain(const Text &text) -> std::string {
   auto result{std::string(text)};
-  while (!result.empty() and result.back() == '\n') {
+  while (not result.empty() and result.back() == '\n') {
     result.pop_back();
   }
   return result;
@@ -195,7 +195,7 @@ struct PersonRecord {
   [[nodiscard]] auto displayName() const -> std::string {
     auto result{title};
     for (const auto &part: {firstName, middleName, lastName}) {
-      if (!part.empty()) {
+      if (not part.empty()) {
         result += (result.empty()? "": " ") + part;
       }
     }
@@ -208,7 +208,7 @@ struct PersonRecord {
   [[nodiscard]] auto summary() const -> std::string {
     auto result{displayName()};
     for (const auto &part: {city, email}) {
-      if (!part.empty()) {
+      if (not part.empty()) {
         result += std::format("  ·  {}", part);
       }
     }
@@ -227,14 +227,19 @@ struct FieldColumn {
   FieldColumn(Container &parent, size_t rows, bool stretchRows=false):
   layout{
     parent, RectangleDefault,
-    BoxLayout{.weights = {}, .sizes = {LayoutSize::fit, LayoutSize::stretch}, .alignments = {}, .spacing = 1}
+    BoxLayout{
+      .weights = {},
+      .sizes = {LayoutSize::fit, LayoutSize::stretch},
+      .alignments = {},
+      .spacing = 1,
+    }
   },
   labels{
     layout, RectangleDefault,
     BoxLayout{
       .weights = {},
       .sizes = std::vector<LayoutSize>(rows, stretchRows? LayoutSize::stretch: LayoutSize::fit),
-      .alignments = {}
+      .alignments = {},
     }
   },
   editors{
@@ -242,7 +247,7 @@ struct FieldColumn {
     BoxLayout{
       .weights = {},
       .sizes = std::vector<LayoutSize>(rows, stretchRows? LayoutSize::stretch: LayoutSize::fit),
-      .alignments = {}
+      .alignments = {},
     }
   }
   {}
@@ -261,7 +266,7 @@ struct FieldPair {
       .weights = {},
       .sizes = {LayoutSize::stretch, LayoutSize::stretch},
       .alignments = {},
-      .spacing = 2
+      .spacing = 2,
     }
   },
   left{layout, rows},
@@ -363,11 +368,18 @@ struct Dialog {
     BoxLayout{
       .weights = {},
       .sizes = {
-        LayoutSize::fit, LayoutSize::fit, LayoutSize::fit, LayoutSize::fit, LayoutSize::fit,
-        LayoutSize::fit, LayoutSize::fit, LayoutSize::stretch, LayoutSize::fit
+        LayoutSize::fit,
+        LayoutSize::fit,
+        LayoutSize::fit,
+        LayoutSize::fit,
+        LayoutSize::fit,
+        LayoutSize::fit,
+        LayoutSize::fit,
+        LayoutSize::stretch,
+        LayoutSize::fit,
       },
       .alignments = {},
-      .padding = 1
+      .padding = 1,
     }
   },
   identityHeader_{
@@ -383,7 +395,7 @@ struct Dialog {
   lastName_{personal_.right.labels, personal_.right.editors, "Last name"},
   birthDate_{personal_.left.labels, personal_.left.editors, "Birth date"},
   gender_{personal_.right.labels, personal_.right.editors, "Gender", {
-    Text{"Select"}, Text{"Woman"}, Text{"Man"}, Text{"Non-binary"}, Text{"Self-describe"}, Text{"Prefer not to say"}
+    Text{"Select"}, Text{"Woman"}, Text{"Man"}, Text{"Non-binary"}, Text{"Self-describe"}, Text{"Prefer not to say"},
   }},
   traitsRow_{
     body_, RectangleDefault,
@@ -391,13 +403,11 @@ struct Dialog {
       .weights = {},
       .sizes = {LayoutSize::fit, LayoutSize::stretch},
       .alignments = {jwezel::ui::LayoutAlign::center, jwezel::ui::LayoutAlign::stretch},
-      .spacing = 1
+      .spacing = 1,
     }
   },
   traitsLabel_{traitsRow_, Text{"Traits"}},
-  traits_{
-    traitsRow_
-  },
+  traits_{traitsRow_},
   contactHeader_{body_, Text{"CONTACT  /  HOW TO REACH THEM", RgbBlue5, RgbNone, bold}},
   contact_{body_, 3},
   email_{contact_.left.labels, contact_.left.editors, "Email"},
@@ -414,8 +424,16 @@ struct Dialog {
   region_{address_.right.labels, address_.right.editors, "Region"},
   postalCode_{address_.left.labels, address_.left.editors, "Post code"},
   country_{address_.right.labels, address_.right.editors, "Country", {
-    Text{"United States"}, Text{"Canada"}, Text{"United Kingdom"}, Text{"Australia"}, Text{"New Zealand"},
-    Text{"France"}, Text{"Germany"}, Text{"India"}, Text{"Japan"}, Text{"Other"}
+    Text{"United States"},
+    Text{"Canada"},
+    Text{"United Kingdom"},
+    Text{"Australia"},
+    Text{"New Zealand"},
+    Text{"France"},
+    Text{"Germany"},
+    Text{"India"},
+    Text{"Japan"},
+    Text{"Other"},
   }},
   notes_{body_, 1, true},
   notesField_{notes_.labels, notes_.editors},
@@ -425,7 +443,7 @@ struct Dialog {
       .weights = {},
       .sizes = {LayoutSize::stretch, LayoutSize::fit, LayoutSize::fit},
       .alignments = {},
-      .spacing = 1
+      .spacing = 1,
     }
   },
   hint_{footer_, Text{"Tab moves  ·  Ctrl-click marks preferred  ·  Esc cancels", RgbGray4}},
@@ -487,7 +505,7 @@ struct Dialog {
       .country = country_.value(),
       .traits = std::move(traits),
       .preferredTraits = std::move(preferredTraits),
-      .notes = notesField_.value()
+      .notes = notesField_.value(),
     };
   }
 
@@ -565,7 +583,8 @@ struct ContactsWindow {
       log(std::format(
         "contacts: {} #{} {}",
         selection.selected()? "selected": "deselected",
-        selection.index(), plain(selection.item())
+        selection.index(),
+        plain(selection.item())
       ));
       updateHelp();
       return true;
@@ -698,12 +717,13 @@ struct Demo {
     }
     const auto area{window_.area()};
     const Vector position{
-      static_cast<Dim>(area.x1() + (width - Dialog::width) / 2), static_cast<Dim>(area.y1() + (height - Dialog::height) / 2)
+      static_cast<Dim>(area.x1() + (width - Dialog::width) / 2),
+      static_cast<Dim>(area.y1() + (height - Dialog::height) / 2)
     };
     // Modal windows take the input exclusively while they are open
     dialog_.emplace(
       ui_, position, colored_? &dialogColors: nullptr, &demoStyle,
-        [this](bool accepted, const PersonRecord &person) {
+      [this](bool accepted, const PersonRecord &person) {
         if (accepted) {
           if (contacts_.size() < 127) {
             contacts_.push_back(person);
@@ -748,7 +768,7 @@ struct Demo {
   }
 
   void toggleColors() {
-    colored_ = !colored_;
+    colored_ = not colored_;
     window_.colors(colored_? &mainColors: nullptr);
     if (dialog_) {
       dialog_->window().colors(colored_? &dialogColors: nullptr);
@@ -784,7 +804,14 @@ auto main(int argc, char *argv[]) -> int {
   try {
     const auto fullscreen{argc > 1 and std::string_view{argv[1]} == "--fullscreen"};
     Terminal terminal{
-      desktopBackground, VectorMin, VectorMin, VectorMax, 1, 0, true, false,
+      desktopBackground,
+      VectorMin,
+      VectorMin,
+      VectorMax,
+      1,
+      0,
+      true,
+      false,
       fullscreen? jwezel::Display::Screen::alternate: jwezel::Display::Screen::main
     };
     terminal.display().mouseMode(jwezel::Display::MouseMode::anything);
@@ -800,3 +827,5 @@ auto main(int argc, char *argv[]) -> int {
   }
   return 0;
 }
+
+// NOLINTEND(cppcoreguidelines-avoid-magic-numbers)

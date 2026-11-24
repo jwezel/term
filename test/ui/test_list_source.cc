@@ -46,7 +46,7 @@ struct VirtualSource: ListSourceInterface<i1> {
 static_assert(ListSourceLike<BracketSource>);
 static_assert(ListSourceLike<ItemSource>);
 static_assert(ListSourceLike<BothSource>);
-static_assert(!ListSourceLike<std::vector<Text>>);
+static_assert(not ListSourceLike<std::vector<Text>>);
 static_assert(std::same_as<SourceIndex<BracketSource>, i1>);
 static_assert(std::same_as<SourceIndex<ItemSource>, i2>);
 

@@ -219,6 +219,17 @@ struct Surface {
   /// @param      updates  Receives what has to be painted again
   void expose(vector<Rectangle> regions, long above, long lowest, vector<Fragment> &updates);
 
+  ///
+  /// Whether an element is the backdrop
+  ///
+  /// The backdrop is the lowest element. It is the terminal background itself, so the surface does not paint
+  /// it.
+  ///
+  /// @param[in]  element  The element
+  ///
+  /// @return     True if the element is the backdrop
+  [[nodiscard]] auto isBackdrop(const Element *element) const -> bool;
+
   vector<Element *> zorder_;
   Device *device_{};
 };

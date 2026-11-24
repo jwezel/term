@@ -3020,7 +3020,7 @@ TEST_CASE("UI Window") {
         auto added{false};
         button.onPress(
           [&](const Element &, const jwezel::Event &) {
-            if (!added) {
+            if (not added) {
               added = true;
               button.onPress([&late](const Element &, const jwezel::Event &) {++late; return false;});
             }

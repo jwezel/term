@@ -63,7 +63,7 @@ auto TextInput::handleKey(const Event &event) -> bool {
 
     case Key::PageUp:
     case Key::PageDown:
-    if (!acceptsEnter()) {
+    if (not acceptsEnter()) {
       return false; // a line has no pages: the window may have a use for the key
     }
     movePage(key == Key::PageDown? 1: -1);
@@ -86,7 +86,7 @@ auto TextInput::handleKey(const Event &event) -> bool {
     break;
 
     case Key::Enter:
-    if (!acceptsEnter()) {
+    if (not acceptsEnter()) {
       return accept(event); // nothing has changed; and if nobody is interested, the window may be
     }
     insertNewline();
