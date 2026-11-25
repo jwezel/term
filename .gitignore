@@ -1,6 +1,6 @@
-*.pc
-build
-.default.sublime-*
-packages/
 !packages/conanfile.txt
-.github/
+*.pc
+.default.sublime-*
+build
+packages/
+release
