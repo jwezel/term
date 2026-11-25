@@ -10,7 +10,8 @@ recorded in the [architectural decisions](\ref ads).
 only component that owns terminal output and screen/cursor control. `Surface` stores and composes drawable elements;
 it does not decide what a widget means or how input should be handled. A `Window` is an `ElementDevice` on the
 terminal surface: it nests elements on its own content surface, clips them to its area, and composes them above its
-own drawing. The window's client-area insets tell the UI where the frame is, so widgets stay inside the content.
+own drawing. The window's client-area insets tell the UI where the frame is, so widgets stay inside the content. A framed window
+also manages itself with the mouse: its title bar drags it, and its left, right, and bottom borders resize it.
 
 ## UI layer
 

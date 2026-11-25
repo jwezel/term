@@ -1987,6 +1987,37 @@ TEST_CASE("UI Window") {
     CHECK_EQ(group.previous(two), &one);
   }
 
+  SUBCASE("Window frame drag and resize") {
+    auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{2, 1, 20, 10}, Text{"Move"})};
+    auto send{
+      [&](const char *input) {
+        REQUIRE_NE(fputs(input, inputWrite), EOF);
+        REQUIRE_FALSE(fflush(inputWrite));
+        term.runEvent();
+      }
+    };
+    // The title bar drags: display (5,1) -> (10,4)
+    send("\x1b[<0;6;2M");
+    send("\x1b[<32;11;5M");
+    send("\x1b[<0;11;5m");
+    CHECK_EQ(w1.area(), Rectangle{7, 4, 25, 13});
+    // The right border resizes: display x 24 -> 28
+    send("\x1b[<0;25;7M");
+    send("\x1b[<32;29;7M");
+    send("\x1b[<0;29;7m");
+    CHECK_EQ(w1.area(), Rectangle{7, 4, 29, 13});
+    // The bottom border resizes: display y 12 -> 16
+    send("\x1b[<0;11;13M");
+    send("\x1b[<32;11;17M");
+    send("\x1b[<0;11;17m");
+    CHECK_EQ(w1.area(), Rectangle{7, 4, 29, 17});
+    // Resizing never makes the client area disappear
+    send("\x1b[<0;29;7M");
+    send("\x1b[<32;1;7M");
+    send("\x1b[<0;1;7m");
+    CHECK_EQ(w1.area().x2(), 10); // 7 + one column of client area + two frame columns
+  }
+
   SUBCASE("Window decoration") {
     auto send{
       [&](const char *input) {

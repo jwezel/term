@@ -99,6 +99,11 @@ struct InputHandler {
 /// A window can be transient to another one, like a popup that belongs to a window: the transient never takes the
 /// terminal focus itself, which its owner keeps, and while the owner has the focus the terminal routes input that
 /// lands on the transient to it.
+///
+/// A window with a frame can be managed with the mouse: pressing the title bar drags it, and pressing the left,
+/// right, or bottom border resizes it. The title bar is the part above the client area; the other frame parts resize
+/// from their edge, and corners resize both axes. A gesture stays within the display and keeps at least one client
+/// cell. An undecorated window has no frame, so it has nothing to grab.
 struct Window: ElementDevice {
   Window(
     struct TerminalInterface *terminal,
@@ -195,11 +200,20 @@ struct Window: ElementDevice {
   void modal(bool modal) {modal_ = modal;}
 
   private:
+  [[nodiscard]] auto beginGesture(const Vector &position) -> bool;
+
+  auto continueGesture(const Vector &position) -> bool;
+
   struct TerminalInterface *terminal_;
   InputHandler *inputHandler_{};
   bool modal_{false};
   Window *transient_{}; // weak reference; the window this one is transient to
   Insets insets_;
+  bool moving_{false};          // whether a drag is in progress
+  int resizeX_{0};              // -1 for the left border, 1 for the right one, 0 for neither
+  int resizeY_{0};              // 1 for the bottom border, 0 for neither
+  Vector gesturePress_;         // where the gesture started, in display coordinates
+  Rectangle gestureArea_;       // the window area when the gesture started
 };
 
 } // namespace jwezel

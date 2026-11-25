@@ -19,6 +19,12 @@ struct TerminalInterface {
   /// @return     The size of the display
   [[nodiscard]] virtual auto size() const -> Vector = 0;
 
+  ///
+  /// Get the size the display can grow to, which is the terminal size
+  ///
+  /// @return     The maximum display size
+  [[nodiscard]] virtual auto maxSize() const -> Vector {return size();}
+
   virtual void focus(struct Window *window) = 0;
 
   ///

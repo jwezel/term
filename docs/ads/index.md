@@ -19,3 +19,4 @@ one when the decision changes; the conceptual chapters describe the resulting de
 - \subpage adr_posted_work
 - \subpage adr_lazy_lists
 - \subpage adr_demo_and_docs
+- \subpage adr_window_management

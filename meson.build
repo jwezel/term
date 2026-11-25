@@ -199,6 +199,7 @@ if doxygen.found()
     'docs/ads/0013-posted-work.md',
     'docs/ads/0014-lazy-lists.md',
     'docs/ads/0015-demo-and-docs.md',
+    'docs/ads/0016-window-management.md',
   ]
   page_inputs = []
   foreach page : doc_pages
@@ -240,6 +241,7 @@ if doxygen.found()
     'docs/ads/0013-posted-work.md',
     'docs/ads/0014-lazy-lists.md',
     'docs/ads/0015-demo-and-docs.md',
+    'docs/ads/0016-window-management.md',
     'examples/quick_start/quick_start.cc',
     'docs/images/quick_start.png'
   )
