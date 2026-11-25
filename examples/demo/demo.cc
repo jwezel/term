@@ -140,7 +140,7 @@ constexpr ColorStyle mainColors{mainRoles};
 
 // Light dialog; it only has to name what is different from the main window, but it is a different table
 constexpr Rgb pale{0.88, 0.93, 1.0};
-constexpr ColorRoles<13> dialogRoles{
+constexpr ColorRoles<19> dialogRoles{
   {"frame", CharAttributes{RgbBlue5}},
   {"frame.inactive", CharAttributes{RgbGray4}},
   {"title", CharAttributes{RgbBlack, RgbNone, bold}},
@@ -154,6 +154,12 @@ constexpr ColorRoles<13> dialogRoles{
   {"dropdown.focus", CharAttributes{RgbWhite, RgbBlue7}},
   {"popup", CharAttributes{RgbBlack, RgbGray9}},
   {"popup.highlight", CharAttributes{RgbWhite, RgbBlue7, bold}},
+  {"list", CharAttributes{RgbBlack, RgbWhite}},
+  {"list.focus", CharAttributes{RgbBlack, pale}},
+  {"list.selected", CharAttributes{RgbWhite, RgbBlue5}},
+  {"list.current", CharAttributes{RgbWhite, RgbBlue7, bold}},
+  {"list.current.selected", CharAttributes{RgbBlack, RgbYellow, bold}},
+  {"list.disabled", CharAttributes{RgbGray4}},
 };
 constexpr ColorStyle dialogColors{dialogRoles};
 
@@ -414,7 +420,11 @@ struct Dialog {
     }
   },
   traitsLabel_{traitsRow_, Text{"Traits"}},
-  traits_{traitsRow_},
+  traits_{
+    traitsRow_,
+    {Text{"Kind"}, Text{"Curious"}, Text{"Punctual"}},
+    {Text{"Kind"}}
+  },
   contactHeader_{body_, Text{"CONTACT  /  HOW TO REACH THEM", RgbBlue5, RgbNone, bold}},
   contact_{body_, 3},
   email_{contact_.left.labels, contact_.left.editors, "Email"},
