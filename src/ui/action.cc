@@ -10,9 +10,9 @@ shortcuts_{shortcuts}
 {}
 
 Action::~Action() {
-  // removeAction changes the list, so work on a copy
+  // remove changes the list, so work on a copy
   for (auto *host: std::vector<ActionHost *>{hosts_}) {
-    host->removeAction(*this);
+    host->remove(*this);
   }
 }
 
@@ -36,14 +36,14 @@ ActionHost::~ActionHost() {
   }
 }
 
-void ActionHost::addAction(Action &action) {
+void ActionHost::add(Action &action) {
   if (std::ranges::find(actions_, &action) == actions_.end()) {
     actions_.push_back(&action);
     action.hosts_.push_back(this);
   }
 }
 
-void ActionHost::removeAction(Action &action) {
+void ActionHost::remove(Action &action) {
   std::erase(actions_, &action);
   std::erase(action.hosts_, this);
 }

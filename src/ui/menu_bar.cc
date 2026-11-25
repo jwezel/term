@@ -93,7 +93,7 @@ void MenuBar::accelerate(Unicode key) {
     }
   );
   action.shortcuts({key});
-  barRoot->addAction(action);
+  barRoot->add(action);
 }
 
 void MenuBar::forget(Menu &menu) {

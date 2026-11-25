@@ -143,6 +143,11 @@ struct Root: Container, InputHandler, ActionHost {
 
   auto add(Element &child) -> Container & override;
 
+  // A root hosts actions as well as it contains elements: both names have to stay reachable
+  using ActionHost::add;
+  using Container::remove;
+  using ActionHost::remove;
+
   ///
   /// Focus a widget
   ///

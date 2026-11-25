@@ -57,8 +57,8 @@ TEST_CASE("Action host") {
   Action one{[&first] {++first;}, {'a', 'b'}};
   Action two{[&second] {++second;}, {'b', 'c'}};
   ActionHost host;
-  host.addAction(one);
-  host.addAction(two);
+  host.add(one);
+  host.add(two);
   SUBCASE("The first action with the shortcut") {
     CHECK(host.triggerShortcut('a'));
     CHECK_EQ(first, 1);
@@ -77,17 +77,17 @@ TEST_CASE("Action host") {
     CHECK_EQ(second, 1);
   }
   SUBCASE("Adding is idempotent") {
-    host.addAction(one);
-    host.addAction(one);
+    host.add(one);
+    host.add(one);
     CHECK_EQ(host.actions().size(), 2);
     CHECK(host.triggerShortcut('a'));
     CHECK_EQ(first, 1);
   }
   SUBCASE("Remove") {
-    host.removeAction(one);
+    host.remove(one);
     CHECK_EQ(host.actions().size(), 1);
     CHECK_FALSE(host.triggerShortcut('a'));
-    host.removeAction(one); // not there: nothing
+    host.remove(one); // not there: nothing
     CHECK_EQ(host.actions().size(), 1);
   }
   SUBCASE("Trigger all") {
@@ -103,14 +103,14 @@ TEST_CASE("Action host") {
   }
   SUBCASE("An action can be in several hosts") {
     ActionHost other;
-    other.addAction(one);
+    other.add(one);
     CHECK(other.triggerShortcut('a'));
     CHECK(host.triggerShortcut('a'));
     CHECK_EQ(first, 2);
     SUBCASE("It leaves all of them when it is destroyed") {
       auto temporary{std::make_unique<Action>([&first] {first += 100;}, std::initializer_list<jwezel::Unicode>{'t'})};
-      host.addAction(*temporary);
-      other.addAction(*temporary);
+      host.add(*temporary);
+      other.add(*temporary);
       CHECK(host.triggerShortcut('t'));
       CHECK(other.triggerShortcut('t'));
       CHECK_EQ(first, 202);
@@ -123,11 +123,11 @@ TEST_CASE("Action host") {
   }
   SUBCASE("A host that is destroyed lets go of the actions") {
     auto temporary{std::make_unique<ActionHost>()};
-    temporary->addAction(one);
+    temporary->add(one);
     CHECK(temporary->triggerShortcut('a'));
     temporary.reset();
     CHECK(one.trigger()); // still all right
-    host.removeAction(one);
+    host.remove(one);
     CHECK_FALSE(host.triggerShortcut('a'));
   }
 }
@@ -138,7 +138,7 @@ TEST_CASE("Action handlers that change things") {
   SUBCASE("An action that destroys itself") {
     std::optional<Action> action;
     action.emplace([&action, &count] {++count; action.reset();}, std::initializer_list<jwezel::Unicode>{'d'});
-    host.addAction(*action);
+    host.add(*action);
     CHECK(host.triggerShortcut('d'));
     CHECK_EQ(count, 1);
     CHECK_FALSE(action.has_value());
@@ -147,16 +147,16 @@ TEST_CASE("Action handlers that change things") {
   }
   SUBCASE("An action that removes another one that is to come") {
     Action later{[&count] {count += 10;}};
-    Action first{[&host, &later, &count] {++count; host.removeAction(later);}};
-    host.addAction(first);
-    host.addAction(later);
+    Action first{[&host, &later, &count] {++count; host.remove(later);}};
+    host.add(first);
+    host.add(later);
     CHECK(host.triggerActions());
     CHECK_EQ(count, 1); // the other one is not there anymore
   }
   SUBCASE("An action that adds one") {
     Action added{[&count] {count += 10;}};
-    Action adder{[&host, &added, &count] {++count; host.addAction(added);}};
-    host.addAction(adder);
+    Action adder{[&host, &added, &count] {++count; host.add(added);}};
+    host.add(adder);
     CHECK(host.triggerActions());
     CHECK_EQ(count, 1); // it is there for the next time
     CHECK(host.triggerActions());

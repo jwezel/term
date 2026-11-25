@@ -128,7 +128,7 @@ void Menu::mnemonic(Unicode key) {
   );
   mnemonicAction_.shortcuts({key});
   if (auto *root{this->root()}; root) {
-    root->addAction(mnemonicAction_);
+    root->add(mnemonicAction_);
   }
 }
 
@@ -280,7 +280,7 @@ void Menu::hostShortcuts() {
       }
     );
     action.shortcuts(item.action->shortcuts());
-    root->addAction(action);
+    root->add(action);
   }
 }
 

@@ -463,10 +463,10 @@ struct Dialog {
     traitsLabel_.verticalAlignment(ContentAlignment::center);
     // Enter and Escape are actions of the whole window. Line edits leave Enter for the default action; the notes
     // field consumes it as a newline. The buttons trigger the same actions, and Tab follows field creation order.
-    window_.addAction(accept_);
-    window_.addAction(reject_);
-    ok_.addAction(accept_);
-    cancel_.addAction(reject_);
+    window_.add(accept_);
+    window_.add(reject_);
+    ok_.add(accept_);
+    cancel_.add(reject_);
   }
 
   Dialog(const Dialog &) = delete;
@@ -583,8 +583,8 @@ struct ContactsWindow {
   removeSelected_{[this, log] {remove(log);}, {Key::Delete}},
   close_{[done] {done();}, {Key::Escape}}
   {
-    window_.addAction(removeSelected_);
-    window_.addAction(close_);
+    window_.add(removeSelected_);
+    window_.add(close_);
     list_.onSelection([this, log](const jwezel::ui::Element &, const Event &event) {
       const auto &selection{event.as<jwezel::ui::SelectionEvent>()};
       log(std::format(
@@ -658,7 +658,7 @@ struct Notice {
   message_{window_, Rectangle{2, 1, toDim(area.width() - 4), toDim(area.height() - 2)}, message},
   close_{[done] {done();}, {Key::Escape, Key::Enter, '\x03'}}
   {
-    window_.addAction(close_);
+    window_.add(close_);
     window_.modal(true);
     message_.verticalAlignment(ContentAlignment::center);
   }
@@ -755,7 +755,7 @@ struct Demo {
   events_{window_, Rectangle{2, 12, 62, 17}, Text{}},
   hint_{window_, Rectangle{2, 18, 62, 19}, Text{"Tab: next  Alt+F/V/H: menus  Esc: close  Ctrl-C: quit"}}
   {
-    window_.addAction(quit_); // Tab and Shift-Tab go from the menu to the notes and back, without anybody saying so
+    window_.add(quit_); // Tab and Shift-Tab go from the menu to the notes and back, without anybody saying so
     contactsMenu_.focusPolicy(FocusPolicy::none); // a submenu is opened by its parent, never on its own
     window_.focus(&fileMenu_);
     fileMenu_.caption(Text{"File"}); // a menu shows what it is called, not what was chosen from it

@@ -1630,7 +1630,7 @@ TEST_CASE("UI Window") {
     auto w1{jwezel::ui::Window(ui_, ' '_C, Rectangle{0, 0, 20, 12}, Text{"Title"}, nullptr, nullptr, &overallStyle)};
     auto cancelled{0};
     jwezel::ui::Action cancel{[&cancelled] {++cancelled;}, {jwezel::Key::Escape}};
-    w1.addAction(cancel);
+    w1.add(cancel);
     const auto source{jwezel::ui::listSource(
       []() -> jwezel::i1 {return 3;},
       [](jwezel::i1 index) {return Text{std::to_string(index)};}
@@ -2744,8 +2744,8 @@ TEST_CASE("UI Window") {
     Action accept{[&log] {log += "accept;";}, {Key::Enter}};
     Action cancel{[&log] {log += "cancel;";}, {Key::Escape}};
     SUBCASE("A hidden action of the window: a default action and a cancel action") {
-      w1.addAction(accept);
-      w1.addAction(cancel);
+      w1.add(accept);
+      w1.add(cancel);
       REQUIRE_EQ(w1.focus(), &entry);
       send("\r"); // an entry that does nothing with Enter lets the window have it
       CHECK_EQ(log, "accept;");
@@ -2754,8 +2754,8 @@ TEST_CASE("UI Window") {
       CHECK_EQ(entry.lines()[0].size(), 1); // nothing was typed
     }
     SUBCASE("From any widget that does not use the key") {
-      w1.addAction(accept);
-      w1.addAction(cancel);
+      w1.add(accept);
+      w1.add(cancel);
       w1.focus(&button);
       send("\x1b");
       CHECK_EQ(log, "cancel;");
@@ -2764,8 +2764,8 @@ TEST_CASE("UI Window") {
       CHECK_EQ(log, "cancel;");
     }
     SUBCASE("What the widget has made use of is not for the window") {
-      w1.addAction(accept);
-      w1.addAction(cancel);
+      w1.add(accept);
+      w1.add(cancel);
       w1.focus(&drop);
       send("\r"); // opens the list
       REQUIRE(drop.isOpen());
@@ -2780,7 +2780,7 @@ TEST_CASE("UI Window") {
       CHECK_EQ(log, "cancel;");
     }
     SUBCASE("An accept handler of an entry that is for it") {
-      w1.addAction(accept);
+      w1.add(accept);
       auto handled{true};
       entry.onAccept([&log, &handled](const jwezel::ui::Element &, const jwezel::Event &) {log += "entry;"; return handled;});
       send("\r");
@@ -2792,8 +2792,8 @@ TEST_CASE("UI Window") {
     SUBCASE("Actions of the widget while it has the focus") {
       Action local{[&log] {log += "local;";}, {Key::F5}};
       Action everywhere{[&log] {log += "window;";}, {Key::F5, Key::F6}};
-      entry.addAction(local);
-      w1.addAction(everywhere);
+      entry.add(local);
+      w1.add(everywhere);
       send("\x1b[15~"); // F5, in the entry
       CHECK_EQ(log, "local;"); // the widget comes first
       send("\x1b[17~"); // F6
@@ -2804,8 +2804,8 @@ TEST_CASE("UI Window") {
     }
     SUBCASE("A disabled action is passed over") {
       Action second{[&log] {log += "second;";}, {Key::Enter}};
-      w1.addAction(accept);
-      w1.addAction(second);
+      w1.add(accept);
+      w1.add(second);
       accept.enabled(false);
       send("\r");
       CHECK_EQ(log, "second;");
@@ -2815,7 +2815,7 @@ TEST_CASE("UI Window") {
     }
     SUBCASE("The window can have Tab") {
       Action own{[&log] {log += "tab;";}, {Key::Tab}};
-      w1.addAction(own);
+      w1.add(own);
       send("\t");
       CHECK_EQ(log, "tab;");
       CHECK_EQ(w1.focus(), &entry); // it is not for the focus then
@@ -2825,7 +2825,7 @@ TEST_CASE("UI Window") {
     }
     SUBCASE("A button triggers its actions when it is pressed") {
       Action press{[&log] {log += "press;";}};
-      button.addAction(press);
+      button.add(press);
       click(2, 7);
       CHECK_EQ(log, "press;");
       send("\r"); // the button has the focus now
@@ -2837,8 +2837,8 @@ TEST_CASE("UI Window") {
       CHECK_EQ(log, "press;press;press;");
     }
     SUBCASE("A button and a key are the same action") {
-      w1.addAction(accept);
-      button.addAction(accept);
+      w1.add(accept);
+      button.add(accept);
       click(2, 7);
       CHECK_EQ(log, "accept;");
       w1.focus(&entry);
@@ -2848,7 +2848,7 @@ TEST_CASE("UI Window") {
     SUBCASE("An action that is destroyed is gone") {
       {
         Action temporary{[&log] {log += "temporary;";}, {Key::F5}};
-        w1.addAction(temporary);
+        w1.add(temporary);
         send("\x1b[15~");
         CHECK_EQ(log, "temporary;");
       }
@@ -2858,7 +2858,7 @@ TEST_CASE("UI Window") {
     SUBCASE("A window that is destroyed lets go of its actions") {
       {
         auto w2{jwezel::ui::Window(ui_, ' '_C, Rectangle{36, 0, 50, 6}, Text{"B"}, nullptr, &plain)};
-        w2.addAction(accept);
+        w2.add(accept);
         CHECK_EQ(accept.trigger(), true);
       }
       CHECK(accept.trigger()); // fine
@@ -2868,7 +2868,7 @@ TEST_CASE("UI Window") {
       // nothing has the focus on a desktop without widgets, and the actions are there all the same
       auto &desktop{ui_.desktop()};
       Action quit{[&log] {log += "quit;";}, {'\x03'}};
-      desktop.addAction(quit);
+      desktop.add(quit);
       term.focus(&term.desktop());
       REQUIRE_EQ(term.focus(), &term.desktop());
       send("\x03");
@@ -3058,7 +3058,7 @@ TEST_CASE("UI Window") {
       using jwezel::Key;
       auto count{0};
       jwezel::ui::Action paging{[&count] {++count;}, {Key::PageUp, Key::PageDown}};
-      w1.addAction(paging);
+      w1.add(paging);
       auto input{jwezel::ui::LineEdit(w1, Rectangle{1, 1, 19, 2}, "single line")};
       auto area{jwezel::ui::TextArea(w1, Rectangle{1, 3, 19, 5}, "a\nb\nc\nd")};
       send("\x1b[5~");

@@ -101,11 +101,11 @@ struct ActionHost {
 
   ///
   /// Add an action, which can be in any number of hosts; nothing happens if it is in this one already
-  void addAction(Action &action);
+  void add(Action &action);
 
   ///
   /// Remove an action; nothing happens if it is not here
-  void removeAction(Action &action);
+  void remove(Action &action);
 
   [[nodiscard]] auto actions() const -> const std::vector<Action *> & {return actions_;}
 
