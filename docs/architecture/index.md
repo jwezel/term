@@ -1,7 +1,8 @@
 @page architecture Architecture overview
 
 The library separates terminal mechanics from interface composition. The terminal layer is usable without the UI layer;
-the UI layer composes those same surface and display primitives into widgets.
+the UI layer composes those same surface and display primitives into widgets. The reasoning behind these structures is
+recorded in the [architectural decisions](\ref ads).
 
 ## Terminal layer
 

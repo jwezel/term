@@ -34,56 +34,13 @@
   unrelated work. When a commit is requested, use an explicit path list with
   `git commit -- <paths>`.
 
-## Settled design decisions
+## Design decisions
 
-- **Widget backgrounds:** `InheritBackground` is the default for widgets and
-    resolves to the host window's background. Explicit `Space` still means the
-    terminal background. A UI `Window` background remains explicit.
-- **Window content:** Widgets are elements on the window's own content
-    surface, offset by the decoration insets. `bounds()` is content-relative;
-    `TextElement::area()` is window-relative. The window clips its content.
-    `UiStyle::popupPlacement` controls where a popup opens: `inside` (the
-    default) places it in the same window, clipped and flipped above the
-    control when needed; `window` opens a transient `jwezel::Window` that
-    can extend past the frame. `jwezel::Window::clientInsets()` reshapes
-    the content area and fires `geometryEvent` so the root re-layouts.
-- **Drop-down captions:** `caption(const Text &)` / `caption()` sets a fixed
-    closed-state caption. A non-empty caption displays regardless of selection;
-    an empty caption shows the selected item. It does not alter items,
-    selection, select events, or the open list. Preferred width accounts for
-    the widest item or caption plus glyph padding.
-- **Box layouts:** `BoxLayout::sizes` selects `LayoutSize::fit` or `stretch`;
-    `alignments` selects `LayoutAlign::stretch`, `begin`, `center`, or `end`.
-    Fit sizing uses preferred size on the main axis, non-stretch alignment uses
-    preferred cross size, leftover space stays at the end, and earlier fit
-    children receive available space first on overflow.
-- **Layout updates:** `Element::layoutChanged()` bubbles to the nearest `Box`;
-    boxes update their children and expose preferred size. Concrete widgets
-    notify after construction and after content changes. `TextArea` has
-    explicit constructors because its `acceptsEnter()` policy is not ready
-    during `TextInput` base construction.
-- **Zero-width text:** `Text::extend` must widen zero-width existing lines;
-    zero-sized layout slices can later be assigned a nonzero width.
-- **Focus tests:** When a test creates a second window and later expects the
-    first to render active, restore focus explicitly in the test. Do not change
-    `Terminal::focus` semantics just to satisfy that test.
-- **Fit clamp:** The preferred-size clamp in `Box::layout()` is intentionally
-    retained. Removing it is an equivalent mutation because the overflow pass
-    clamps fit children to the same available space.
-- **Demo contact form:** Use line edits for free-form single-line values,
-    drop-downs for choices, and a text area for notes. Keep the birth-date
-    format hint (`YYYY-MM-DD`) and ensure the dialog fits the demo's declared
-    minimum terminal size (70x22). Accepted form values are collected into a
-    value-owned `PersonRecord`.
-- **Documentation:** Generate a Doxygen HTML manual and API reference. Keep
-    concise API contracts next to declarations in public headers; put
-    tutorials, long conceptual explanations, and developer guidance in Markdown
-    under `docs/`. Link manual pages with Doxygen page references. Keep docs
-    optional in Meson when Doxygen is unavailable.
-- **README teaser:** Keep a very short, complete, compiled `quick_start` example
-    in the README Usage section, followed immediately by a screenshot captured
-    from the running program. The source of the snippet is
-    `examples/quick_start/quick_start.cc`.
+Architectural and product decisions are recorded as ADRs under `docs/ads/`, starting at the `ads` page in the manual.
+Read the relevant record before changing a design, and add a new record or supersede an old one when a decision changes.
+
+When a test creates a second window and later expects the first to render active, restore focus explicitly in the test;
+do not change `Terminal::focus` semantics just to satisfy that test.
 
 ## Development and verification workflow
 
@@ -150,3 +107,11 @@
   Doxygen warnings. The demo pty checks cover menu bar and submenu navigation,
   the Keys and About boxes, dialog cancellation, Tab navigation, typing into
   fields, saving, and the 70x22 minimum terminal size.
+
+## Roadmap
+
+- There should be a concept for abstract events: an action can be triggered by more than
+  one event, eg. a mouse gesture or a key press, or even an external event, but all the 
+  events have one shared meaning. For example, both pressing Ctrl+Q or a clicking a Close button 
+  could mean, "close the application".
+- 

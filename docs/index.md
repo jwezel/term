@@ -21,6 +21,8 @@ The same program is compiled as the Meson target `quick_start` and included belo
 
 \subpage developer
 
+\subpage ads
+
 ## API reference
 
 The reference is generated from the public headers under `src/term`, `src/ui`, `src/ext_ui`, and `src/util`. The most useful starting
